@@ -1,0 +1,24 @@
+/* MainLayout.module.scss */
+
+// 1. Container bao trùm cả ứng dụng: Luôn cao đúng bằng màn hình, không cuộn body
+.appContainer {
+    display: flex;
+    flex-direction: column; // Xếp dọc: Header trên, Thân dưới
+    height: 100vh; // Chiều cao = 100% màn hình thiết bị
+    overflow: hidden; // Ẩn thanh cuộn của trình duyệt
+}
+
+// 2. Phần thân dưới (Gồm Sidebar + Main Content)
+.bodyContainer {
+    display: flex; // Xếp ngang: Sidebar trái, Content phải
+    flex: 1; // Chiếm toàn bộ chiều cao còn thừa (100vh - Header)
+    overflow: hidden; // Quan trọng: Để chặn scroll chung
+}
+
+// 3. Khu vực nội dung chính (Cái duy nhất được cuộn)
+.mainContent {
+    flex: 1; // Chiếm hết chiều rộng còn lại
+    overflow-y: auto; // CHỈ CHO PHÉP cuộn ở khu vực này
+    padding: 1.5rem; // Padding nội dung
+    background-color: #f8fafc; // Màu nền xám nhạt cho nội dung
+}

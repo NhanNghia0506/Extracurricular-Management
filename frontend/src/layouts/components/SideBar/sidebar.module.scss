@@ -1,0 +1,68 @@
+/* Sidebar.module.scss */
+
+.sidebarWrapper {
+    width: 260px;
+    height: 100%; // Chiều rộng cố định của sidebar
+    background-color: #ffffff;
+    border-right: 1px solid #f1f5f9; // Viền mỏng bên phải
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column; // Dàn dọc
+    flex-shrink: 0; // Không bị co lại khi màn hình nhỏ
+}
+
+// Style chung cho mỗi item trong menu
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 12px; // Khoảng cách giữa icon và chữ
+    padding: 12px 16px;
+    border-radius: 12px; // Bo góc mềm mại
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #64748b; // Màu chữ mặc định (xám xanh)
+    font-weight: 500;
+    text-decoration: none;
+    margin-bottom: 4px;
+
+    &:hover {
+        background-color: #f8fafc; // Hover nhẹ
+        color: #334155;
+    }
+}
+
+// Icon trong item
+.navIcon {
+    width: 20px; // Cố định chiều rộng để chữ thẳng hàng
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+// --- Trạng thái Active (Đang chọn) ---
+// Giống tab "Explore" trong hình
+.active {
+    background-color: #eff6ff; // Xanh dương rất nhạt (blue-50)
+    color: #2563eb; // Chữ xanh dương đậm (blue-600)
+    font-weight: 600;
+
+    &:hover {
+        background-color: #eff6ff; // Giữ nguyên màu khi hover vào item đang active
+    }
+}
+
+// --- Phần Footer (Settings & Sign Out) ---
+.footerMenu {
+    margin-top: auto; // Đẩy phần này xuống đáy sidebar
+    padding-top: 1rem;
+    border-top: 1px solid #f1f5f9; // Đường gạch ngang phân cách mờ (tùy chọn)
+}
+
+// Style riêng cho nút Sign Out (màu đỏ)
+.dangerItem {
+    color: #ef4444; // Đỏ
+
+    &:hover {
+        background-color: #fef2f2; // Nền đỏ rất nhạt khi hover
+        color: #dc2626;
+    }
+}
