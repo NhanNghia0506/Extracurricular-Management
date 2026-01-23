@@ -5,6 +5,7 @@ import { UserController } from "./user.controller";
 import UserService from "./user.service";
 import { UserRepository } from "./user.repository";
 import { StudentModule } from "../students/student.module";
+import { JwtModule } from "@nestjs/jwt";
 
 @Module({
     imports: [
@@ -12,6 +13,10 @@ import { StudentModule } from "../students/student.module";
         MongooseModule.forFeature([
             { name: User.name, schema: UserSchema }
         ]),
+        JwtModule.register({
+            secret: 'your-secret-key',
+            signOptions: { expiresIn: '24h' },
+        }),
     ],
     controllers: [UserController],
     providers: [UserService, UserRepository],

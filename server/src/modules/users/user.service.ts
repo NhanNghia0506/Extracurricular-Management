@@ -1,5 +1,7 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { RegisterDto } from "./dtos/register.dto";
+import { LoginDto } from "./dtos/login.dto";
 import { UserRepository } from "./user.repository";
 import bcrypt from 'bcrypt';
 import { UserRole, UserStatus } from "src/global/globalEnum";
@@ -9,10 +11,11 @@ class UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly studentService: StudentService,
-    ) {}
+        private readonly jwtService: JwtService,
+    ) { }
 
-    async register(userData: RegisterDto) {
-        if(await this.userRepository.findByEmail(userData.email)) {
+    async createStudent(userData: RegisterDto) {
+        if (await this.userRepository.findByEmail(userData.email)) {
             throw new ConflictException('Email đã được sử dụng');
         }
 
@@ -43,6 +46,38 @@ class UserService {
             name: user.name,
             email: user.email,
             role: user.role
+        };
+    }
+
+    async login(loginData: LoginDto) {
+        // Tìm user theo email
+        const user = await this.userRepository.findByEmail(loginData.email);
+
+        if (!user) {
+            throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+        }
+
+        // So sánh mật khẩu
+        const isPasswordMatch = await bcrypt.compare(loginData.password, user.password);
+
+        if (!isPasswordMatch) {
+            throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+        }
+
+        // Tạo JWT token
+        const payload = { sub: user._id, email: user.email, role: user.role };
+    
+        const access_token = this.jwtService.sign(payload);
+
+        // Trả về thông tin user và token nếu đăng nhập thành công
+        return {
+            access_token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
         };
     }
 }

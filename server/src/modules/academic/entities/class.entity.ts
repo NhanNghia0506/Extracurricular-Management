@@ -9,7 +9,11 @@ export class Class {
     @Prop({ required: true })
     classCode: string;
 
-    @Prop({ required: true })
+    @Prop({
+        type: Types.ObjectId,
+        ref: 'Faculty',
+        required: true,
+    })
     facultyId: Types.ObjectId;
 }
 
