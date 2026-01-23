@@ -14,19 +14,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status = exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message: string | string[] = 'Internal server error';
 
-    const message = exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
+    if(exception instanceof HttpException) {
+      status = exception.getStatus();
+      const res = exception.getResponse();
+      if(typeof res === 'string') {
+        message = res;
+      } else if(typeof res === 'object' && res['message']) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        message = res['message'];
+      }
+    }
 
     response.status(status).json({
+      success: false,
       statusCode: status,
       message,
       path: request.url,
       timestamp: new Date().toISOString(),
     });
-    }
+  }
 }

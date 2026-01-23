@@ -1,13 +1,20 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import UserService from "./user.service";
 import { RegisterDto } from "./dtos/register.dto";
+import { ResponseMessage } from "src/decorators/response-message.decorator";
 
-@Controller('users')
+@Controller('user')
 export class UserController {
     constructor(private readonly userService: UserService) {}
-
+    // Register a new student
+    @ResponseMessage('User registered successfully')
     @Post('register')
-    register(@Body() userData: RegisterDto) {
-        
+    createStudent(@Body() userData: RegisterDto) {
+        return this.userService.register(userData);
+    }
+
+    @Get('profile')
+    getProfile() {
+        return 'Hello';
     }
 }
