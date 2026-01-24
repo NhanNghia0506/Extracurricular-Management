@@ -18,3 +18,11 @@ export enum UserStatus {
     ACTIVE = 1,
     DELETED = 2
 }
+
+export enum ActivityStatus {
+    OPEN = 'OPEN',            // Vừa tạo, SV đăng ký được
+    CLOSED = 'CLOSED',        // Đóng đăng ký
+    ONGOING = 'ONGOING',      // Đang diễn ra
+    COMPLETED = 'COMPLETED',  // Đã kết thúc
+    CANCELLED = 'CANCELLED',  // Bị hủy
+}
