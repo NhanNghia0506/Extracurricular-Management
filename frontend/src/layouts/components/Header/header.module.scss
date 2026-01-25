@@ -1,9 +1,9 @@
 /* Header.module.scss */
 
 .headerWrapper {
-    background-color: #ffffff;
-    padding: 0.75rem 2rem; // Padding rộng hơn cho desktop
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03); // Bóng đổ rất nhẹ
+    background-color: var(--color-bg-white);
+    padding: 0.75rem 2rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
     position: sticky;
     top: 0;
     z-index: 1020;
@@ -41,30 +41,30 @@
     top: 50%;
     left: 1.2rem;
     transform: translateY(-50%);
-    color: #64748b; // Màu icon xám xanh
+    color: var(--color-text-muted);
     font-size: 0.9rem;
     pointer-events: none;
 }
 
 .searchInput {
     width: 100%;
-    padding: 0.7rem 1rem 0.7rem 3rem; // Padding trái lớn để chứa icon
-    background-color: #f8fafc; // Màu nền xám xanh rất nhạt (giống hình)
+    padding: 0.7rem 1rem 0.7rem 3rem;
+    background-color: var(--color-bg-light);
     border: 1px solid transparent;
-    border-radius: 99px; // Bo tròn kiểu viên thuốc (Pill shape)
+    border-radius: 99px;
     font-size: 0.95rem;
     color: #334155;
     transition: all 0.2s ease;
 
     &::placeholder {
-        color: #94a3b8;
+        color: var(--color-text-muted-light);
         font-weight: 400;
     }
 
     &:focus {
         outline: none;
-        background-color: #fff;
-        border-color: #e2e8f0;
+        background-color: var(--color-bg-white);
+        border-color: var(--color-border-lighter);
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 }
@@ -73,14 +73,14 @@
 .actionBtn {
     background: none;
     border: none;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 1.25rem;
     padding: 0.5rem;
     transition: color 0.2s;
     margin-right: 0.5rem;
 
     &:hover {
-        color: #2563eb;
+        color: var(--color-primary-blue);
     }
 }
 
@@ -90,8 +90,8 @@
     border-radius: 50%;
     overflow: hidden;
     cursor: pointer;
-    border: 2px solid #fff; // Viền trắng bao quanh
-    box-shadow: 0 0 0 1px #e2e8f0; // Viền mỏng xám bên ngoài
+    border: 2px solid var(--color-white);
+    box-shadow: 0 0 0 1px var(--color-border-lighter);
 
     img {
         width: 100%;

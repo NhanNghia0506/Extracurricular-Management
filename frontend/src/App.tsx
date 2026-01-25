@@ -1,16 +1,20 @@
-import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import MainLayout from './layouts/MainLayout/mainlayout';
 import Feed from './layouts/components/Feed/feed';
+import CreateActivity from './components/CreateActivity/create.activity';
 
 function App() {
   return (
-    <div className="App">
+    <Router>
       <MainLayout>
-        <Feed></Feed>
+        <Routes>
+          <Route path="/" element={<Feed />} />
+          <Route path="/create-activity" element={<CreateActivity />} />
+        </Routes>
       </MainLayout>
-    </div>
+    </Router>
   );
 }
 

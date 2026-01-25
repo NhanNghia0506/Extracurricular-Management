@@ -1,0 +1,239 @@
+/* CreateActivity.module.scss */
+
+$primary-blue: var(--color-primary-blue);
+$text-main: var(--color-text-dark);
+$text-muted: var(--color-text-muted);
+$text-secondary: var(--color-text-secondary);
+$border-color: var(--color-border-lighter);
+$bg-white: var(--color-bg-white);
+$bg-lighter: var(--color-bg-lighter);
+$bg-blue-light: var(--color-bg-blue-50);
+
+.createWrapper {
+    background-color: $bg-white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    max-width: 900px;
+    margin: 2rem auto;
+    overflow: hidden;
+    border: 1px solid $border-color;
+}
+
+// --- Top Header ---
+.topHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid $border-color;
+
+    h4 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+        color: $text-main;
+        text-align: center;
+        flex: 1;
+    }
+
+    .publishBtn {
+        color: $primary-blue;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 0.9rem;
+
+        &:hover {
+            opacity: 0.8;
+        }
+    }
+}
+
+// --- Upload Area ---
+.uploadSection {
+    padding: 1.5rem;
+}
+
+.uploadBox {
+    border: 2px dashed $border-color;
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    background-color: $bg-lighter;
+
+    .uploadIcon {
+        font-size: 2rem;
+        color: $text-muted;
+        margin-bottom: 0.5rem;
+    }
+
+    h6 {
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    p {
+        font-size: 0.8rem;
+        color: $text-muted;
+        margin-bottom: 1rem;
+    }
+}
+
+.cyanBtnSmall {
+    background-color: $primary-blue;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+// --- Form Elements ---
+.formBody {
+    padding: 0 1.5rem 1.5rem;
+
+    label {
+        display: block;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: $text-main;
+        margin-bottom: 0.5rem;
+    }
+}
+
+.customInput,
+.customSelect,
+.customTextarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid $border-color;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+
+    &:focus {
+        outline: none;
+        border-color: $primary-blue;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+}
+
+// --- Tags / Organizers ---
+.tagContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.tag {
+    background-color: $bg-blue-light;
+    color: $primary-blue;
+    padding: 0.4rem 0.8rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+        cursor: pointer;
+    }
+}
+
+.addStaffBtn {
+    background: none;
+    border: 1px solid $border-color;
+    padding: 0.4rem 0.8rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    color: $text-muted;
+}
+
+// --- Map Section ---
+.mapContainer {
+    position: relative;
+    width: 100%;
+    height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #eee;
+    margin-bottom: 1rem;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+.mapControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    button {
+        width: 32px;
+        height: 32px;
+        background: white;
+        border: none;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-size: 0.8rem;
+    }
+}
+
+// --- Range Slider ---
+.sliderLabelRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: $text-muted;
+    margin-bottom: 0.5rem;
+
+    span:last-child {
+        color: $primary-blue;
+    }
+}
+
+.customRange {
+    width: 100%;
+    accent-color: $primary-blue;
+}
+
+// --- Bottom Action Buttons ---
+.mainActions {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btnPrimaryLarge {
+    background-color: $primary-blue;
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btnDraft {
+    background: none;
+    border: none;
+    color: $text-muted;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+}

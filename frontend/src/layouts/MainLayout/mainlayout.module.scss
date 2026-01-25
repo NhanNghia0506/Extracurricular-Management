@@ -17,8 +17,8 @@
 
 // 3. Khu vực nội dung chính (Cái duy nhất được cuộn)
 .mainContent {
-    flex: 1; // Chiếm hết chiều rộng còn lại
-    overflow-y: auto; // CHỈ CHO PHÉP cuộn ở khu vực này
-    padding: 1.5rem; // Padding nội dung
-    background-color: #f8fafc; // Màu nền xám nhạt cho nội dung
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background-color: var(--color-bg-light);
 }

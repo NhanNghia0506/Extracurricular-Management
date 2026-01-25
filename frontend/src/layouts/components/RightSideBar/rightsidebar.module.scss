@@ -1,21 +1,21 @@
 /* RightSidebar.module.scss */
 
 .wrapper {
-    width: 300px; // Chiều rộng cố định cho cột phải
-    background-color: #ffffff;
-    border-left: 1px solid #f1f5f9; // Viền ngăn cách bên trái
+    width: 300px;
+    background-color: var(--color-bg-white);
+    border-left: 1px solid var(--color-border-lighter);
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    height: 100%; // Cao theo cha (MainLayout)
-    overflow-y: auto; // Cho phép cuộn nếu nội dung quá dài
+    height: 100%;
+    overflow-y: auto;
 }
 
 // --- Style chung cho Tiêu đề Section ---
 .sectionTitle {
     font-size: 0.75rem;
     font-weight: 700;
-    color: #64748b; // Màu xám đậm
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 1rem;
@@ -25,8 +25,8 @@
 }
 
 .badgeCount {
-    background-color: #2563eb;
-    color: white;
+    background-color: var(--color-primary-blue);
+    color: var(--color-white);
     font-size: 0.7rem;
     width: 20px;
     height: 20px;
@@ -61,37 +61,37 @@
     flex-shrink: 0;
 
     // Màu mặc định
-    background-color: #f1f5f9;
-    color: #64748b;
+    background-color: var(--color-bg-very-light);
+    color: var(--color-text-muted);
 
     // Các biến thể màu (nếu cần)
     &.purple {
-        background-color: #f3f0ff;
-        color: #7c3aed;
+        background-color: var(--color-purple-light);
+        color: var(--color-purple);
     }
 
     &.green {
-        background-color: #ecfdf5;
-        color: #10b981;
+        background-color: var(--color-status-success-light);
+        color: var(--color-status-success);
     }
 }
 
 .clubName {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #1e293b;
+    color: var(--color-text-dark);
     display: block;
 }
 
 .memberCount {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-muted-light);
 }
 
 .joinBtn {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #2563eb;
+    color: var(--color-primary-blue);
     background: none;
     border: none;
     padding: 0;
