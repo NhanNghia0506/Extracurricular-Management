@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import activityService from '../../services/activity.service';
 import styles from './create.activity.module.scss';
-import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
@@ -8,17 +9,67 @@ import 'leaflet/dist/leaflet.css';
 const CreateActivity: React.FC = () => {
     // Dữ liệu mẫu cho Organizers
     const [organizers, setOrganizers] = useState([
-        { id: 1, name: 'Sarah Jenkins' },
-        { id: 2, name: 'Dr. Aris Thorne' }
+        { id: 'org-1', name: 'Sarah Jenkins' },
+        { id: 'org-2', name: 'Dr. Aris Thorne' }
+    ]);
+    const [categories] = useState([
+        { id: 'cat-1', name: 'Học Tập' },
+        { id: 'cat-2', name: 'Thể Thao' },
+        { id: 'cat-3', name: 'Nghệ Thuật' },
     ]);
 
-    const [radius, setRadius] = useState(50);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [categoryId, setCategoryId] = useState('');
+    const [organizerId, setOrganizerId] = useState('');
     const [location, setLocation] = useState('University Central Courtyard, Wing A');
+    const [coverPreview, setCoverPreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [startAt, setStartAt] = useState('');
+    const [endAt, setEndAt] = useState('');
     const [coordinates, setCoordinates] = useState<[number, number]>([20.8287, 106.6749]);
     const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [mapKey, setMapKey] = useState(0);
     const [markerPosition, setMarkerPosition] = useState<[number, number]>(coordinates);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleCoverFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const previewUrl = URL.createObjectURL(file);
+        setCoverPreview((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return previewUrl;
+        });
+
+        setUploading(true);
+        try {
+            // TODO: Gọi API upload và lưu lại URL trả về từ server
+            // const formData = new FormData();
+            // formData.append('file', file);
+            // const { data } = await axios.post('/api/upload', formData);
+            // setCoverPreview(data.url);
+        } catch (error) {
+            console.error('Lỗi upload ảnh:', error);
+            alert('Upload ảnh thất bại, vui lòng thử lại.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (coverPreview) URL.revokeObjectURL(coverPreview);
+        };
+    }, [coverPreview]);
 
     // Hàm lấy vị trí hiện tại
     const getCurrentLocation = () => {
@@ -33,8 +84,8 @@ const CreateActivity: React.FC = () => {
                     setLocation('Vị trí hiện tại');
                 },
                 (error) => {
-                    alert(error.message);
-                    // alert('Không thể lấy vị trí hiện tại. Vui lòng bật định vị GPS.');
+                    // alert(error.message);
+                    alert('Không thể lấy vị trí hiện tại. Vui lòng bật định vị GPS.');
                 }
             );
         } else {
@@ -92,8 +143,57 @@ const CreateActivity: React.FC = () => {
         return null;
     };
 
-    const removeOrganizer = (id: number) => {
+    const removeOrganizer = (id: string) => {
         setOrganizers(organizers.filter(item => item.id !== id));
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setErrorMessage('');
+
+        const errors: string[] = [];
+        if (!title.trim()) errors.push('Tên hoạt động không được để trống.');
+        if (!description.trim()) errors.push('Mô tả không được để trống.');
+        if (!categoryId) errors.push('Vui lòng chọn danh mục.');
+        if (!organizerId) errors.push('Vui lòng chọn người tổ chức.');
+        if (!location.trim()) errors.push('Địa điểm không được để trống.');
+        if (!startAt) errors.push('Vui lòng chọn thời gian bắt đầu.');
+        if (!endAt) errors.push('Vui lòng chọn thời gian kết thúc.');
+        if (startAt && endAt && new Date(startAt) >= new Date(endAt)) {
+            errors.push('Thời gian kết thúc phải sau thời gian bắt đầu.');
+        }
+
+        if (errors.length) {
+            setErrorMessage(errors.join(' '));
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await activityService.create({
+                title,
+                description,
+                location,
+                image: coverPreview || undefined,
+                organizerId,
+                categoryId,
+                startAt: new Date(startAt).toISOString(),
+                endAt: new Date(endAt).toISOString(),
+            });
+
+            alert('Tạo hoạt động thành công');
+            setTitle('');
+            setDescription('');
+            setCategoryId('');
+            setOrganizerId('');
+            setStartAt('');
+            setEndAt('');
+        } catch (error) {
+            console.error('Lỗi tạo activity:', error);
+            setErrorMessage('Không thể tạo hoạt động. Vui lòng thử lại.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -112,31 +212,68 @@ const CreateActivity: React.FC = () => {
                     </div>
                     <h6>Thêm Ảnh Bìa</h6>
                     <p>Tải lên ảnh JPG hoặc PNG chất lượng cao (tỷ lệ 16:9)</p>
-                    <button className={styles.cyanBtnSmall}>Tải Lên Ảnh</button>
+                    <button
+                        type="button"
+                        className={styles.cyanBtnSmall}
+                        onClick={handleUploadClick}
+                        disabled={uploading}
+                    >
+                        {uploading ? 'Đang tải...' : 'Tải Lên Ảnh'}
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleCoverFileChange}
+                    />
+                    {coverPreview && (
+                        <div className={styles.previewWrapper}>
+                            <img src={coverPreview} alt="Ảnh bìa xem trước" />
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* 3. Form Fields */}
-            <form className={styles.formBody}>
+            <form className={styles.formBody} onSubmit={handleSubmit}>
+                {errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
+
                 {/* Tên Hoạt Động */}
                 <label>Tên Hoạt Động</label>
                 <input
                     type="text"
                     className={styles.customInput}
                     placeholder="Ví dụ: Hội thảo Công nghệ Hàng năm"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                 />
 
                 {/* Danh Mục */}
                 <label>Danh Mục Hoạt Động</label>
-                <select className={styles.customSelect}>
-                    <option>Chọn loại hoạt động</option>
-                    <option>Học Tập</option>
-                    <option>Thể Thao</option>
-                    <option>Nghệ Thuật</option>
+                <select
+                    className={styles.customSelect}
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                >
+                    <option value="">Chọn loại hoạt động</option>
+                    {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                 </select>
 
                 {/* Gán Người Tổ Chức */}
                 <label>Gán Người Tổ Chức</label>
+                <select
+                    className={styles.customSelect}
+                    value={organizerId}
+                    onChange={(e) => setOrganizerId(e.target.value)}
+                >
+                    <option value="">Chọn người tổ chức</option>
+                    {organizers.map((org) => (
+                        <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                </select>
                 <div className={styles.tagContainer}>
                     {organizers.map(staff => (
                         <div key={staff.id} className={styles.tag}>
@@ -153,7 +290,28 @@ const CreateActivity: React.FC = () => {
                     className={styles.customTextarea}
                     rows={4}
                     placeholder="Mô tả mục tiêu, lịch trình và yêu cầu của hoạt động ngoài khóa..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                 ></textarea>
+
+                {/* Thời gian bắt đầu */}
+                <label>Thời Gian Bắt Đầu</label>
+                <input
+                    type="datetime-local"
+                    className={styles.customInput}
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                />
+
+                {/* Thời gian kết thúc */}
+                <label>Thời Gian Kết Thúc</label>
+                <input
+                    type="datetime-local"
+                    className={styles.customInput}
+                    value={endAt}
+                    min={startAt || undefined}
+                    onChange={(e) => setEndAt(e.target.value)}
+                />
 
                 {/* Địa Điểm & Vòng Địa Lý */}
                 <label>Địa Điểm</label>
@@ -216,16 +374,15 @@ const CreateActivity: React.FC = () => {
                         })} />
                     </MapContainer>
                 </div>
+                {/* Final Actions */}
+                <div className={styles.mainActions}>
+                    <button className={styles.btnPrimaryLarge} type="submit" disabled={submitting}>
+                        <i className="fa-solid fa-paper-plane"></i>
+                        {submitting ? 'Đang gửi...' : 'Đăng bài'}
+                    </button>
+                    <button className={styles.btnDraft} type="button" disabled={submitting}>Lưu Bản Nháp</button>
+                </div>
             </form>
-
-            {/* Final Actions */}
-            <div className={styles.mainActions}>
-                <button className={styles.btnPrimaryLarge}>
-                    <i className="fa-solid fa-paper-plane"></i>
-                    Đăng bài
-                </button>
-                <button className={styles.btnDraft}>Lưu Bản Nháp</button>
-            </div>
         </div>
     );
 };

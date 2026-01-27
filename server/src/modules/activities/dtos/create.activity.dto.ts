@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, IsDate } from 'class-validator';
 import { ActivityStatus } from '../../../global/globalEnum';
 
 export class CreateActivityDto {
@@ -13,6 +13,10 @@ export class CreateActivityDto {
     @IsString()
     @IsNotEmpty()
     location: string;
+
+    @IsNotEmpty()
+    @IsDate()
+    startAt: Date;
 
     @IsEnum(ActivityStatus)
     @IsOptional()

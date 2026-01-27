@@ -39,6 +39,7 @@ export class ActivityController {
         @Body() createActivityDto: CreateActivityDto,
         @UploadedFile() file: Express.Multer.File | undefined,
     ): Promise<Activity> {
+        console.log('Received file:', file);
         const uploadedFilename = file?.filename;
 
         try {

@@ -5,15 +5,6 @@ import { Types } from 'mongoose';
 import { ActivityStatus } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 
-interface ActivityEntity {
-    title: string;
-    description: string;
-    location: string;
-    status: ActivityStatus;
-    image?: string;
-    organizerId: Types.ObjectId;
-    categoryId: Types.ObjectId;
-}
 
 @Injectable()
 export class ActivityService {
@@ -37,11 +28,12 @@ export class ActivityService {
         }
 
             // Tạo entity
-        const activity: ActivityEntity = {
+        const activity = {
             title: createActivityDto.title,
             description: createActivityDto.description,
             location: createActivityDto.location,
             status: createActivityDto.status || ActivityStatus.OPEN,
+            startAt: createActivityDto.startAt,
             image: createActivityDto.image, // Tên file đã upload
             organizerId: new Types.ObjectId(createActivityDto.organizerId),
             categoryId: new Types.ObjectId(createActivityDto.categoryId),

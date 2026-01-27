@@ -11,15 +11,15 @@ interface MenuItem {
 
 // 2. Khởi tạo mảng dữ liệu (như bạn yêu cầu)
 const MAIN_MENU: MenuItem[] = [
-    { id: 'explore', icon: 'fa-regular fa-compass', label: 'Explore' },
-    { id: 'my-activities', icon: 'fa-regular fa-calendar-check', label: 'My Activities' },
-    { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Organizations' }, // Hoặc fa-user-group
-    { id: 'achievements', icon: 'fa-solid fa-medal', label: 'Achievements' },
+    { id: 'explore', icon: 'fa-regular fa-compass', label: 'Khám phá' },
+    { id: 'my-activities', icon: 'fa-regular fa-calendar-check', label: 'Hoạt động của tôi' },
+    { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Tổ chức' }, // Hoặc fa-user-group
+    { id: 'achievements', icon: 'fa-solid fa-medal', label: 'Thành tích' },
 ];
 
 const BOTTOM_MENU: MenuItem[] = [
-    { id: 'settings', icon: 'fa-solid fa-gear', label: 'Settings' },
-    { id: 'sign-out', icon: 'fa-solid fa-arrow-right-from-bracket', label: 'Sign Out', isDanger: true },
+    { id: 'settings', icon: 'fa-solid fa-gear', label: 'Cài đặt' },
+    { id: 'sign-out', icon: 'fa-solid fa-arrow-right-from-bracket', label: 'Đăng xuất', isDanger: true },
 ];
 
 interface SidebarProps {

@@ -19,6 +19,16 @@ export class Activity {
     @Prop({
         required: true,
     })
+    startAt: Date;
+
+    @Prop({
+        default: null,
+    })
+    endAt: Date;
+
+    @Prop({
+        required: true,
+    })
     location: string;
 
     @Prop({

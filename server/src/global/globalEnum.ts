@@ -26,3 +26,14 @@ export enum ActivityStatus {
     COMPLETED = 'COMPLETED',  // Đã kết thúc
     CANCELLED = 'CANCELLED',  // Bị hủy
 }
+
+export enum OrganizerStatus {
+    ACTIVE = 1,
+    INACTIVE = 2
+}
+
+export enum OrganizerMemberRole {
+    MANAGER = 'MANAGER',
+    ADMIN = 'ADMIN',
+    MEMBER = 'MEMBER'
+}

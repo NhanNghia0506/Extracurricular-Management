@@ -59,7 +59,7 @@ const RightSidebar: React.FC = () => {
 
             {/* --- Section 1: Recommended Clubs --- */}
             <div className="mb-5">
-                <div className={styles.sectionTitle}>Recommended Clubs</div>
+                <div className={styles.sectionTitle}>Nhóm đề xuất</div>
 
                 {CLUBS.map((club) => (
                     <div key={club.id} className={styles.clubItem}>
@@ -81,7 +81,7 @@ const RightSidebar: React.FC = () => {
             {/* --- Section 2: Active Messages --- */}
             <div className="mb-5">
                 <div className={styles.sectionTitle}>
-                    Active Messages
+                    Tin nhắn đang hoạt động
                     <span className={styles.badgeCount}>3</span>
                 </div>
 
@@ -103,7 +103,7 @@ const RightSidebar: React.FC = () => {
             <div className={styles.proTipCard}>
                 <h6>Pro Tip</h6>
                 <p>
-                    Complete 5 more activities this month to reach <strong>Silver Rank</strong>!
+                    Hãy tham gia vào nhóm chat sau khi đăng ký tham gia hoạt động để nhận được các thông báo mới nhất <strong>Chúc thành công</strong>!
                 </p>
             </div>
 
