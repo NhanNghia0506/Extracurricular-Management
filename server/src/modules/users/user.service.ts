@@ -1,20 +1,22 @@
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { RegisterDto } from "./dtos/register.dto";
+import { RegisterStudentDto, RegisterTeacherDto } from "./dtos/register.dto";
 import { LoginDto } from "./dtos/login.dto";
 import { UserRepository } from "./user.repository";
 import bcrypt from 'bcrypt';
 import { UserRole, UserStatus } from "src/global/globalEnum";
 import StudentService from "../students/student.service";
+import TeacherService from "../teachers/teacher.service";
 @Injectable()
 class UserService {
     constructor(
         private readonly userRepository: UserRepository,
         private readonly studentService: StudentService,
+        private readonly teacherService: TeacherService,
         private readonly jwtService: JwtService,
     ) { }
 
-    async createStudent(userData: RegisterDto) {
+    async createStudent(userData: RegisterStudentDto) {
         if (await this.userRepository.findByEmail(userData.email)) {
             throw new ConflictException('Email đã được sử dụng');
         }
@@ -49,6 +51,40 @@ class UserService {
         };
     }
 
+    async createTeacher(userData: RegisterTeacherDto) {
+        if (await this.userRepository.findByEmail(userData.email)) {
+            throw new ConflictException('Email đã được sử dụng');
+        }
+
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+        const { name, email, avatar, teacherCode, facultyId } = userData;
+
+        // Tạo user
+        const user = await this.userRepository.create({
+            name,
+            email,
+            avatar,
+            password: hashedPassword,
+            role: UserRole.TEACHER,
+            status: UserStatus.ACTIVE,
+        });
+
+        // Tạo giáo viên
+        await this.teacherService.create({
+            userId: user._id.toString(),
+            teacherCode,
+            facultyId,
+        })
+
+        return {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        };
+    }
+
     async login(loginData: LoginDto) {
         // Tìm user theo email
         const user = await this.userRepository.findByEmail(loginData.email);
@@ -65,8 +101,8 @@ class UserService {
         }
 
         // Tạo JWT token
-        const payload = { sub: user._id, email: user.email, role: user.role };
-    
+        const payload = { sub: user._id, email: user.email, name: user.name, role: user.role };
+
         const access_token = this.jwtService.sign(payload);
 
         // Trả về thông tin user và token nếu đăng nhập thành công

@@ -1,0 +1,128 @@
+/* Login.module.scss */
+
+$primary-blue: #2563eb;
+$bg-light: #f8fafc;
+$text-main: #0f172a;
+$text-muted: #64748b;
+$border-color: #e2e8f0;
+
+.loginPage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: $bg-light;
+    padding: 1rem;
+}
+
+// --- Logo & Title ---
+.header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+
+    .logoImage {
+        width: 200px;
+        height: auto;
+        margin-bottom: 1rem;
+        object-fit: contain;
+    }
+
+    p {
+        color: $text-muted;
+        font-weight: 500;
+    }
+}
+
+// --- Login Card ---
+.loginCard {
+    background: #ffffff;
+    padding: 2.5rem;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+// --- Input Styling ---
+.inputGroup {
+    margin-bottom: 1.5rem;
+
+    label {
+        display: block;
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        color: $text-main;
+    }
+
+    .inputWrapper {
+        position: relative;
+
+        input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid $border-color;
+            border-radius: 10px;
+            background-color: #fcfcfc;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-blue;
+                background-color: #fff;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+            }
+        }
+
+        .eyeIcon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: $text-muted;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+    }
+}
+
+// --- Button ---
+.loginBtn {
+    width: 100%;
+    padding: 0.9rem;
+    background-color: $primary-blue;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 1rem;
+    transition: opacity 0.2s;
+
+    &:hover {
+        opacity: 0.9;
+    }
+
+    &:active {
+        transform: scale(0.99);
+    }
+
+    &:disabled {
+        background-color: #94a3b8;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+}
+
+// --- Error Message ---
+.errorMessage {
+    background-color: #fee2e2;
+    color: #dc2626;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    border-left: 4px solid #dc2626;
+}

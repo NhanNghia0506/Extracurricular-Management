@@ -6,10 +6,12 @@ import UserService from "./user.service";
 import { UserRepository } from "./user.repository";
 import { StudentModule } from "../students/student.module";
 import { JwtModule } from "@nestjs/jwt";
+import { TeacherModule } from "../teachers/teacher.module";
 
 @Module({
     imports: [
         StudentModule,
+        TeacherModule,
         MongooseModule.forFeature([
             { name: User.name, schema: UserSchema }
         ]),

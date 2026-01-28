@@ -9,9 +9,9 @@ export enum HttpMessage {
 }
 
 export enum UserRole {
-    ADMIN = 1,
-    STUDENT = 2,
-    TEACHER = 3,
+    ADMIN = 'ADMIN',
+    STUDENT = 'STUDENT',
+    TEACHER = 'TEACHER',
 }
 
 export enum UserStatus {

@@ -1,14 +1,11 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Header from '../components/Header/header';
 import Sidebar from '../components/SideBar/sidebar'; // Sidebar Trái
 import RightSidebar from '../components/RightSideBar/rightsidebar'; // Sidebar Phải mới tạo
 import styles from './mainlayout.module.scss';
 
-interface MainLayoutProps {
-    children: React.ReactNode;
-}
-
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+const MainLayout: React.FC = () => {
     return (
         <div className={styles.appContainer}>
             <Header />
@@ -21,7 +18,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
                 {/* Cột 2: Nội dung chính (Cuộn được) */}
                 <main className={styles.mainContent}>
-                    {children}
+                    <Outlet />
                 </main>
 
                 {/* Cột 3: Sidebar phải (Chỉ hiện trên màn hình lớn) */}
