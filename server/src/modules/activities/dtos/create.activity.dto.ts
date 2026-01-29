@@ -1,5 +1,21 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional, IsDate } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional, IsDate, IsNumber, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ActivityStatus } from '../../../global/globalEnum';
+import type { LocationData } from 'src/global/globalInterface';
+
+class LocationDataDto {
+    @IsString()
+    @IsNotEmpty()
+    address: string;
+
+    @IsNumber()
+    @IsNotEmpty()
+    latitude: number;
+
+    @IsNumber()
+    @IsNotEmpty()
+    longitude: number;
+}
 
 export class CreateActivityDto {
     @IsString()
@@ -10,9 +26,10 @@ export class CreateActivityDto {
     @IsNotEmpty()
     description: string;
 
-    @IsString()
+    @ValidateNested()
+    @Type(() => LocationDataDto)
     @IsNotEmpty()
-    location: string;
+    location: LocationData;
 
     @IsNotEmpty()
     @IsDate()

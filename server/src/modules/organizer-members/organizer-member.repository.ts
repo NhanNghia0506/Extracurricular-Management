@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { OrganizerMember } from "./organizer-member.entity";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 
 @Injectable()
 export class OrganizerMemberRepository {
@@ -14,14 +14,21 @@ export class OrganizerMemberRepository {
     }
 
     findOrganizationsByUserId(userId: string) {
-        return this.organizerMemberModel.find({ userId }).populate('organizerId').exec();
+        const objectId = new Types.ObjectId(userId);
+        console.log("Fetching organizations for userId:", objectId);
+        return this.organizerMemberModel
+            .find({ userId: objectId, isActive: true })
+            .populate('organizerId')
+            .exec();
     }
 
     findByUserIdAndOrganizerId(userId: string, organizerId: string) {
-        return this.organizerMemberModel.findOne({ 
-            userId, 
-            organizerId 
-        }).exec(); 
+        const userObjectId = new Types.ObjectId(userId);
+        const organizerObjectId = new Types.ObjectId(organizerId);
+        return this.organizerMemberModel.findOne({
+            userId: userObjectId,
+            organizerId: organizerObjectId
+        }).exec();
     }
 
 }

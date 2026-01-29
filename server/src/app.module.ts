@@ -6,6 +6,7 @@ import { AcademicModule } from './modules/academic/academic.module';
 import { ActivityModule } from './modules/activities/activity.module';
 import { OrganizerModule } from './modules/organizers/organizer.module';
 import { OrganizerMemberModule } from './modules/organizer-members/organizer-member.module';
+import { ActivityCategoryModule } from './modules/activity-categories/activity-category.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { OrganizerMemberModule } from './modules/organizer-members/organizer-mem
     AcademicModule,
     ActivityModule,
     OrganizerModule,
-    OrganizerMemberModule
+    OrganizerMemberModule,
+    ActivityCategoryModule,
   ],
   controllers: [],
   providers: [],

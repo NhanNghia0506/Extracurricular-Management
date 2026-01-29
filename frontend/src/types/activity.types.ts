@@ -1,7 +1,13 @@
+export interface LocationData {
+    address: string;
+    latitude: number;
+    longitude: number;
+}
+
 export interface CreateActivity {
     title: string;
     description: string;
-    location: string;
+    location: LocationData;
     image?: string;
     organizerId: string;
     categoryId: string;

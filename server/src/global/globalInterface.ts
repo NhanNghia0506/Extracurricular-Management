@@ -16,3 +16,10 @@ export interface UploadResponse {
     uploadedAt: Date;
   };
 }
+
+// Type cho location (địa chỉ + tọa độ)
+export interface LocationData {
+    address: string;
+    latitude: number;
+    longitude: number;
+}

@@ -39,10 +39,20 @@ export class ActivityController {
         @Body() createActivityDto: CreateActivityDto,
         @UploadedFile() file: Express.Multer.File | undefined,
     ): Promise<Activity> {
-        console.log('Received file:', file);
+
         const uploadedFilename = file?.filename;
 
         try {
+            // Parse location string thành object nếu cần
+            if (typeof createActivityDto.location === 'string') {
+                try {
+                    createActivityDto.location = JSON.parse(createActivityDto.location) as typeof createActivityDto.location;
+                } catch (e) {
+                    console.error('Lỗi parse location:', e);
+                    throw new Error('Location format không hợp lệ');
+                }
+            }
+
             // Nếu có file upload, thêm vào DTO
             if (file) {
                 createActivityDto.image = file.filename;

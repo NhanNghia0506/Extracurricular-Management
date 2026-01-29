@@ -1,8 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ActivityStatus } from '../../global/globalEnum';
+import type { LocationData } from 'src/global/globalInterface';
 
 export type ActivityDocument = Activity & Document;
+
 
 @Schema({ timestamps: true })
 export class Activity {
@@ -28,8 +30,13 @@ export class Activity {
 
     @Prop({
         required: true,
+        type: {
+            address: { type: String, required: true },
+            latitude: { type: Number, required: true },
+            longitude: { type: Number, required: true }
+        }
     })
-    location: string;
+    location: LocationData;
 
     @Prop({
         required: true,
@@ -52,7 +59,7 @@ export class Activity {
 
     @Prop({
         type: Types.ObjectId,
-        ref: 'Category',
+        ref: 'ActivityCategory',
         required: true,
     })
     categoryId: Types.ObjectId;

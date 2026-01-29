@@ -15,6 +15,7 @@ export class OrganizerMemberController {
 
     @Get("my-organizations/:userId")
     getMyOrganizations(@Param("userId") userId: string) {
+        // console.log("Fetching organizations for userId:", userId);
         return this.organizerMemberService.getMyOrganizations(userId);
     }
 

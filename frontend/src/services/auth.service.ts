@@ -3,8 +3,8 @@ import { ApiResponse } from '../types/response.types';
 import { LoginRequest, LoginResponse } from '../types/auth.types';
 
 class AuthService {
-    private readonly AUTH_TOKEN_KEY = 'authToken';
-    private readonly USER_INFO_KEY = 'userInfo';
+    private readonly AUTH_TOKEN_KEY = process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken';
+    private readonly USER_INFO_KEY = process.env.REACT_APP_USER_INFO_KEY || 'userInfo';
 
     async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
         const response = await apiService.post<ApiResponse<LoginResponse>>(

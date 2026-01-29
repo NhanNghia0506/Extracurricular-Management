@@ -6,13 +6,13 @@ export type OrganizerMemberDocument = OrganizerMember & Document;
 
 @Schema({ timestamps: true })
 export class OrganizerMember {
-    @Prop({ required: true, type: Types.ObjectId })
+    @Prop({ required: true, type: Types.ObjectId, ref: 'User' })
     userId: Types.ObjectId;
 
-    @Prop({ required: true, type: Types.ObjectId })
+    @Prop({ required: true, type: Types.ObjectId, ref: 'Organizer' })
     organizerId: Types.ObjectId;
 
-    @Prop({ 
+    @Prop({
         required: true,
         default: OrganizerMemberRole.MEMBER,
         enum: Object.values(OrganizerMemberRole)
