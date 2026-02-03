@@ -11,6 +11,8 @@ export const useActivityForm = () => {
     const [uploading, setUploading] = useState(false);
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
+    const [trainingScore, setTrainingScore] = useState<number>(0);
+    const [participantCount, setParticipantCount] = useState<number>(0);
     const [submitting, setSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -49,6 +51,8 @@ export const useActivityForm = () => {
         setOrganizerId('');
         setStartAt('');
         setEndAt('');
+        setTrainingScore(0);
+        setParticipantCount(0);
         setCoverFile(null);
         setCoverPreview(null);
     };
@@ -65,6 +69,8 @@ export const useActivityForm = () => {
         uploading,
         startAt,
         endAt,
+        trainingScore,
+        participantCount,
         submitting,
         errorMessage,
         fileInputRef,
@@ -74,6 +80,8 @@ export const useActivityForm = () => {
         setCategoryId,
         setOrganizerId,
         setLocation,
+        setTrainingScore,
+        setParticipantCount,
         setCoverFile,
         setCoverPreview,
         setUploading,

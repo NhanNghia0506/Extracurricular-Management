@@ -35,6 +35,10 @@ export class CreateActivityDto {
     @IsDate()
     startAt: Date;
 
+    @IsOptional()
+    @IsDate()
+    endAt?: Date;
+
     @IsEnum(ActivityStatus)
     @IsOptional()
     status?: ActivityStatus;
@@ -50,4 +54,12 @@ export class CreateActivityDto {
     @IsString()
     @IsNotEmpty()
     categoryId: string;
+
+    @IsOptional()
+    @IsNumber()
+    trainingScore?: number;
+
+    @IsOptional()
+    @IsNumber()
+    participantCount?: number;
 }

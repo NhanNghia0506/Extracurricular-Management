@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './postcard.module.scss';
 
 // Định nghĩa kiểu dữ liệu cho một bài viết
@@ -22,9 +23,16 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ data }) => {
-    return (
-        <div className={styles.cardWrapper}>
+    const navigate = useNavigate();
 
+    const handleCardClick = () => {
+        navigate(`/detail/${data.id}`);
+    }; return (
+        <div
+            className={styles.cardWrapper}
+            onClick={handleCardClick}
+            style={{ cursor: 'pointer' }}
+        >
             {/* 1. Header: Logo, Tên tổ chức, Trạng thái */}
             <div className={styles.header}>
                 <div className="d-flex gap-3 align-items-center">
@@ -52,13 +60,13 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
 
             {/* 4. Meta Info (Địa điểm & Điểm thưởng) */}
             <div className={styles.metaRow}>
-                <span>
+                <span className={styles.metaItem}>
                     <i className="fa-solid fa-location-dot"></i>
                     {data.location}
                 </span>
-                <span className={styles.points}>
-                    <i className="fa-solid fa-circle-check"></i>
-                    {data.points} Training Points
+                <span className={`${styles.metaItem} ${styles.points}`}>
+                    <i className="fa-solid fa-award"></i>
+                    {data.points} Điểm rèn luyện
                 </span>
             </div>
 
@@ -77,7 +85,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                 {/* Nút hành động */}
                 {data.status === 'OPEN' ? (
                     <button className={`${styles.actionBtn} ${styles.primary}`}>
-                        Register Now
+                        Đăng ký
                     </button>
                 ) : (
                     <button className={`${styles.actionBtn} ${styles.secondary}`}>
@@ -86,7 +94,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                 )}
             </div>
 
-        </div>
+        </div >
     );
 };
 

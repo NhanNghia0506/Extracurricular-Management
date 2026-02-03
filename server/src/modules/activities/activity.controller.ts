@@ -4,6 +4,8 @@ import {
     Body,
     UseInterceptors,
     UploadedFile,
+    Get,
+    Param,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -11,6 +13,7 @@ import { createUploadImageInterceptor } from '../../interceptors/upload-image.in
 import { UploadService } from '../../interceptors/upload.service';
 import { Activity } from './activity.entity';
 import { ResponseMessage } from 'src/decorators/response-message.decorator';
+import { ActivityDetailResponse } from 'src/global/globalInterface';
 
 
 @Controller('activities')
@@ -66,5 +69,22 @@ export class ActivityController {
             }
             throw error;
         }
+    }
+
+    /**
+     * Lấy danh sách hoạt động
+     * Endpoint: GET /activities
+     */
+    @ResponseMessage('Lấy danh sách hoạt động thành công')
+    @Get()
+    async findAll(): Promise<Activity[]> {
+        return this.activityService.findAll();
+    }
+
+    // Lấy ra chi tiết một hoạt động bao gồm cả số lượng người tham gia
+    @ResponseMessage('Lấy chi tiết hoạt động thành công')
+    @Get(':id')
+    async getActivityById(@Param('id') id: string): Promise<ActivityDetailResponse | null> {
+        return this.activityService.findActivityDetailById(id);
     }
 }

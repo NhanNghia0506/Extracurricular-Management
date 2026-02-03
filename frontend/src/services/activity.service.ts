@@ -19,6 +19,8 @@ const activityService = {
         );
     },
     categories: () => apiService.get('/activity-categories'),
+    list: () => apiService.get('/activities'),
+    getDetail: (id: string) => apiService.get(`/activities/${id}`),
 }
 
 export default activityService;

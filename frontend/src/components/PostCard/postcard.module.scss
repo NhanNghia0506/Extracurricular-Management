@@ -104,7 +104,7 @@
     gap: 1.5rem;
     margin-bottom: 1.5rem;
     font-size: 0.9rem;
-    color: var(--color-text-muted);
+    color: var(--color-text-muted, #64748b);
     font-weight: 500;
 
     i {
@@ -114,8 +114,18 @@
     }
 
     .points {
-        color: var(--color-primary-blue);
+        color: var(--color-primary-blue, #2563eb);
         font-weight: 600;
+    }
+}
+
+.metaItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+        color: currentColor;
     }
 }
 

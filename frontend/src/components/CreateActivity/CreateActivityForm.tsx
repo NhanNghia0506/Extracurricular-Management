@@ -9,6 +9,8 @@ interface CreateActivityFormProps {
     organizerId: string;
     startAt: string;
     endAt: string;
+    trainingScore: number;
+    participantCount: number;
     coverPreview: string | null;
     uploading: boolean;
     submitting: boolean;
@@ -22,6 +24,8 @@ interface CreateActivityFormProps {
     onOrganizerChange: (value: string) => void;
     onStartAtChange: (value: string) => void;
     onEndAtChange: (value: string) => void;
+    onTrainingScoreChange: (value: number) => void;
+    onParticipantCountChange: (value: number) => void;
     onUploadClick: () => void;
     onCoverFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -43,6 +47,8 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
     organizerId,
     startAt,
     endAt,
+    trainingScore,
+    participantCount,
     coverPreview,
     uploading,
     submitting,
@@ -56,6 +62,8 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
     onOrganizerChange,
     onStartAtChange,
     onEndAtChange,
+    onTrainingScoreChange,
+    onParticipantCountChange,
     onUploadClick,
     onCoverFileChange,
     onSubmit,
@@ -168,13 +176,34 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
                 />
 
                 {/* Thời gian kết thúc */}
-                <label>Thời Gian Kết Thúc</label>
+                <label>Thời Gian Kết Thúc (không bắt buộc)</label>
                 <input
                     type="datetime-local"
                     className={styles.customInput}
                     value={endAt}
-                    min={startAt || undefined}
                     onChange={(e) => onEndAtChange(e.target.value)}
+                />
+
+                {/* Điểm rèn luyện */}
+                <label>Điểm Rèn Luyện</label>
+                <input
+                    type="number"
+                    className={styles.customInput}
+                    placeholder="Nhập điểm rèn luyện"
+                    value={trainingScore}
+                    min="0"
+                    onChange={(e) => onTrainingScoreChange(Number(e.target.value))}
+                />
+
+                {/* Số lượng tham gia */}
+                <label>Số Lượng Tham Gia</label>
+                <input
+                    type="number"
+                    className={styles.customInput}
+                    placeholder="Nhập số lượng tham gia"
+                    value={participantCount}
+                    min="0"
+                    onChange={(e) => onParticipantCountChange(Number(e.target.value))}
                 />
 
                 {/* Location & Map */}

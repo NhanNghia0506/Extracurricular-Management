@@ -1,61 +1,95 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PostCard, { PostData } from '../../../components/PostCard/postcard';
-
-// DỮ LIỆU GIẢ LẬP (MOCK DATA) - Giống hệt hình ảnh
-const POSTS: PostData[] = [
-    {
-        id: '1',
-        title: 'Annual Hackathon 2024',
-        organization: 'Computer Science Society',
-        orgIcon: 'fa-solid fa-code', // Icon code
-        orgColor: 'blue',
-        status: 'OPEN',
-        image: 'https://cdn.dribbble.com/users/1200062/screenshots/16382974/media/3f080775d1607b32252b472851493025.png?resize=800x600&vertical=center', // Ảnh minh họa hackathon
-        description: 'Join us for 48 hours of innovation, coding, and networking. No experience required, just bring your enthusiasm!',
-        location: 'Main Campus, Lab 402',
-        points: 150,
-        participants: [
-            'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-            'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
-            'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob'
-        ],
-        participantCount: 42
-    },
-    {
-        id: '2',
-        title: 'Creative Arts Workshop',
-        organization: 'Fine Arts Club',
-        orgIcon: 'fa-solid fa-palette', // Icon bảng vẽ
-        orgColor: 'orange',
-        status: 'WAITLIST',
-        image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2071&auto=format&fit=crop', // Ảnh minh họa nghệ thuật
-        description: 'Explore different mediums of expression. This weekend we focus on watercolor techniques and urban sketching.',
-        location: 'Student Union, Level 2',
-        points: 80,
-        participants: [
-            'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice',
-            'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike'
-        ],
-        participantCount: 15
-    }
-];
+import activityService from '../../../services/activity.service';
+import { ActivityListItem } from '../../../types/activity.types';
+import { ApiResponse } from '../../../types/response.types';
 
 const Feed: React.FC = () => {
+    const [activities, setActivities] = useState<ActivityListItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchActivities = async () => {
+            try {
+                setLoading(true);
+                const response = await activityService.list();
+                const payload = response.data as ApiResponse<ActivityListItem[]>;
+                if (payload.success) {
+                    setActivities(payload.data || []);
+                } else {
+                    setError(payload.message || 'Không thể tải hoạt động');
+                }
+            } catch (err) {
+                console.error('Lỗi fetch activities:', err);
+                setError('Không thể tải hoạt động');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchActivities();
+    }, []);
+
+    const baseUrl = useMemo(
+        () => process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001',
+        []
+    );
+
+    const posts: PostData[] = useMemo(() => {
+        return activities.map((activity, index) => {
+            const organizerName = typeof activity.organizerId === 'string'
+                ? 'Unknown Organizer'
+                : activity.organizerId?.name || 'Unknown Organizer';
+
+            const locationText = activity.location?.address || 'Unknown location';
+            const imageUrl = activity.image
+                ? `${baseUrl}/uploads/${activity.image}`
+                : 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
+
+            const status = activity.status === 'OPEN' ? 'OPEN' : 'WAITLIST';
+
+            return {
+                id: activity._id,
+                title: activity.title,
+                organization: organizerName,
+                orgIcon: 'fa-solid fa-building',
+                orgColor: index % 2 === 0 ? 'blue' : 'orange',
+                status,
+                image: imageUrl,
+                description: activity.description,
+                location: locationText,
+                points: 0,
+                participants: [],
+                participantCount: 0,
+            };
+        });
+    }, [activities, baseUrl]);
+
     return (
         <div className="container-fluid p-0" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* Tiêu đề trang nếu cần */}
-            {/* <h4 className="mb-4 fw-bold">Latest Activities</h4> */}
+            {error && (
+                <div className="alert alert-danger" role="alert">
+                    {error}
+                </div>
+            )}
 
-            {/* Duyệt qua mảng và render Card */}
-            {POSTS.map((post) => (
+            {posts.map((post) => (
                 <PostCard key={post.id} data={post} />
             ))}
 
-            {/* Loading Spinner (Giả lập cuộn vô tận) */}
-            <div className="text-center py-4 text-muted">
-                <i className="fa-solid fa-spinner fa-spin me-2"></i>
-                Loading more activities...
-            </div>
+            {loading && (
+                <div className="text-center py-4 text-muted">
+                    <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                    Loading more activities...
+                </div>
+            )}
+
+            {!loading && posts.length === 0 && !error && (
+                <div className="text-center py-4 text-muted">
+                    Chưa có hoạt động nào.
+                </div>
+            )}
         </div>
     );
 };

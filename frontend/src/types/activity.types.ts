@@ -15,3 +15,46 @@ export interface CreateActivity {
     endAt?: string;
     status?: string;
 }
+
+export interface ActivityListItem {
+    _id: string;
+    title: string;
+    description: string;
+    location: LocationData;
+    status: string;
+    image?: string;
+    organizerId?: {
+        _id?: string;
+        name?: string;
+    } | string;
+    categoryId?: {
+        _id?: string;
+        name?: string;
+    } | string;
+    startAt: string;
+    endAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface ActivityDetailResponse {
+    id: string;
+    title: string;
+    description: string;
+    startAt: string;
+    endAt?: string;
+    location: LocationData;
+    status: string;
+    image?: string;
+    trainingScore?: number;
+    participantCount?: number;
+    organizer: {
+        _id: string;
+        name: string;
+    };
+    category: {
+        _id: string;
+        name: string;
+    };
+    registeredCount: number;
+}

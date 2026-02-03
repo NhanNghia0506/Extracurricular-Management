@@ -13,4 +13,21 @@ export class ActivityRepository {
     create(activity: Partial<Activity>): Promise<Activity> {
         return this.activityModel.create(activity);
     }
+
+    findAll(): Promise<Activity[]> {
+        return this.activityModel
+            .find()
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
+    findById(id: string) {
+        return this.activityModel
+            .findById(id)
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .exec();
+    }
 }

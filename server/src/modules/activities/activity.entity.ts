@@ -63,6 +63,18 @@ export class Activity {
         required: true,
     })
     categoryId: Types.ObjectId;
+
+    @Prop({
+        required: false,
+        default: 0,
+    })
+    trainingScore: number;
+
+    @Prop({
+        required: false,
+        default: 0,
+    })
+    participantCount: number;
 }
 
 export const ActivitySchema = SchemaFactory.createForClass(Activity);

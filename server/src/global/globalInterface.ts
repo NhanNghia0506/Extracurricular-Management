@@ -23,3 +23,18 @@ export interface LocationData {
     latitude: number;
     longitude: number;
 }
+
+export interface ActivityDetailResponse {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  trainingScore: number;
+  startAt: Date;
+  endAt: Date;
+  location: LocationData;
+  status: string;
+  organizer: any;
+  category: any;
+  participantCount: number;
+}

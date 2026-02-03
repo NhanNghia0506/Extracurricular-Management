@@ -27,8 +27,7 @@ const CreateActivity: React.FC = () => {
         if (!form.organizerId) errors.push('Vui lòng chọn người tổ chức.');
         if (!location.location.trim()) errors.push('Địa điểm không được để trống.');
         if (!form.startAt) errors.push('Vui lòng chọn thời gian bắt đầu.');
-        if (!form.endAt) errors.push('Vui lòng chọn thời gian kết thúc.');
-        if (form.startAt && form.endAt && new Date(form.startAt) >= new Date(form.endAt)) {
+        if (form.endAt && form.startAt && new Date(form.startAt) >= new Date(form.endAt)) {
             errors.push('Thời gian kết thúc phải sau thời gian bắt đầu.');
         }
 
@@ -51,7 +50,15 @@ const CreateActivity: React.FC = () => {
             formData.append('organizerId', form.organizerId);
             formData.append('categoryId', form.categoryId);
             formData.append('startAt', new Date(form.startAt).toISOString());
-            formData.append('endAt', new Date(form.endAt).toISOString());
+            if (form.endAt) {
+                formData.append('endAt', new Date(form.endAt).toISOString());
+            }
+            if (form.trainingScore) {
+                formData.append('trainingScore', form.trainingScore.toString());
+            }
+            if (form.participantCount) {
+                formData.append('participantCount', form.participantCount.toString());
+            }
 
             // Thêm file nếu có
             if (form.coverFile) {
@@ -92,6 +99,10 @@ const CreateActivity: React.FC = () => {
                 onOrganizerChange={form.setOrganizerId}
                 onStartAtChange={form.setStartAt}
                 onEndAtChange={form.setEndAt}
+                trainingScore={form.trainingScore}
+                participantCount={form.participantCount}
+                onTrainingScoreChange={form.setTrainingScore}
+                onParticipantCountChange={form.setParticipantCount}
                 onUploadClick={form.handleUploadClick}
                 onCoverFileChange={form.handleCoverFileChange}
                 onSubmit={handleSubmit}
