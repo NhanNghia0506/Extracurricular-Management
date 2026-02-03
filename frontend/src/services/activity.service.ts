@@ -21,6 +21,7 @@ const activityService = {
     categories: () => apiService.get('/activity-categories'),
     list: () => apiService.get('/activities'),
     getDetail: (id: string) => apiService.get(`/activities/${id}`),
+    register: (activityId: string) => apiService.post('/activity-participants', { activityId }),
 }
 
 export default activityService;

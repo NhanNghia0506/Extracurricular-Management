@@ -7,10 +7,6 @@ export class CreateActivityParticipantDto {
     @IsNotEmpty()
     activityId: string;
 
-    @IsMongoId()
-    @IsNotEmpty()
-    userId: string;
-
     @IsEnum(ParticipantStatus)
     @IsOptional()
     status?: ParticipantStatus;

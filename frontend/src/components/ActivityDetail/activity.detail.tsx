@@ -21,6 +21,7 @@ const ActivityDetail: React.FC = () => {
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [registering, setRegistering] = useState(false);
 
     useEffect(() => {
         const fetchActivityDetail = async () => {
@@ -44,6 +45,24 @@ const ActivityDetail: React.FC = () => {
 
         fetchActivityDetail();
     }, [id]);
+
+    const handleRegister = async () => {
+        if (!id) return;
+        
+        try {
+            setRegistering(true);
+            await activityService.register(id);
+            alert('Đăng ký tham gia thành công!');
+            // Reload lại dữ liệu để cập nhật số người đăng ký
+            const response = await activityService.getDetail(id);
+            setActivity(response.data.data);
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Không thể đăng ký. Vui lòng thử lại!');
+            console.error('Error registering:', err);
+        } finally {
+            setRegistering(false);
+        }
+    };
 
     if (loading) return <div className="text-center py-5">Đang tải...</div>;
     if (error) return <div className="text-center py-5 text-danger">{error}</div>;
@@ -155,8 +174,13 @@ const ActivityDetail: React.FC = () => {
                                 }}
                             ></div>
                         </div>
-                        <button className={styles.registerBtn}>
-                            <i className="fa-solid fa-id-card"></i> Đăng ký ngay
+                        <button 
+                            className={styles.registerBtn}
+                            onClick={handleRegister}
+                            disabled={registering}
+                        >
+                            <i className="fa-solid fa-id-card"></i> 
+                            {registering ? 'Đang đăng ký...' : 'Đăng ký ngay'}
                         </button>
                         <p className="text-center text-muted small m-0">Đăng ký kết thúc trong 2 ngày</p>
                     </div>

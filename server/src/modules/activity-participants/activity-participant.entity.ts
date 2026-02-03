@@ -20,7 +20,6 @@ export class ActivityParticipant {
 
     @Prop({
         required: false,
-        default: ParticipantStatus.PENDING,
         enum: Object.values(ParticipantStatus)
     })
     status?: ParticipantStatus;
