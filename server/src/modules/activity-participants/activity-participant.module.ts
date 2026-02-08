@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ActivityParticipantService } from './activity-participant.service';
 import { ActivityParticipantController } from './activity-participant.controller';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -6,6 +6,7 @@ import { ActivityParticipant, ActivityParticipantSchema } from './activity-parti
 import { ActivityParticipantRepository } from './activity-participant.repository';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from 'src/guards/auth.guard';
+import { ActivityModule } from '../activities/activity.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
             secret: process.env.JWT_SECRET || 'your-secret-key',
             signOptions: { expiresIn: '7d' },
         }),
+        forwardRef(() => ActivityModule),
     ],
     controllers: [ActivityParticipantController],
     providers: [ActivityParticipantService, ActivityParticipantRepository, AuthGuard],

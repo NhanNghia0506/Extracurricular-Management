@@ -161,32 +161,26 @@
     margin-left: 8px;
 }
 
-// Nút đăng ký
-.actionBtn {
-    padding: 0.6rem 1.5rem;
-    font-weight: 600;
-    border-radius: 12px;
-    font-size: 0.95rem;
+// Icon bình luận (Facebook style)
+.commentBtn {
+    background-color: transparent;
     border: none;
-    transition: all 0.2s;
+    color: var(--color-text-muted, #64748b);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0.4rem 0.4rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    // Style nút Register Now (Xanh)
-    &.primary {
-        background-color: #2563eb;
-        color: white;
-
-        &:hover {
-            background-color: #1d4ed8;
-        }
+    &:hover {
+        background-color: var(--color-bg-very-light, #f1f5f9);
+        color: var(--color-primary-blue, #2563eb);
     }
 
-    // Style nút Waitlist (Xám nhạt)
-    &.secondary {
-        background-color: #f1f5f9;
-        color: #475569;
-
-        &:hover {
-            background-color: #e2e8f0;
-        }
+    &:active {
+        transform: scale(0.95);
     }
 }

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Modal } from 'react-bootstrap';
 import styles from './postcard.module.scss';
+import CommentSection from '../Comments/comment.section';
 
 // Định nghĩa kiểu dữ liệu cho một bài viết
 export interface PostData {
@@ -24,14 +26,20 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const navigate = useNavigate();
+    const [showCommentModal, setShowCommentModal] = useState(false);
 
     const handleCardClick = () => {
         navigate(`/detail/${data.id}`);
-    }; return (
+    };
+
+    const handleCommentClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Ngăn trigger cardClick
+        setShowCommentModal(true);
+    };
+
+    return (
         <div
             className={styles.cardWrapper}
-            onClick={handleCardClick}
-            style={{ cursor: 'pointer' }}
         >
             {/* 1. Header: Logo, Tên tổ chức, Trạng thái */}
             <div className={styles.header}>
@@ -51,7 +59,13 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
             </div>
 
             {/* 2. Ảnh Banner */}
-            <img src={data.image} alt={data.title} className={styles.bannerImage} />
+            <img
+                src={data.image}
+                alt={data.title}
+                className={styles.bannerImage}
+                onClick={handleCardClick}
+                style={{ cursor: 'pointer' }}
+            />
 
             {/* 3. Nội dung mô tả */}
             <p className={styles.description}>
@@ -72,7 +86,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
 
             <hr style={{ borderColor: '#f1f5f9', margin: '0 0 1.5rem 0' }} />
 
-            {/* 5. Footer: Avatar & Nút bấm */}
+            {/* 5. Footer: Avatar & Icon bình luận */}
             <div className={styles.footer}>
                 {/* Nhóm Avatar */}
                 <div className={styles.participantGroup}>
@@ -82,19 +96,31 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                     <span className={styles.moreCount}>+{data.participantCount}</span>
                 </div>
 
-                {/* Nút hành động */}
-                {data.status === 'OPEN' ? (
-                    <button className={`${styles.actionBtn} ${styles.primary}`}>
-                        Đăng ký
-                    </button>
-                ) : (
-                    <button className={`${styles.actionBtn} ${styles.secondary}`}>
-                        Waitlist
-                    </button>
-                )}
+                {/* Icon bình luận */}
+                <button
+                    className={styles.commentBtn}
+                    onClick={handleCommentClick}
+                    title="Bình luận"
+                >
+                    <i className="fa-solid fa-comment"></i>
+                </button>
             </div>
 
-        </div >
+            {/* Modal Comment */}
+            <Modal
+                show={showCommentModal}
+                onHide={() => setShowCommentModal(false)}
+                size="lg"
+                centered
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>{data.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <CommentSection activityId={data.id} />
+                </Modal.Body>
+            </Modal>
+        </div>
     );
 };
 

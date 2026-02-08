@@ -6,6 +6,8 @@ import {
     UploadedFile,
     Get,
     Param,
+    UseGuards,
+    Req,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -14,6 +16,8 @@ import { UploadService } from '../../interceptors/upload.service';
 import { Activity } from './activity.entity';
 import { ResponseMessage } from 'src/decorators/response-message.decorator';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
+import { AuthGuard } from "src/guards/auth.guard";
+import type { Request } from 'express';
 
 
 @Controller('activities')
@@ -38,10 +42,17 @@ export class ActivityController {
     @ResponseMessage('Tạo hoạt động thành công')
     @Post()
     @UseInterceptors(createUploadImageInterceptor())
+    @UseGuards(AuthGuard)
     async create(
         @Body() createActivityDto: CreateActivityDto,
         @UploadedFile() file: Express.Multer.File | undefined,
+        @Req() req: Request,
     ): Promise<Activity> {
+
+        const userRole = req.user?.role;
+        if (userRole !== 'ADMIN' && userRole !== 'TEACHER') {
+            throw new Error('Bạn không có quyền tạo hoạt động');
+        }
 
         const uploadedFilename = file?.filename;
 

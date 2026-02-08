@@ -7,6 +7,7 @@ import { ActivityModule } from './modules/activities/activity.module';
 import { OrganizerModule } from './modules/organizers/organizer.module';
 import { OrganizerMemberModule } from './modules/organizer-members/organizer-member.module';
 import { ActivityCategoryModule } from './modules/activity-categories/activity-category.module';
+import { ActivityParticipantModule } from './modules/activity-participants/activity-participant.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ActivityCategoryModule } from './modules/activity-categories/activity-c
     OrganizerModule,
     OrganizerMemberModule,
     ActivityCategoryModule,
+    ActivityParticipantModule
   ],
   controllers: [],
   providers: [],

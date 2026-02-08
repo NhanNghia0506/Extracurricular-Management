@@ -1,0 +1,180 @@
+/* Comments.module.scss */
+$bg-comment: #f1f5f9;
+$text-dark: #0f172a;
+$text-muted: #64748b;
+$primary-blue: #2563eb;
+
+.commentsContainer {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h5 {
+        font-weight: 800;
+        margin: 0;
+
+        span {
+            color: $text-muted;
+            font-weight: 400;
+            margin-left: 8px;
+        }
+    }
+
+    .sortDropdown {
+        font-size: 0.9rem;
+        color: $text-muted;
+        font-weight: 600;
+        cursor: pointer;
+
+        i {
+            margin-left: 5px;
+        }
+    }
+}
+
+// --- Ô nhập bình luận ---
+.inputWrapper {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 2rem;
+
+    .userAvatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .fieldContainer {
+        flex: 1;
+
+        .inputBox {
+            background-color: $bg-comment;
+            border-radius: 20px;
+            padding: 0.6rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            input {
+                flex: 1;
+                background: transparent;
+                border: none;
+                outline: none;
+                font-size: 0.95rem;
+            }
+
+            .iconActions {
+                display: flex;
+                gap: 12px;
+                color: $text-muted;
+                cursor: pointer;
+            }
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: $text-muted;
+            margin: 8px 0 0 12px;
+        }
+    }
+}
+
+// --- Danh sách bình luận ---
+.commentList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.commentItem {
+    display: flex;
+    gap: 12px;
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .commentContent {
+        flex: 1;
+
+        .bubble {
+            background-color: $bg-comment;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            display: inline-block;
+            max-width: 100%;
+
+            .authorName {
+                font-weight: 800;
+                font-size: 0.95rem;
+                display: block;
+                margin-bottom: 2px;
+                color: $text-dark;
+            }
+
+            .text {
+                font-size: 0.95rem;
+                line-height: 1.5;
+                color: $text-dark;
+            }
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 6px;
+            margin-left: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: $text-muted;
+
+            span {
+                cursor: pointer;
+
+                &:hover {
+                    color: $primary-blue;
+                }
+            }
+
+            .time {
+                font-weight: 400;
+                cursor: default;
+            }
+        }
+    }
+}
+
+// --- Bình luận con (Replies) ---
+.repliesContainer {
+    margin-top: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.viewMore {
+    color: $primary-blue;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    display: inline-block;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}

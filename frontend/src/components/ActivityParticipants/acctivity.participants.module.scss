@@ -1,0 +1,284 @@
+.managementWrapper {
+    padding: 2rem;
+    background-color: var(--color-bg-light);
+    min-height: 100vh;
+}
+
+// --- Header ---
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+
+    h2 {
+        font-weight: 800;
+        color: var(--color-text-main);
+        margin-bottom: 0.25rem;
+    }
+
+    p {
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+    }
+
+    .actionButtons {
+        display: flex;
+        gap: 12px;
+    }
+}
+
+.btnOutline {
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-light);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-main);
+}
+
+.btnPrimary {
+    background: var(--color-primary-blue);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+// --- Stats Cards ---
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.statCard {
+    background: var(--color-bg-white);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--color-border-light);
+    position: relative;
+
+    label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+
+    .valueContainer {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+
+        .number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--color-text-main);
+        }
+
+        .trend {
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .up {
+            color: var(--color-status-success);
+        }
+
+        .down {
+            color: var(--color-status-error);
+        }
+    }
+
+    .iconBadge {
+        position: absolute;
+        top: 1.5rem;
+        right: 1.5rem;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+}
+
+// --- Table Section ---
+.tableContainer {
+    background: var(--color-bg-white);
+    border-radius: 16px;
+    border: 1px solid var(--color-border-light);
+    overflow: hidden;
+}
+
+.tableFilters {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-light);
+
+    .leftFilters {
+        display: flex;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .searchBox {
+        position: relative;
+        width: 300px;
+
+        i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--color-border-light);
+            background: var(--color-bg-lighter);
+        }
+    }
+
+    .selectBox {
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--color-border-light);
+        background: var(--color-bg-lighter);
+        font-size: 0.9rem;
+        color: var(--color-text-main);
+        min-width: 130px;
+    }
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+        background: var(--color-bg-light);
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--color-border-light);
+    }
+
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--color-border-lighter);
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+
+    .studentInfo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--color-bg-very-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+    }
+}
+
+// --- Status Badges ---
+.statusBadge {
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    &::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    &.confirmed {
+        background: var(--color-status-success-light);
+        color: var(--color-status-success);
+
+        &::before {
+            background: var(--color-status-success);
+        }
+    }
+
+    &.pending {
+        background: var(--color-bg-orange-light);
+        color: var(--color-status-warning);
+
+        &::before {
+            background: var(--color-status-warning);
+        }
+    }
+
+    &.checkedIn {
+        background: var(--color-bg-blue-light);
+        color: var(--color-primary-blue);
+
+        &::before {
+            background: var(--color-primary-blue);
+        }
+    }
+}
+
+// --- Pagination ---
+.pagination {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+
+    .pageNumbers {
+        display: flex;
+        gap: 8px;
+
+        button {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border-light);
+            background: var(--color-bg-white);
+
+            &.active {
+                background: var(--color-primary-blue);
+                color: white;
+                border-color: var(--color-primary-blue);
+            }
+        }
+    }
+}

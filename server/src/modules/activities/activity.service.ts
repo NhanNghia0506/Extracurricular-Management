@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ActivityRepository } from './activity.repository';
 import { CreateActivityDto } from './dtos/create.activity.dto';
 import { Types } from 'mongoose';
@@ -12,6 +12,7 @@ import { ActivityParticipantService } from '../activity-participants/activity-pa
 export class ActivityService {
     constructor(
         private readonly activityRepository: ActivityRepository,
+        @Inject(forwardRef(() => ActivityParticipantService))
         private readonly activityParticipantService: ActivityParticipantService,
     ) { }
 
@@ -94,5 +95,9 @@ export class ActivityService {
             category: activity.categoryId,
             registeredCount: participantCount,
         } as ActivityDetailResponse;
+    }
+
+    findById(id: string): Promise<Activity | null> {
+        return this.activityRepository.findById(id);
     }
 }

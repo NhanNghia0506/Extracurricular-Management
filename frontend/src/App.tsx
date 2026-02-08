@@ -8,6 +8,8 @@ import LoginPage from './pages/LoginPage';
 import WithSidebarLayout from './layouts/WithSidebarLayout/withsidebarlayout';
 import Attendance from './components/Attendance/attendance';
 import ActivityDetail from './components/ActivityDetail/activity.detail';
+import ActivityParticipants from './components/ActivityParticipants/acctivity.participants';
+import NoSidebarLayout from './layouts/NoSidebarLayout/nosidebarlayout';
 
 function App() {
   return (
@@ -27,6 +29,9 @@ function App() {
           <Route path="/detail/:id" element={<ActivityDetail />} />
         </Route>
 
+        <Route element={<NoSidebarLayout />}>
+          <Route path="/participants/:activityId" element={<ActivityParticipants />} />
+        </Route>
       </Routes>
     </Router>
   );

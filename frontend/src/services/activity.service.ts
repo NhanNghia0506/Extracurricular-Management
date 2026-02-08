@@ -22,6 +22,7 @@ const activityService = {
     list: () => apiService.get('/activities'),
     getDetail: (id: string) => apiService.get(`/activities/${id}`),
     register: (activityId: string) => apiService.post('/activity-participants', { activityId }),
+    participantsByActivity: (activityId: string) => apiService.get(`/activity-participants/participantsByActivity/${activityId}`),
 }
 
 export default activityService;
