@@ -7,6 +7,7 @@ import { ActivityRepository } from './activity.repository';
 import { UploadService } from '../../interceptors/upload.service';
 import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
 import { JwtModule } from '@nestjs/jwt';
+import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { JwtModule } from '@nestjs/jwt';
             signOptions: { expiresIn: '7d' },
         }),
         forwardRef(() => ActivityParticipantModule),
+        OrganizerMemberModule,
     ],
     controllers: [ActivityController],
     providers: [ActivityService, ActivityRepository, UploadService],

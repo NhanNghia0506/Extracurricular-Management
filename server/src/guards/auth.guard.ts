@@ -1,27 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
-
-interface CustomJwtPayload {
-    sub: string;
-    email: string;
-    name: string;
-    role: string;
-}
-
-declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
-    namespace Express {
-        interface Request {
-            user?: {
-                id?: string;
-                email?: string;
-                name?: string;
-                role?: string;
-            };
-        }
-    }
-}
+import { CustomJwtPayload } from "src/global/globalInterface";
 
 @Injectable()
 export class AuthGuard implements CanActivate {

@@ -7,7 +7,6 @@ import {
     Get,
     Param,
     UseGuards,
-    Req,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -17,10 +16,10 @@ import { Activity } from './activity.entity';
 import { ResponseMessage } from 'src/decorators/response-message.decorator';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
 import { AuthGuard } from "src/guards/auth.guard";
-import type { Request } from 'express';
+import { OrganizerManagerGuard } from 'src/guards/organizer.manager.guard';
 
 
-@Controller('activities')
+@Controller()
 export class ActivityController {
     constructor(
         private readonly activityService: ActivityService,
@@ -29,7 +28,7 @@ export class ActivityController {
 
     /**
      * Tạo activity mới với upload ảnh
-     * Endpoint: POST /activities
+    * Endpoint: POST /organizers/:organizerId/activities
      * Form-data:
      *   - title: string (bắt buộc)
      *   - description: string (bắt buộc)
@@ -40,19 +39,15 @@ export class ActivityController {
      *   - image: file (tùy chọn, max 5MB)
      */
     @ResponseMessage('Tạo hoạt động thành công')
-    @Post()
+    @Post('organizers/:organizerId/activities')
     @UseInterceptors(createUploadImageInterceptor())
-    @UseGuards(AuthGuard)
+    @UseGuards(AuthGuard, OrganizerManagerGuard)
     async create(
         @Body() createActivityDto: CreateActivityDto,
         @UploadedFile() file: Express.Multer.File | undefined,
-        @Req() req: Request,
+        @Param('organizerId') organizerId: string,
     ): Promise<Activity> {
-
-        const userRole = req.user?.role;
-        if (userRole !== 'ADMIN' && userRole !== 'TEACHER') {
-            throw new Error('Bạn không có quyền tạo hoạt động');
-        }
+        createActivityDto.organizerId = organizerId;
 
         const uploadedFilename = file?.filename;
 
@@ -87,14 +82,14 @@ export class ActivityController {
      * Endpoint: GET /activities
      */
     @ResponseMessage('Lấy danh sách hoạt động thành công')
-    @Get()
+    @Get('activities')
     async findAll(): Promise<Activity[]> {
         return this.activityService.findAll();
     }
 
     // Lấy ra chi tiết một hoạt động bao gồm cả số lượng người tham gia
     @ResponseMessage('Lấy chi tiết hoạt động thành công')
-    @Get(':id')
+    @Get('activities/:id')
     async getActivityById(@Param('id') id: string): Promise<ActivityDetailResponse | null> {
         return this.activityService.findActivityDetailById(id);
     }

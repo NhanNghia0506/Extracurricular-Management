@@ -65,7 +65,7 @@ const CreateActivity: React.FC = () => {
                 formData.append('image', form.coverFile);
             }
 
-            await activityService.createWithFile(formData);
+            await activityService.createWithFile(form.organizerId, formData);
 
             alert('Tạo hoạt động thành công');
             form.resetForm();

@@ -38,3 +38,10 @@ export interface ActivityDetailResponse {
   category: any;
   participantCount: number;
 }
+
+export interface CustomJwtPayload {
+  sub: string;
+  email: string;
+  name: string;
+  role: string;
+}
