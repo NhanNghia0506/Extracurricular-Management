@@ -7,6 +7,8 @@ import {
     Get,
     Param,
     UseGuards,
+    Query,
+    BadRequestException,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -28,26 +30,36 @@ export class ActivityController {
 
     /**
      * Tạo activity mới với upload ảnh
-    * Endpoint: POST /organizers/:organizerId/activities
+     * Endpoint: POST /activities?organizerId=...&categoryId=...
      * Form-data:
      *   - title: string (bắt buộc)
      *   - description: string (bắt buộc)
      *   - location: string (bắt buộc)
      *   - status: ActivityStatus (tùy chọn)
-     *   - organizerId: string (bắt buộc)
-     *   - categoryId: string (bắt buộc)
+     *   - organizerId: string (bắt buộc, query)
+     *   - categoryId: string (bắt buộc, query)
      *   - image: file (tùy chọn, max 5MB)
      */
     @ResponseMessage('Tạo hoạt động thành công')
-    @Post('organizers/:organizerId/activities')
+    @Post('activities')
     @UseInterceptors(createUploadImageInterceptor())
     @UseGuards(AuthGuard, OrganizerManagerGuard)
     async create(
         @Body() createActivityDto: CreateActivityDto,
         @UploadedFile() file: Express.Multer.File | undefined,
-        @Param('organizerId') organizerId: string,
+        @Query('organizerId') organizerId: string,
+        @Query('categoryId') categoryId: string,
     ): Promise<Activity> {
+        if (!organizerId) {
+            throw new BadRequestException('organizerId is required');
+        }
+
+        if (!categoryId) {
+            throw new BadRequestException('categoryId is required');
+        }
+
         createActivityDto.organizerId = organizerId;
+        createActivityDto.categoryId = categoryId;
 
         const uploadedFilename = file?.filename;
 

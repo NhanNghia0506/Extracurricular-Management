@@ -1,21 +1,12 @@
 import { CreateActivity } from "@/types/activity.types";
 import apiService from "./api.service";
-import axios from "axios";
 
 const activityService = {
-    create: (data: CreateActivity) => apiService.post(`/organizers/${data.organizerId}/activities`, data),
-    createWithFile: (organizerId: string, formData: FormData) => {
-        // Gửi FormData với header Content-Type multipart/form-data
-        const token = localStorage.getItem(process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken');
-        return axios.post(
-            `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}/organizers/${organizerId}/activities`,
-            formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`
-                }
-            }
+    create: (data: CreateActivity) => apiService.post(`/activities?organizerId=${data.organizerId}&categoryId=${data.categoryId}`, data),
+    createWithFile: (organizerId: string, categoryId: string, formData: FormData) => {
+        return apiService.post(
+            `/activities?organizerId=${organizerId}&categoryId=${categoryId}`,
+            formData
         );
     },
     categories: () => apiService.get('/activity-categories'),

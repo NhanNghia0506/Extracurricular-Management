@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styles from './sidebar.module.scss';
+import authService from '../../../services/auth.service';
 
 // 1. Định nghĩa kiểu dữ liệu cho Item
 interface MenuItem {
@@ -31,11 +32,15 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     const [activeId, setActiveId] = useState<string>('explore');
 
     const handleItemClick = (item: MenuItem) => {
+        if (item.id === 'sign-out') {
+            authService.logout();
+            return;
+        }
+
         setActiveId(item.id);
         if (onNavigate) {
             onNavigate(item.id);
         }
-        // Nếu là sign-out thì có thể xử lý logic logout riêng ở đây
     };
 
     // Hàm render item để tái sử dụng

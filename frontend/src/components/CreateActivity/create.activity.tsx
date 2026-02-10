@@ -47,8 +47,6 @@ const CreateActivity: React.FC = () => {
                 latitude: location.coordinates[0],
                 longitude: location.coordinates[1]
             }));
-            formData.append('organizerId', form.organizerId);
-            formData.append('categoryId', form.categoryId);
             formData.append('startAt', new Date(form.startAt).toISOString());
             if (form.endAt) {
                 formData.append('endAt', new Date(form.endAt).toISOString());
@@ -65,7 +63,7 @@ const CreateActivity: React.FC = () => {
                 formData.append('image', form.coverFile);
             }
 
-            await activityService.createWithFile(form.organizerId, formData);
+            await activityService.createWithFile(form.organizerId, form.categoryId, formData);
 
             alert('Tạo hoạt động thành công');
             form.resetForm();

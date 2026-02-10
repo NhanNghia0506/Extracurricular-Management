@@ -24,7 +24,7 @@ export class ActivityParticipantController {
     @Get('participantsByActivity/:activityId')
     getParticipantsByActivity(@Param('activityId') activityId: string, @Req() req: Request) {
         const role = req.user?.role;
-        if(role != UserRole.TEACHER && role != UserRole.ADMIN)
+        if (role !== UserRole.USER && role !== UserRole.ADMIN)
             throw new UnauthorizedException('Bạn không có quyền truy cập vào chức năng này!');
         return this.activityParticipantService.findByActivityIdWithStudentInfo(activityId);
     }

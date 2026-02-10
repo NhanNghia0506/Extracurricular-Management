@@ -80,6 +80,10 @@ const LoginForm: React.FC = () => {
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </button>
 
+                    <div className={styles.linkRow}>
+                        Chưa có tài khoản? <a className={styles.link} href="/register">Đăng ký</a>
+                    </div>
+
                 </form>
             </div>
         </div>

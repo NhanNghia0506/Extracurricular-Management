@@ -11,7 +11,11 @@ export class OrganizerManagerGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest<Request>();
-        const { organizerId } = request.body as { organizerId: string };
+        const organizerId = (
+            request.params.organizerId ||
+            (request.query as { organizerId?: string })?.organizerId ||
+            (request.body as { organizerId?: string })?.organizerId
+        ) as string;
         const userId = request.user?.id;
 
         if (!organizerId) {

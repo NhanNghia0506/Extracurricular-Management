@@ -7,7 +7,7 @@ export class CreateClassDto {
 
     @IsString()
     @IsNotEmpty()
-    classCode: string;
+    code: string;
 
     @IsString()
     @IsNotEmpty()

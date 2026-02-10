@@ -1,6 +1,6 @@
 import apiService from './api.service';
 import { ApiResponse } from '../types/response.types';
-import { LoginRequest, LoginResponse } from '../types/auth.types';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../types/auth.types';
 
 class AuthService {
     private readonly AUTH_TOKEN_KEY = process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken';
@@ -17,6 +17,15 @@ class AuthService {
             this.setToken(access_token);
             this.saveUserInfoFromToken(access_token);
         }
+
+        return response.data;
+    }
+
+    async register(payload: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
+        const response = await apiService.post<ApiResponse<RegisterResponse>>(
+            '/user/register',
+            payload
+        );
 
         return response.data;
     }
@@ -71,6 +80,18 @@ class AuthService {
         return token;
     }
 
+    private getTokenPayload(token: string): { exp?: number } | null {
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return null;
+
+            const payloadStr = atob(parts[1]);
+            return JSON.parse(payloadStr) as { exp?: number };
+        } catch (error) {
+            return null;
+        }
+    }
+
     // Lấy role từ JWT token
     getRole(): string | null {
         const token = this.getToken();
@@ -98,7 +119,14 @@ class AuthService {
     }
 
     isAuthenticated(): boolean {
-        return !!this.getToken();
+        const token = this.getToken();
+        if (!token) return false;
+
+        const payload = this.getTokenPayload(token);
+        if (!payload?.exp) return false;
+
+        const nowInSeconds = Math.floor(Date.now() / 1000);
+        return payload.exp > nowInSeconds;
     }
 }
 

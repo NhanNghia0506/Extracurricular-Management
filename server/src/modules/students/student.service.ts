@@ -21,7 +21,6 @@ class StudentService {
             facultyId: new Types.ObjectId(studentData.facultyId),
         }
 
-        console.log('student entity:', student);
         return this.studentRepository.create(student);
     }
 }

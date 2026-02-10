@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsEnum, IsNotEmpty, IsOptional, IsString, ValidateIf } from "class-validator";
+import { UserType } from "src/global/globalEnum";
 
-
-export class RegisterStudentDto {
+export class RegisterUserDto {
     @IsString()
     @IsNotEmpty()
     name: string;
@@ -15,41 +15,25 @@ export class RegisterStudentDto {
     password: string;
 
     @IsString()
+    @IsOptional()
     avatar?: string;
 
-    @IsString()
     @IsNotEmpty()
-    studentCode: string;
+    @IsEnum(UserType)
+    userType: UserType;
 
     @IsString()
     @IsNotEmpty()
-    facultyId: string;
+    code: string;
 
+    @ValidateIf((o: RegisterUserDto) => o.userType === UserType.STUDENT)
     @IsString()
     @IsNotEmpty()
     classId: string;
-}
 
-export class RegisterTeacherDto {
-    @IsString()
-    @IsNotEmpty()
-    name: string;
-
-    @IsString()
-    @IsNotEmpty()
-    email: string;
-
-    @IsString()
-    @IsNotEmpty()
-    password: string;
-
-    @IsString()
-    avatar?: string;
-
-    @IsString()
-    @IsNotEmpty()
-    teacherCode: string;
-
+    @ValidateIf((o: RegisterUserDto) =>
+        o.userType === UserType.STUDENT || o.userType === UserType.TEACHER
+    )
     @IsString()
     @IsNotEmpty()
     facultyId: string;

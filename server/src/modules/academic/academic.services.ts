@@ -25,9 +25,17 @@ export class AcademicService {
         // map từ class dto sang class entity
         const classEntity = {
             name: classData.name,
-            classCode: classData.classCode,
+            code: classData.code,
             facultyId: new Types.ObjectId(classData.facultyId),
         };
         return this.academicRepository.createClass(classEntity);
+    }
+
+    findAllFaculties() {
+        return this.academicRepository.findAllFaculties();
+    }
+
+    findClassesByFacultyId(facultyId: string) {
+        return this.academicRepository.findClassesByFacultyId(facultyId);
     }
 }

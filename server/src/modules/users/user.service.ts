@@ -1,10 +1,10 @@
 import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { RegisterStudentDto, RegisterTeacherDto } from "./dtos/register.dto";
+import { RegisterUserDto } from "./dtos/register.dto";
 import { LoginDto } from "./dtos/login.dto";
 import { UserRepository } from "./user.repository";
 import bcrypt from 'bcrypt';
-import { UserRole, UserStatus } from "src/global/globalEnum";
+import { UserRole, UserStatus, UserType } from "src/global/globalEnum";
 import StudentService from "../students/student.service";
 import TeacherService from "../teachers/teacher.service";
 @Injectable()
@@ -16,14 +16,14 @@ class UserService {
         private readonly jwtService: JwtService,
     ) { }
 
-    async createStudent(userData: RegisterStudentDto) {
+    async createStudent(userData: RegisterUserDto) {
         if (await this.userRepository.findByEmail(userData.email)) {
             throw new ConflictException('Email đã được sử dụng');
         }
 
         const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-        const { name, email, avatar, studentCode, facultyId, classId } = userData;
+        const { name, email, avatar, code, facultyId, classId } = userData;
 
         // Tạo user
         const user = await this.userRepository.create({
@@ -31,14 +31,14 @@ class UserService {
             email,
             avatar,
             password: hashedPassword,
-            role: UserRole.STUDENT,
+            role: UserRole.USER,
             status: UserStatus.ACTIVE,
         });
 
         // Tạo sinh viên
         await this.studentService.create({
             userId: user._id.toString(),
-            studentCode,
+            studentCode: code,
             facultyId,
             classId,
         })
@@ -51,14 +51,14 @@ class UserService {
         };
     }
 
-    async createTeacher(userData: RegisterTeacherDto) {
+    async createTeacher(userData: RegisterUserDto) {
         if (await this.userRepository.findByEmail(userData.email)) {
             throw new ConflictException('Email đã được sử dụng');
         }
 
         const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-        const { name, email, avatar, teacherCode, facultyId } = userData;
+        const { name, email, avatar, code, facultyId } = userData;
 
         // Tạo user
         const user = await this.userRepository.create({
@@ -66,14 +66,14 @@ class UserService {
             email,
             avatar,
             password: hashedPassword,
-            role: UserRole.TEACHER,
+            role: UserRole.USER,
             status: UserStatus.ACTIVE,
         });
 
         // Tạo giáo viên
         await this.teacherService.create({
             userId: user._id.toString(),
-            teacherCode,
+            teacherCode: code,
             facultyId,
         })
 
@@ -115,6 +115,14 @@ class UserService {
                 role: user.role
             }
         };
+    }
+
+    async register(userData: RegisterUserDto) {
+        if (userData.userType === UserType.STUDENT) {
+            return this.createStudent(userData);
+        }
+
+        return this.createTeacher(userData);
     }
 }
 

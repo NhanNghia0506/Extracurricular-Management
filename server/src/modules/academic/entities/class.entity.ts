@@ -7,7 +7,7 @@ export class Class {
     name: string;
 
     @Prop({ required: true })
-    classCode: string;
+    code: string;
 
     @Prop({
         type: Types.ObjectId,

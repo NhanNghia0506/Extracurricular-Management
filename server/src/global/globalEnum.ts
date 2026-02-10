@@ -10,6 +10,10 @@ export enum HttpMessage {
 
 export enum UserRole {
     ADMIN = 'ADMIN',
+    USER = 'USER',
+}
+
+export enum UserType {
     STUDENT = 'STUDENT',
     TEACHER = 'TEACHER',
 }
