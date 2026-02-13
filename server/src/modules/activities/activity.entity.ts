@@ -65,6 +65,13 @@ export class Activity {
     categoryId: Types.ObjectId;
 
     @Prop({
+        type: Types.ObjectId,
+        ref: 'User',
+        required: true,
+    })
+    createdBy: Types.ObjectId;
+
+    @Prop({
         required: false,
         default: 0,
     })

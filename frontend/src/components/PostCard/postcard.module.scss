@@ -136,6 +136,12 @@
     align-items: center;
 }
 
+.actionGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .participantGroup {
     display: flex;
     align-items: center;
@@ -167,6 +173,29 @@
     border: none;
     color: var(--color-text-muted, #64748b);
     font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0.4rem 0.4rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+        background-color: var(--color-bg-very-light, #f1f5f9);
+        color: var(--color-primary-blue, #2563eb);
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+.editBtn {
+    background-color: transparent;
+    border: none;
+    color: var(--color-text-muted, #64748b);
+    font-size: 1.1rem;
     cursor: pointer;
     padding: 0.4rem 0.4rem;
     border-radius: 8px;

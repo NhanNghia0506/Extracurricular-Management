@@ -18,6 +18,7 @@ export interface PostData {
     points: number;
     participants: string[]; // Mảng chứa URL ảnh avatar
     participantCount: number; // Tổng số người tham gia (để hiện +42)
+    isMine?: boolean;
 }
 
 interface PostCardProps {
@@ -35,6 +36,11 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const handleCommentClick = (e: React.MouseEvent) => {
         e.stopPropagation(); // Ngăn trigger cardClick
         setShowCommentModal(true);
+    };
+
+    const handleEditClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigate(`/create-activity?editId=${data.id}`);
     };
 
     return (
@@ -96,14 +102,24 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                     <span className={styles.moreCount}>+{data.participantCount}</span>
                 </div>
 
-                {/* Icon bình luận */}
-                <button
-                    className={styles.commentBtn}
-                    onClick={handleCommentClick}
-                    title="Bình luận"
-                >
-                    <i className="fa-solid fa-comment"></i>
-                </button>
+                <div className={styles.actionGroup}>
+                    {data.isMine && (
+                        <button
+                            className={styles.editBtn}
+                            onClick={handleEditClick}
+                            title="Chỉnh sửa"
+                        >
+                            <i className="fa-solid fa-pen"></i>
+                        </button>
+                    )}
+                    <button
+                        className={styles.commentBtn}
+                        onClick={handleCommentClick}
+                        title="Bình luận"
+                    >
+                        <i className="fa-solid fa-comment"></i>
+                    </button>
+                </div>
             </div>
 
             {/* Modal Comment */}

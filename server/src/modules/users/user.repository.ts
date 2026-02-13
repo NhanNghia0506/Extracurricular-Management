@@ -7,10 +7,14 @@ import { Model } from "mongoose";
 export class UserRepository {
     constructor(
         @InjectModel(User.name) private userModel: Model<User>,
-    ){}
+    ) { }
 
     async findByEmail(email: string) {
         return this.userModel.findOne({ email });
+    }
+
+    async findById(id: string) {
+        return this.userModel.findById(id);
     }
 
     async create(user: Partial<User>) {

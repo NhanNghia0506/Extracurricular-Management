@@ -9,6 +9,8 @@ import {
     UseGuards,
     Query,
     BadRequestException,
+    Request,
+    Req,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -19,6 +21,8 @@ import { ResponseMessage } from 'src/decorators/response-message.decorator';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
 import { AuthGuard } from "src/guards/auth.guard";
 import { OrganizerManagerGuard } from 'src/guards/organizer.manager.guard';
+import type { Request as ExpressRequest } from 'express';
+import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
 
 
 @Controller()
@@ -46,6 +50,7 @@ export class ActivityController {
     @UseGuards(AuthGuard, OrganizerManagerGuard)
     async create(
         @Body() createActivityDto: CreateActivityDto,
+        @Request() req: ExpressRequest,
         @UploadedFile() file: Express.Multer.File | undefined,
         @Query('organizerId') organizerId: string,
         @Query('categoryId') categoryId: string,
@@ -79,7 +84,7 @@ export class ActivityController {
                 createActivityDto.image = file.filename;
             }
 
-            return await this.activityService.create(createActivityDto);
+            return await this.activityService.create(req.user!.id!, createActivityDto);
         } catch (error) {
             // Xóa file nếu tạo activity thất bại
             if (uploadedFilename) {
@@ -95,8 +100,9 @@ export class ActivityController {
      */
     @ResponseMessage('Lấy danh sách hoạt động thành công')
     @Get('activities')
-    async findAll(): Promise<Activity[]> {
-        return this.activityService.findAll();
+    @UseGuards(OptionalAuthGuard)
+    async findAll(@Req() req: ExpressRequest): Promise<Array<Activity & { isMine: boolean }>> {
+        return this.activityService.findAll(req.user?.id);
     }
 
     // Lấy ra chi tiết một hoạt động bao gồm cả số lượng người tham gia

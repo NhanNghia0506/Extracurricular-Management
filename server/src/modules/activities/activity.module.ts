@@ -8,6 +8,7 @@ import { UploadService } from '../../interceptors/upload.service';
 import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
 import { JwtModule } from '@nestjs/jwt';
 import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
+import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
 
 @Module({
     imports: [
@@ -22,7 +23,7 @@ import { OrganizerMemberModule } from '../organizer-members/organizer-member.mod
         OrganizerMemberModule,
     ],
     controllers: [ActivityController],
-    providers: [ActivityService, ActivityRepository, UploadService],
+    providers: [ActivityService, ActivityRepository, UploadService, OptionalAuthGuard],
     exports: [ActivityService, ActivityRepository],
 })
 export class ActivityModule { }

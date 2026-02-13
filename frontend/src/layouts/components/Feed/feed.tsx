@@ -62,6 +62,7 @@ const Feed: React.FC = () => {
                 points: 0,
                 participants: [],
                 participantCount: 0,
+                isMine: Boolean(activity.isMine),
             };
         });
     }, [activities, baseUrl]);
@@ -74,8 +75,8 @@ const Feed: React.FC = () => {
                 </div>
             )}
 
-            {posts.map((post) => (
-                <PostCard key={post.id} data={post} />
+            {posts.map((post, index) => (
+                <PostCard key={`${post.id}-${index}`} data={post} />
             ))}
 
             {loading && (

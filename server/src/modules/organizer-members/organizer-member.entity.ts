@@ -14,7 +14,7 @@ export class OrganizerMember {
 
     @Prop({
         required: true,
-        default: OrganizerMemberRole.MEMBER,
+        default: OrganizerMemberRole.MANAGER,
         enum: Object.values(OrganizerMemberRole)
     })
     role: OrganizerMemberRole;

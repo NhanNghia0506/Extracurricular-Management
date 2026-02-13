@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { RegisterUserDto } from "./dtos/register.dto";
 import { LoginDto } from "./dtos/login.dto";
@@ -123,6 +123,20 @@ class UserService {
         }
 
         return this.createTeacher(userData);
+    }
+
+    async getProfile(userId: string) {
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy người dùng');
+        }
+
+        return {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar || null,
+        };
     }
 }
 

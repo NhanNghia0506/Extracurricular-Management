@@ -11,6 +11,7 @@ import AttendancePage from '../pages/AttendancePage';
 import ActivityDetailPage from '../pages/ActivityDetailPage';
 import ActivityParticipantsPage from '../pages/ActivityParticipantsPage';
 import ProtectedRoute from './ProtectedRoute';
+import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 
 const AppRoutes: React.FC = () => {
     return (
@@ -35,6 +36,7 @@ const AppRoutes: React.FC = () => {
             <Route element={<WithSidebarLayout />}>
                 <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/detail/:id" element={<ActivityDetailPage />} />
+                <Route path="/configure-attendance" element={<ConfigureAttendancePage />} />
             </Route>
 
             <Route element={<NoSidebarLayout />}>

@@ -14,12 +14,13 @@ export class ActivityRepository {
         return this.activityModel.create(activity);
     }
 
-    findAll(): Promise<Activity[]> {
+    findAll(): Promise<Array<Activity & { _id: any }>> {
         return this.activityModel
             .find()
             .populate('organizerId', 'name')
             .populate('categoryId', 'name')
             .sort({ createdAt: -1 })
+            .lean()
             .exec();
     }
 

@@ -35,6 +35,7 @@ export interface ActivityListItem {
     endAt?: string;
     createdAt?: string;
     updatedAt?: string;
+    isMine?: boolean;
 }
 
 export interface ActivityDetailResponse {

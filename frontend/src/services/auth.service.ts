@@ -1,6 +1,6 @@
 import apiService from './api.service';
 import { ApiResponse } from '../types/response.types';
-import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../types/auth.types';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserProfile } from '../types/auth.types';
 
 class AuthService {
     private readonly AUTH_TOKEN_KEY = process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken';
@@ -27,6 +27,11 @@ class AuthService {
             payload
         );
 
+        return response.data;
+    }
+
+    async getProfile(): Promise<ApiResponse<UserProfile>> {
+        const response = await apiService.get<ApiResponse<UserProfile>>('/user/me');
         return response.data;
     }
     logout(): void {

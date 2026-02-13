@@ -21,7 +21,7 @@ export class ActivityService {
      * @param createActivityDto - DTO chứa thông tin activity
      * @returns Activity đã được tạo
      */
-    async create(createActivityDto: CreateActivityDto): Promise<Activity> {
+    async create(createdBy: string, createActivityDto: CreateActivityDto): Promise<Activity> {
         if (
             !Types.ObjectId.isValid(createActivityDto.organizerId) ||
             !Types.ObjectId.isValid(createActivityDto.categoryId)
@@ -29,6 +29,10 @@ export class ActivityService {
             throw new BadRequestException(
                 'organizerId và categoryId phải là MongoDB ObjectId hợp lệ',
             );
+        }
+
+        if (!Types.ObjectId.isValid(createdBy)) {
+            throw new BadRequestException('createdBy phải là MongoDB ObjectId hợp lệ');
         }
 
         if (!createActivityDto.location) {
@@ -48,6 +52,7 @@ export class ActivityService {
             image: createActivityDto.image, // Tên file đã upload
             organizerId: new Types.ObjectId(createActivityDto.organizerId),
             categoryId: new Types.ObjectId(createActivityDto.categoryId),
+            createdBy: new Types.ObjectId(createdBy),
         };
 
         // Lưu vào database
@@ -59,8 +64,15 @@ export class ActivityService {
      * Lấy danh sách activities
      * @returns Danh sách Activity
      */
-    async findAll(): Promise<Activity[]> {
-        return this.activityRepository.findAll();
+    async findAll(userId?: string): Promise<Array<Activity & { isMine: boolean }>> {
+        const activities = await this.activityRepository.findAll();
+        const normalizedUserId = userId?.toString();
+        return activities.map((activity) => ({
+            ...activity,
+            isMine: Boolean(
+                normalizedUserId && activity.createdBy?.toString() === normalizedUserId,
+            ),
+        }))
     }
 
     /**
