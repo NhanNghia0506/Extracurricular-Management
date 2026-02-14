@@ -1,8 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './configure.attendance.module.scss';
+import activityService from 'services/activity.service';
+import { ActivityDetailResponse } from '@/types/activity.types';
+import checkinSessionService from 'services/checkin-session.service';
+import type { CreateCheckinSession } from '@/types/checkin-session.types';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -45,28 +50,81 @@ const MapViewUpdater: React.FC<MapViewUpdaterProps> = ({ center }) => {
     return null;
 };
 
-const parseLocalDateTime = (value: string): Date | null => {
+const parseTimeToMinutes = (value: string): number | null => {
     if (!value) return null;
-    const [datePart, timePart] = value.split('T');
-    if (!datePart || !timePart) return null;
-    const [yearStr, monthStr, dayStr] = datePart.split('-');
-    const [hourStr, minuteStr] = timePart.split(':');
-    const year = Number(yearStr);
-    const month = Number(monthStr);
-    const day = Number(dayStr);
+    const [hourStr, minuteStr] = value.split(':');
     const hour = Number(hourStr);
     const minute = Number(minuteStr);
-    if ([year, month, day, hour, minute].some((part) => Number.isNaN(part))) return null;
-    return new Date(year, month - 1, day, hour, minute, 0, 0);
+    if ([hour, minute].some((part) => Number.isNaN(part))) return null;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return hour * 60 + minute;
+};
+
+const toLocalTimeValue = (value?: string): string => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (part: number) => String(part).padStart(2, '0');
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const formatDuration = (totalMinutes: number): string => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+        return `${hours} giờ ${minutes} phút`;
+    }
+    if (hours > 0) {
+        return `${hours} giờ`;
+    }
+    return `${minutes} phút`;
 };
 
 const ConfigureAttendance: React.FC = () => {
-    const [activityName] = useState('');
+    const [searchParams] = useSearchParams();
+    const [activityName, setActivityName] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [radius, setRadius] = useState(DEFAULT_RADIUS);
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
     const [requirePhoto, setRequirePhoto] = useState(false);
     const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
+    const [activityLocationAddress, setActivityLocationAddress] = useState('');
+    const [activityDateBase, setActivityDateBase] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const activityId = searchParams.get('activityId') || searchParams.get('id');
+    const hasCustomCenterRef = useRef(false);
+
+    useEffect(() => {
+        const fetchActivity = async () => {
+            if (!activityId) {
+                setError('Thiếu activityId trong query');
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await activityService.getDetail(activityId);
+                const activityData: ActivityDetailResponse = response.data.data;
+                setActivityName(activityData.title || '');
+                setActivityLocationAddress(activityData.location?.address || '');
+                setActivityDateBase(activityData.startAt);
+                if (!hasCustomCenterRef.current && activityData.location?.latitude && activityData.location?.longitude) {
+                    setCenter([activityData.location.latitude, activityData.location.longitude]);
+                }
+                setStartAt(toLocalTimeValue(activityData.startAt));
+                setEndAt(toLocalTimeValue(activityData.endAt));
+            } catch (err: any) {
+                setError(err.message || 'Không thể tải thông tin hoạt động');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchActivity();
+    }, [activityId]);
 
     const primaryBlue = useMemo(() => {
         if (typeof window === 'undefined') return '#2563eb';
@@ -78,58 +136,104 @@ const ConfigureAttendance: React.FC = () => {
     }, []);
 
     const durationLabel = useMemo(() => {
-        if (!startAt || !endAt) return 'Chưa đặt lịch';
-        const start = parseLocalDateTime(startAt);
-        const end = parseLocalDateTime(endAt);
-        if (!start || !end || end <= start) {
-            return 'Thời gian chưa hợp lệ';
+        if (!startAt || !endAt) return 'Chưa đặt giờ';
+        const startMinutes = parseTimeToMinutes(startAt);
+        const endMinutes = parseTimeToMinutes(endAt);
+        if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+            return 'Giờ chưa hợp lệ';
         }
+        return `${startAt} - ${endAt}`;
+    }, [startAt, endAt]);
 
-        const diffMs = end.getTime() - start.getTime();
-        const minutes = Math.round(diffMs / 60000);
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        if (hours > 0 && remainingMinutes > 0) {
-            return `${hours} giờ ${remainingMinutes} phút`;
+    const durationValue = useMemo(() => {
+        if (!startAt || !endAt) return '';
+        const startMinutes = parseTimeToMinutes(startAt);
+        const endMinutes = parseTimeToMinutes(endAt);
+        if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+            return '';
         }
-        if (hours > 0) {
-            return `${hours} giờ`;
-        }
-        return `${minutes} phút`;
+        return formatDuration(endMinutes - startMinutes);
     }, [startAt, endAt]);
 
     const durationWarning = useMemo(() => {
         if (!startAt || !endAt) return '';
-        const start = parseLocalDateTime(startAt);
-        const end = parseLocalDateTime(endAt);
-        if (!start || !end || end <= start) {
+        const startMinutes = parseTimeToMinutes(startAt);
+        const endMinutes = parseTimeToMinutes(endAt);
+        if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
             return '';
         }
 
-        const diffMs = end.getTime() - start.getTime();
-        if (diffMs < 20 * 60 * 1000) {
-            return 'Thời gian kết thúc cần sau bắt đầu tối thiểu 20 phút';
+        const diffMinutes = endMinutes - startMinutes;
+        if (diffMinutes < 20) {
+            return 'Giờ kết thúc cần sau bắt đầu tối thiểu 20 phút';
         }
         return '';
     }, [startAt, endAt]);
 
     const coordinatesLabel = `${center[0].toFixed(5)}, ${center[1].toFixed(5)}`;
 
+    const buildDateTime = (dateBase: string, timeValue: string): Date | null => {
+        if (!dateBase || !timeValue) return null;
+        const [hourStr, minuteStr] = timeValue.split(':');
+        const hour = Number(hourStr);
+        const minute = Number(minuteStr);
+        if ([hour, minute].some((part) => Number.isNaN(part))) return null;
+        const base = new Date(dateBase);
+        if (Number.isNaN(base.getTime())) return null;
+        base.setHours(hour, minute, 0, 0);
+        return base;
+    };
+
+    const handleCreateCheckinSession = async () => {
+        if (!activityId) {
+            setError('Thiếu activityId trong query');
+            return;
+        }
+
+        const startTime = buildDateTime(activityDateBase, startAt);
+        const endTime = buildDateTime(activityDateBase, endAt);
+
+        if (!startTime || !endTime || startTime >= endTime) {
+            setError('Giờ bắt đầu và kết thúc chưa hợp lệ');
+            return;
+        }
+
+        const payload: CreateCheckinSession = {
+            activityId,
+            location: {
+                address: activityLocationAddress || 'N/A',
+                latitude: center[0],
+                longitude: center[1],
+            },
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            radiusMetters: radius,
+        };
+
+        try {
+            setSubmitting(true);
+            setError(null);
+            await checkinSessionService.create(payload);
+            alert('Tạo buổi điểm danh thành công');
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err.message || 'Không thể tạo buổi điểm danh');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     return (
         <div className={styles.pageContainer}>
-            {/* Breadcrumbs */}
-            <nav className={styles.breadcrumbs}>
-                Dashboard / Activities / {activityName || 'Chưa chọn hoạt động'} / <span>Configure Session</span>
-            </nav>
-
             {/* Header */}
             <header className={styles.header}>
-                <h2>Configure Attendance Session</h2>
+                <h2>Cấu hình buổi điểm danh</h2>
                 <h3>
                     {activityName || 'Chưa nhập tên hoạt động'}
-                    <span className={styles.badge}>Active Activity</span>
+                    <span className={styles.badge}>Hoạt động đang chọn</span>
                 </h3>
                 <p>Thiết lập khu vực GPS và lịch điểm danh cho buổi học.</p>
+                {loading && <p className="text-muted small">Đang tải thông tin hoạt động...</p>}
+                {error && <p className="text-danger small">{error}</p>}
             </header>
 
             <div className={styles.mainGrid}>
@@ -139,7 +243,7 @@ const ConfigureAttendance: React.FC = () => {
                     {/* Card 1: Geofence */}
                     <section className={styles.card}>
                         <div className={styles.cardTitle}>
-                            <h5><i className="fa-solid fa-location-dot"></i> Geofence Configuration</h5>
+                            <h5><i className="fa-solid fa-location-dot"></i> Cấu hình vùng điểm danh</h5>
                         </div>
 
                         <div className={styles.mapMockup}>
@@ -153,6 +257,7 @@ const ConfigureAttendance: React.FC = () => {
                                 <MapViewUpdater center={center} />
                                 <MapClickHandler
                                     onSelect={(lat, lng) => {
+                                        hasCustomCenterRef.current = true;
                                         setCenter([lat, lng]);
                                     }}
                                 />
@@ -161,7 +266,7 @@ const ConfigureAttendance: React.FC = () => {
 
                         <div className={styles.radiusControl}>
                             <div className={styles.sliderGroup}>
-                                <label>Attendance Radius <span>{radius} meters</span></label>
+                                <label>Bán kính điểm danh <span>{radius} mét</span></label>
                                 <input
                                     type="range"
                                     min="10"
@@ -176,7 +281,7 @@ const ConfigureAttendance: React.FC = () => {
                                 </div>
                             </div>
                             <div className={styles.manualInput}>
-                                <label>Manual Input (m)</label>
+                                <label>Nhập tay (m)</label>
                                 <input
                                     type="number"
                                     value={radius}
@@ -191,16 +296,16 @@ const ConfigureAttendance: React.FC = () => {
                     {/* Card 2: Timing */}
                     <section className={styles.card}>
                         <div className={styles.cardTitle}>
-                            <h5><i className="fa-regular fa-clock"></i> Timing & Schedule</h5>
+                            <h5><i className="fa-regular fa-clock"></i> Thời gian điểm danh</h5>
                         </div>
                         <div className={styles.timingGrid}>
                             <div>
-                                <label>Start Date & Time</label>
-                                <input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} />
+                                <label>Giờ bắt đầu</label>
+                                <input type="time" value={startAt} onChange={(event) => setStartAt(event.target.value)} />
                             </div>
                             <div>
-                                <label>End Date & Time</label>
-                                <input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} />
+                                <label>Giờ kết thúc</label>
+                                <input type="time" value={endAt} onChange={(event) => setEndAt(event.target.value)} />
                             </div>
                         </div>
                     </section>
@@ -209,12 +314,12 @@ const ConfigureAttendance: React.FC = () => {
                 {/* Cột phải: Tổng quan & Action */}
                 <aside className={styles.summarySidebar}>
                     <div className={styles.card}>
-                        <h6 className="fw-bold mb-4">Session Summary</h6>
+                        <h6 className="fw-bold mb-4">Tóm tắt buổi điểm danh</h6>
 
                         <div className={styles.summaryItem}>
                             <div className={styles.iconBox}><i className="fa-solid fa-book"></i></div>
                             <div className={styles.info}>
-                                <label>Activity</label>
+                                <label>Hoạt động</label>
                                 <p>{activityName || 'Chưa nhập tên'}</p>
                             </div>
                         </div>
@@ -222,7 +327,7 @@ const ConfigureAttendance: React.FC = () => {
                         <div className={styles.summaryItem}>
                             <div className={styles.iconBox}><i className="fa-solid fa-location-crosshairs"></i></div>
                             <div className={styles.info}>
-                                <label>Coordinates</label>
+                                <label>Tọa độ</label>
                                 <p>{coordinatesLabel}</p>
                                 <small>Chọn vị trí trực tiếp trên bản đồ</small>
                             </div>
@@ -231,8 +336,8 @@ const ConfigureAttendance: React.FC = () => {
                         <div className={styles.summaryItem}>
                             <div className={styles.iconBox}><i className="fa-solid fa-bullseye"></i></div>
                             <div className={styles.info}>
-                                <label>Validation Radius</label>
-                                <p>{radius} Meters</p>
+                                <label>Bán kính xác nhận</label>
+                                <p>{radius} mét</p>
                                 <small>GPS radius tùy chỉnh</small>
                             </div>
                         </div>
@@ -240,10 +345,10 @@ const ConfigureAttendance: React.FC = () => {
                         <div className={styles.summaryItem}>
                             <div className={styles.iconBox}><i className="fa-regular fa-hourglass-half"></i></div>
                             <div className={styles.info}>
-                                <label>Duration</label>
+                                <label>Khung giờ</label>
                                 <p>{durationLabel}</p>
                                 <small>
-                                    {durationWarning || (startAt ? new Date(startAt).toLocaleString() : 'Chưa chọn thời gian bắt đầu')}
+                                    {durationWarning || (durationValue ? `Tổng thời gian: ${durationValue}` : 'Chưa chọn giờ bắt đầu')}
                                 </small>
                             </div>
                         </div>
@@ -257,22 +362,22 @@ const ConfigureAttendance: React.FC = () => {
                                 onChange={(event) => setRequirePhoto(event.target.checked)}
                             />
                             <label className="form-check-label small fw-bold text-muted" htmlFor="photoCheck">
-                                Require photo proof on check-in
+                                Yêu cầu ảnh xác minh khi điểm danh
                             </label>
                         </div>
 
-                        <button className={styles.primaryBtn}>
-                            <i className="fa-solid fa-circle-check"></i> Create Session
+                        <button className={styles.primaryBtn} onClick={handleCreateCheckinSession} disabled={submitting}>
+                            <i className="fa-solid fa-circle-check"></i> Tạo buổi điểm danh
                         </button>
-                        <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Save as Draft</button>
+                        <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Lưu nháp</button>
                     </div>
 
                     {/* Tip Box */}
                     <div className={styles.tipBox}>
                         <i className="fa-solid fa-circle-info"></i>
                         <div className={styles.tipText}>
-                            <label>Organizer Tip</label>
-                            <p>For indoor activities, we recommend a minimum radius of 30 meters to account for GPS signal drift in multi-story buildings.</p>
+                            <label>Gợi ý cho ban tổ chức</label>
+                            <p>Với hoạt động trong nhà, nên đặt bán kính tối thiểu 30 mét để bù trừ sai lệch GPS trong các tòa nhà nhiều tầng.</p>
                         </div>
                     </div>
                 </aside>

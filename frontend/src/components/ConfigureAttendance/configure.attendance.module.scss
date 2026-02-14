@@ -19,16 +19,6 @@ $status-warning: var(--color-status-warning);
 }
 
 // --- Header & Breadcrumbs ---
-.breadcrumbs {
-    font-size: 0.85rem;
-    color: $text-muted;
-    margin-bottom: 0.5rem;
-
-    span {
-        color: $text-dark;
-        font-weight: 700;
-    }
-}
 
 .header {
     margin-bottom: 2rem;
@@ -301,6 +291,10 @@ $status-warning: var(--color-status-warning);
     justify-content: center;
     gap: 10px;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+
+    &:hover {
+        opacity: 0.8;
+    }
 }
 
 .tipBox {

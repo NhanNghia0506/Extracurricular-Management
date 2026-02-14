@@ -8,6 +8,7 @@ import { OrganizerModule } from './modules/organizers/organizer.module';
 import { OrganizerMemberModule } from './modules/organizer-members/organizer-member.module';
 import { ActivityCategoryModule } from './modules/activity-categories/activity-category.module';
 import { ActivityParticipantModule } from './modules/activity-participants/activity-participant.module';
+import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session.module';
 
 @Module({
   imports: [
@@ -19,9 +20,10 @@ import { ActivityParticipantModule } from './modules/activity-participants/activ
     OrganizerModule,
     OrganizerMemberModule,
     ActivityCategoryModule,
-    ActivityParticipantModule
+    ActivityParticipantModule,
+    CheckinSessionModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }
