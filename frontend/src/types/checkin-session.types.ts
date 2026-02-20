@@ -7,3 +7,14 @@ export interface CreateCheckinSession {
     endTime: string;
     radiusMetters: number;
 }
+
+export interface CheckinSession {
+    _id: string;
+    activityId: string;
+    location: LocationData;
+    startTime: Date;
+    endTime: Date;
+    radiusMetters: number;
+    createdAt?: Date;
+    updatedAt?: Date;
+}

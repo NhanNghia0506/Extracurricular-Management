@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, Popup } from 'react-leaflet';
+import React, { useState, useRef, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './attendance.module.scss';
@@ -25,49 +25,63 @@ const attendanceIcon = new L.Icon({
 });
 
 interface AttendanceMapProps {
-    // Tọa độ điểm danh từ cơ sở dữ liệu
-    attendanceLocation?: LatLngExpression;
-    attendanceLocationName?: string;
-    attendanceRadius?: number; // Bán kính vùng điểm danh (mét)
+    // Tọa độ điểm danh từ backend
+    attendanceLocation: LatLngExpression;
+    attendanceLocationName: string;
+    attendanceRadius: number; // Bán kính vùng điểm danh (mét)
 }
 
+// Component để center map khi attendanceLocation thay đổi
+const MapCenterUpdater: React.FC<{ center: LatLngExpression }> = ({ center }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        map.setView(center, 15);
+    }, [center, map]);
+
+    return null;
+};
+
 const AttendanceMap: React.FC<AttendanceMapProps> = ({
-    attendanceLocation = [21.0289, 105.8547],
-    attendanceLocationName = 'Lecture Hall B, Level 3',
-    attendanceRadius = 150
+    attendanceLocation,
+    attendanceLocationName,
+    attendanceRadius
 }) => {
-    // Tọa độ mặc định (Hanoi, Vietnam)
-    const defaultCenter: LatLngExpression = [21.0285, 105.8542];
-    const [userLocation, setUserLocation] = useState<LatLngExpression>(defaultCenter);
+    const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
     const mapRef = useRef(null);
 
-    // Định vị vị trí người dùng hiện tại
+    // Định vị vị trí người dùng hiện tại khi click nút
     const handleLocate = () => {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                const { latitude, longitude } = position.coords;
-                setUserLocation([latitude, longitude]);
-                // Flyto vị trí người dùng
-                if (mapRef.current) {
-                    const map = (mapRef.current as any).leafletElement || (mapRef.current as any);
-                    map?.flyTo([latitude, longitude], 15);
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    setUserLocation([latitude, longitude]);
+                },
+                (error) => {
+                    console.error('Lỗi khi lấy vị trí:', error);
+                    // Nếu không lấy được vị trí, set default tại attendanceLocation
+                    setUserLocation(attendanceLocation);
                 }
-            });
+            );
+        } else {
+            // Trình duyệt không hỗ trợ geolocation
+            setUserLocation(attendanceLocation);
         }
     };
 
     return (
         <div className={styles.mapColumn}>
             <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fw-bold"><i className="fa-solid fa-map me-2"></i>Campus Map</h5>
+                <h5 className="mb-0 fw-bold"><i className="fa-solid fa-map me-2"></i>Bản đồ</h5>
                 <button className="btn btn-sm btn-light border" onClick={handleLocate}>
-                    <i className="fa-solid fa-location-crosshairs me-1"></i> My Location
+                    <i className="fa-solid fa-location-crosshairs me-1"></i> Vị trí của tôi
                 </button>
             </div>
 
             <div className={styles.mapWrapper}>
                 <MapContainer
-                    center={defaultCenter}
+                    center={attendanceLocation}
                     zoom={15}
                     style={{ height: '100%', width: '100%' }}
                     ref={mapRef}
@@ -77,12 +91,17 @@ const AttendanceMap: React.FC<AttendanceMapProps> = ({
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
 
-                    {/* Vị trí người dùng */}
-                    <Marker position={userLocation} icon={userIcon}>
-                        <Popup>You are here</Popup>
-                    </Marker>
+                    {/* Component để update center khi attendanceLocation thay đổi */}
+                    <MapCenterUpdater center={attendanceLocation} />
 
-                    {/* Vùng điểm danh từ cơ sở dữ liệu */}
+                    {/* Vị trí người dùng */}
+                    {userLocation && (
+                        <Marker position={userLocation} icon={userIcon}>
+                            <Popup>Bạn đang ở đây</Popup>
+                        </Marker>
+                    )}
+
+                    {/* Vùng điểm danh từ backend */}
                     <Marker position={attendanceLocation} icon={attendanceIcon}>
                         <Popup>{attendanceLocationName}</Popup>
                     </Marker>
@@ -97,7 +116,7 @@ const AttendanceMap: React.FC<AttendanceMapProps> = ({
                         color="red"
                         fillOpacity={0.15}
                     >
-                        <Popup>Attendance Zone ({attendanceRadius}m)</Popup>
+                        <Popup>Khu vực điểm danh ({attendanceRadius}m)</Popup>
                     </Circle>
                 </MapContainer>
 

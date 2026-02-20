@@ -88,7 +88,6 @@ const ConfigureAttendance: React.FC = () => {
     const [radius, setRadius] = useState(DEFAULT_RADIUS);
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
-    const [requirePhoto, setRequirePhoto] = useState(false);
     const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
     const [activityLocationAddress, setActivityLocationAddress] = useState('');
     const [activityDateBase, setActivityDateBase] = useState('');
@@ -351,19 +350,6 @@ const ConfigureAttendance: React.FC = () => {
                                     {durationWarning || (durationValue ? `Tổng thời gian: ${durationValue}` : 'Chưa chọn giờ bắt đầu')}
                                 </small>
                             </div>
-                        </div>
-
-                        <div className="form-check mb-4 mt-2">
-                            <input
-                                className="form-check-input"
-                                type="checkbox"
-                                id="photoCheck"
-                                checked={requirePhoto}
-                                onChange={(event) => setRequirePhoto(event.target.checked)}
-                            />
-                            <label className="form-check-label small fw-bold text-muted" htmlFor="photoCheck">
-                                Yêu cầu ảnh xác minh khi điểm danh
-                            </label>
                         </div>
 
                         <button className={styles.primaryBtn} onClick={handleCreateCheckinSession} disabled={submitting}>
