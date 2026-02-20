@@ -9,6 +9,7 @@ import { OrganizerMemberModule } from './modules/organizer-members/organizer-mem
 import { ActivityCategoryModule } from './modules/activity-categories/activity-category.module';
 import { ActivityParticipantModule } from './modules/activity-participants/activity-participant.module';
 import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session.module';
+import { CheckinModule } from './modules/checkins/checkin.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session
     ActivityCategoryModule,
     ActivityParticipantModule,
     CheckinSessionModule,
+    CheckinModule,
   ],
   controllers: [],
   providers: [],

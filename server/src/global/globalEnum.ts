@@ -41,3 +41,8 @@ export enum OrganizerMemberRole {
     ADMIN = 'ADMIN',
     MEMBER = 'MEMBER'
 }
+
+export enum CheckinStatus {
+    SUCCESS = 'SUCCESS',
+    FAILED = 'FAILED',
+}

@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { ActivityService } from '../activities/activity.service';
 import { CreateCheckinSessionDto } from './dtos/create.checkin-session.dto';
 import { CheckinSessionRepository } from './checkin-session.repository';
+import { CheckinSession } from './checkin-session.entity';
 
 @Injectable()
 export class CheckinSessionService {
@@ -34,5 +35,9 @@ export class CheckinSessionService {
         };
 
         return this.checkinSessionRepository.create(checkinSession);
+    }
+
+    findById(id: string): Promise<CheckinSession | null> {
+        return this.checkinSessionRepository.findById(id);
     }
 }

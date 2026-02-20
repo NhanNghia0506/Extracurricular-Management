@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Get, Param, NotFoundException } from '@nestjs/common';
 import { ResponseMessage } from 'src/decorators/response-message.decorator';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CheckinSessionService } from './checkin-session.service';
@@ -13,5 +13,15 @@ export class CheckinSessionController {
     @Post()
     create(@Body() createCheckinSessionDto: CreateCheckinSessionDto) {
         return this.checkinSessionService.create(createCheckinSessionDto);
+    }
+
+    @ResponseMessage('Lấy phiên điểm danh thành công')
+    @Get(':id')
+    async getById(@Param('id') id: string) {
+        const checkinSession = await this.checkinSessionService.findById(id);
+        if (!checkinSession) {
+            throw new NotFoundException('Không tìm thấy phiên điểm danh với ID đã cho');
+        }
+        return checkinSession;
     }
 }
