@@ -21,10 +21,7 @@ const LoginForm: React.FC = () => {
             const response = await authService.login({ email, password });
 
             if (response.success) {
-                // Đăng nhập thành công, chuyển hướng về trang chủ
-                console.log('✅ Login successful:', response.data);
-                console.log('👤 Current user:', authService.getCurrentUser());
-                console.log('🔑 User role:', authService.getRole());
+                
                 navigate('/');
             } else {
                 setError(response.message || 'Đăng nhập thất bại');

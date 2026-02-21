@@ -6,6 +6,7 @@ import { ActivityStatus } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
+import { Request } from 'express';
 
 
 @Injectable()
@@ -80,7 +81,7 @@ export class ActivityService {
      * @param id - ID của activity
      * @returns Chi tiết Activity
      */
-    async findActivityDetailById(id: string): Promise<ActivityDetailResponse | null> {
+    async findActivityDetailById(id: string, userId: string | undefined): Promise<ActivityDetailResponse | null> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException('ID phải là MongoDB ObjectId hợp lệ');
         }
@@ -91,7 +92,7 @@ export class ActivityService {
         }
 
         const participantCount = await this.activityParticipantService.countParticipantsByActivity(id);
-
+        const isRegistered = userId ? await this.activityParticipantService.findByActivityAndUserId(id, userId) !== null : false;
         return {
             id: activity._id.toString(),
             title: activity.title,
@@ -106,6 +107,7 @@ export class ActivityService {
             organizer: activity.organizerId,
             category: activity.categoryId,
             registeredCount: participantCount,
+            isRegistered: isRegistered,
         } as ActivityDetailResponse;
     }
 

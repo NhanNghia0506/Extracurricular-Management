@@ -10,6 +10,7 @@ import { ActivityCategoryModule } from './modules/activity-categories/activity-c
 import { ActivityParticipantModule } from './modules/activity-participants/activity-participant.module';
 import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session.module';
 import { CheckinModule } from './modules/checkins/checkin.module';
+import { DeviceModule } from './modules/devices/device.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CheckinModule } from './modules/checkins/checkin.module';
     ActivityParticipantModule,
     CheckinSessionModule,
     CheckinModule,
+    DeviceModule,
   ],
   controllers: [],
   providers: [],

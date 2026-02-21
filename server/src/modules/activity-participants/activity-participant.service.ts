@@ -47,7 +47,15 @@ export class ActivityParticipantService {
 
     // Lấy danh sách sinh viên đăng kí tham gia hoạt động theo activityId kèm thông tin lớp và khoa, chức năng này chỉ dành cho teacher
     findByActivityIdWithStudentInfo(activityId: string) {
-        
         return this.activityParticipantRepository.findByActivityIdWithClassFacultyNames(activityId);
+    }
+
+    // Lấy danh sách thành viên tham gia một hoạt động
+    findByActivityId(activityId: string): Promise<ActivityParticipant[]> {
+        return this.activityParticipantRepository.findByActivityId(activityId);
+    }
+
+    findByActivityAndUserId(activityId: string, userId: string): Promise<ActivityParticipant | null> {
+        return this.activityParticipantRepository.findByActivityAndUserId(activityId, userId);
     }
 }

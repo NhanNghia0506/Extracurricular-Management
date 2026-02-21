@@ -48,7 +48,7 @@ const ActivityDetail: React.FC = () => {
 
     const handleRegister = async () => {
         if (!id) return;
-        
+
         try {
             setRegistering(true);
             await activityService.register(id);
@@ -174,13 +174,16 @@ const ActivityDetail: React.FC = () => {
                                 }}
                             ></div>
                         </div>
-                        <button 
+                        <button
                             className={styles.registerBtn}
                             onClick={handleRegister}
-                            disabled={registering}
+                            disabled={registering || activity.isRegistered}
                         >
-                            <i className="fa-solid fa-id-card"></i> 
-                            {registering ? 'Đang đăng ký...' : 'Đăng ký ngay'}
+                            <i className="fa-solid fa-id-card"></i>
+                            {activity.isRegistered
+                                ? 'Đã đăng ký'
+                                : registering ? 'Đang đăng ký...' : 'Đăng ký ngay'
+                            }
                         </button>
                         <p className="text-center text-muted small m-0">Đăng ký kết thúc trong 2 ngày</p>
                     </div>

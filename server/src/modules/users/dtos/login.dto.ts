@@ -8,4 +8,13 @@ export class LoginDto {
     @IsString()
     @IsNotEmpty()
     password: string;
+
+    @IsNotEmpty()
+    fingerprintData: {
+        userAgent: string;
+        screen: string;
+        timezone: string;
+        language: string;
+        platform: string;
+    };
 }

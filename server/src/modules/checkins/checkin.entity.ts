@@ -27,6 +27,9 @@ export class Checkin {
     @Prop({ required: false, default: null })
     failReason?: string;
 
+    @Prop({ required: true })
+    deviceId: string;
+
     @Prop()
     createdAt?: Date;
 }

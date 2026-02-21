@@ -108,7 +108,8 @@ export class ActivityController {
     // Lấy ra chi tiết một hoạt động bao gồm cả số lượng người tham gia
     @ResponseMessage('Lấy chi tiết hoạt động thành công')
     @Get('activities/:id')
-    async getActivityById(@Param('id') id: string): Promise<ActivityDetailResponse | null> {
-        return this.activityService.findActivityDetailById(id);
+    @UseGuards(AuthGuard)
+    async getActivityById(@Param('id') id: string, @Req() req: ExpressRequest): Promise<ActivityDetailResponse | null> {
+        return this.activityService.findActivityDetailById(id, req.user?.id);
     }
 }

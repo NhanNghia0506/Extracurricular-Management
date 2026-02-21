@@ -72,4 +72,16 @@ export class ActivityParticipantRepository {
             },
         ]).exec();
     }
+
+    findByActivityId(activityId: string) {
+        const objectId = new Types.ObjectId(activityId);
+        return this.activityParticipantModel.find({ activityId: objectId }).exec();
+    }
+
+    findByActivityAndUserId(activityId: string, userId: string) {
+        return this.activityParticipantModel.findOne({
+            activityId: new Types.ObjectId(activityId),
+            userId: new Types.ObjectId(userId)
+        }).exec();
+    }
 }

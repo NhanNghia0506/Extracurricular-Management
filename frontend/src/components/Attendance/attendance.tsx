@@ -82,7 +82,11 @@ const Attendance: React.FC = () => {
             if (err instanceof GeolocationPositionError) {
                 setCheckinError('Không thể lấy vị trí. Vui lòng kiểm tra quyền GPS!');
             } else {
-                setCheckinError('Lỗi khi điểm danh. Vui lòng thử lại!');
+                // Bắt error message từ backend
+                const errorMessage = (err as any)?.response?.data?.message
+                    || (err as any)?.message
+                    || 'Lỗi khi điểm danh. Vui lòng thử lại!';
+                setCheckinError(errorMessage);
             }
             console.error(err);
         } finally {

@@ -58,4 +58,5 @@ export interface ActivityDetailResponse {
         name: string;
     };
     registeredCount: number;
+    isRegistered: boolean;
 }

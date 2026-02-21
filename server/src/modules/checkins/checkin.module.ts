@@ -6,6 +6,7 @@ import { CheckinRepository } from './checkin.repository';
 import { CheckinService } from './checkin.service';
 import { CheckinSessionModule } from '../checkin-sessions/checkin-session.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
 
 @Module({
     imports: [
@@ -17,6 +18,7 @@ import { JwtModule } from '@nestjs/jwt';
             signOptions: { expiresIn: '7d' },
         }),
         CheckinSessionModule,
+        ActivityParticipantModule
     ],
     controllers: [CheckinController],
     providers: [CheckinService, CheckinRepository],

@@ -37,6 +37,7 @@ export interface ActivityDetailResponse {
   organizer: any;
   category: any;
   participantCount: number;
+  isRegistered: boolean;
 }
 
 export interface CustomJwtPayload {

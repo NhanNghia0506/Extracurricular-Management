@@ -7,6 +7,8 @@ import bcrypt from 'bcrypt';
 import { UserRole, UserStatus, UserType } from "src/global/globalEnum";
 import StudentService from "../students/student.service";
 import TeacherService from "../teachers/teacher.service";
+import { DeviceService } from "../devices/device.service";
+import { createFingerPrintHash } from "src/utils/createFingerPrintHash";
 @Injectable()
 class UserService {
     constructor(
@@ -14,6 +16,7 @@ class UserService {
         private readonly studentService: StudentService,
         private readonly teacherService: TeacherService,
         private readonly jwtService: JwtService,
+        private readonly deviceService: DeviceService,
     ) { }
 
     async createStudent(userData: RegisterUserDto) {
@@ -105,9 +108,15 @@ class UserService {
 
         const access_token = this.jwtService.sign(payload);
 
+        // hash fingerprint data để tạo deviceId
+        const fingerprintHash = createFingerPrintHash(loginData.fingerprintData)
+
+        const device = await this.deviceService.findOrCreateDevice(fingerprintHash, user._id.toString())
+
         // Trả về thông tin user và token nếu đăng nhập thành công
         return {
             access_token,
+            deviceId: device.id,
             user: {
                 id: user._id,
                 name: user.name,

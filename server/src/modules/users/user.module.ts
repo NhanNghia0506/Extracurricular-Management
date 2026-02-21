@@ -7,6 +7,7 @@ import { UserRepository } from "./user.repository";
 import { StudentModule } from "../students/student.module";
 import { JwtModule } from "@nestjs/jwt";
 import { TeacherModule } from "../teachers/teacher.module";
+import { DeviceModule } from "../devices/device.module";
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { TeacherModule } from "../teachers/teacher.module";
             secret: 'your-secret-key',
             signOptions: { expiresIn: '24h' },
         }),
+        DeviceModule,
     ],
     controllers: [UserController],
     providers: [UserService, UserRepository],

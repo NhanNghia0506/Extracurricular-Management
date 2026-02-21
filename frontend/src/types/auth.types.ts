@@ -17,6 +17,7 @@ export interface RegisterRequest {
 
 export interface LoginResponse {
     access_token: string;
+    deviceId: string;
     user: {
         id: string;
         email: string;

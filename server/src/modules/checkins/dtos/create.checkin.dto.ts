@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class CreateCheckinDto {
     @IsMongoId()
@@ -16,4 +16,8 @@ export class CreateCheckinDto {
     @IsNumber()
     @IsNotEmpty()
     longitude: number;
+
+    @IsString()
+    @IsNotEmpty()
+    deviceId: string;
 }

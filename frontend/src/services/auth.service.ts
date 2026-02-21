@@ -1,20 +1,24 @@
 import apiService from './api.service';
 import { ApiResponse } from '../types/response.types';
 import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserProfile } from '../types/auth.types';
+import { getFingerPrintData } from '../utils/fingerprint';
 
 class AuthService {
     private readonly AUTH_TOKEN_KEY = process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken';
     private readonly USER_INFO_KEY = process.env.REACT_APP_USER_INFO_KEY || 'userInfo';
+    private readonly DEVICE_ID_KEY = 'deviceId';
 
     async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
+        const fingerprintData = getFingerPrintData();
         const response = await apiService.post<ApiResponse<LoginResponse>>(
             '/user/login',
-            credentials
+            { ...credentials, fingerprintData }
         );
 
         if (response.data.success) {
-            const { access_token } = response.data.data;
+            const { access_token, deviceId } = response.data.data;
             this.setToken(access_token);
+            this.setDeviceId(deviceId);
             this.saveUserInfoFromToken(access_token);
         }
 
@@ -37,12 +41,21 @@ class AuthService {
     logout(): void {
         localStorage.removeItem(this.AUTH_TOKEN_KEY);
         localStorage.removeItem(this.USER_INFO_KEY);
+        localStorage.removeItem(this.DEVICE_ID_KEY);
         window.location.href = '/login';
     }
 
     setToken(token: string): void {
         const cleanToken = token.trim();
         localStorage.setItem(this.AUTH_TOKEN_KEY, cleanToken);
+    }
+
+    setDeviceId(deviceId: string): void {
+        localStorage.setItem(this.DEVICE_ID_KEY, deviceId);
+    }
+
+    getDeviceId(): string | null {
+        return localStorage.getItem(this.DEVICE_ID_KEY);
     }
 
     setUserInfo(user: any): void {
