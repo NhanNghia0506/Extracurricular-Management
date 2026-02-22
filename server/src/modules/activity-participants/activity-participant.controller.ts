@@ -28,4 +28,16 @@ export class ActivityParticipantController {
             throw new UnauthorizedException('Bạn không có quyền truy cập vào chức năng này!');
         return this.activityParticipantService.findByActivityIdWithStudentInfo(activityId);
     }
+
+    @UseGuards(AuthGuard)
+    @Get('my-activities')
+    getMyActivities(@Req() req: Request) {
+        const userId = req.user?.id;
+        if (!userId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+        return this.activityParticipantService.findActivitiesByUserId(userId);
+    }
+
+
 }

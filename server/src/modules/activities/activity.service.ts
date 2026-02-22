@@ -6,7 +6,6 @@ import { ActivityStatus } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
-import { Request } from 'express';
 
 
 @Injectable()
@@ -93,6 +92,7 @@ export class ActivityService {
 
         const participantCount = await this.activityParticipantService.countParticipantsByActivity(id);
         const isRegistered = userId ? await this.activityParticipantService.findByActivityAndUserId(id, userId) !== null : false;
+        const isOwner = userId === activity.createdBy?.toString();
         return {
             id: activity._id.toString(),
             title: activity.title,
@@ -108,6 +108,7 @@ export class ActivityService {
             category: activity.categoryId,
             registeredCount: participantCount,
             isRegistered: isRegistered,
+            isOwner: isOwner,
         } as ActivityDetailResponse;
     }
 

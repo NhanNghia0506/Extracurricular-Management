@@ -58,4 +58,9 @@ export class ActivityParticipantService {
     findByActivityAndUserId(activityId: string, userId: string): Promise<ActivityParticipant | null> {
         return this.activityParticipantRepository.findByActivityAndUserId(activityId, userId);
     }
+
+    // Lấy danh sách hoạt động mà user đã tham gia
+    findActivitiesByUserId(userId: string) {
+        return this.activityParticipantRepository.findActivitiesByUserId(userId);
+    }
 }

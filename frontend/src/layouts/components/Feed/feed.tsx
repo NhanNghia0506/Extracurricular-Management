@@ -59,7 +59,7 @@ const Feed: React.FC = () => {
                 image: imageUrl,
                 description: activity.description,
                 location: locationText,
-                points: 0,
+                trainingScore: activity.trainingScore || 0,
                 participants: [],
                 participantCount: 0,
                 isMine: Boolean(activity.isMine),

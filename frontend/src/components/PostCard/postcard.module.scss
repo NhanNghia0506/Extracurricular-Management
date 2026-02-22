@@ -91,11 +91,45 @@
 }
 
 // --- Content Text ---
+.descriptionWrapper {
+    margin-bottom: 1rem;
+}
+
 .description {
     color: var(--color-text-secondary);
     font-size: 0.95rem;
     line-height: 1.6;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+    
+    &.collapsed {
+        max-height: 4.8em; // ~3 dòng text
+    }
+    
+    &.expanded {
+        max-height: 1000px; // Đủ lớn để chứa nội dung
+    }
+}
+
+.toggleBtn {
+    background: none;
+    border: none;
+    color: var(--color-primary-blue, #2563eb);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        text-decoration: underline;
+        opacity: 0.8;
+    }
+    
+    &:active {
+        transform: scale(0.98);
+    }
 }
 
 // --- Meta Info (Location, Points) ---

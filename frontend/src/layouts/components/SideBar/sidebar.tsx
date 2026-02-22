@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './sidebar.module.scss';
 import authService from '../../../services/auth.service';
 
@@ -7,7 +8,7 @@ interface MenuItem {
     id: string;
     icon: string; // Class name của FontAwesome
     label: string;
-    isDanger?: boolean; // Tùy chọn: đánh dấu mục nguy hiểm (như Sign Out)
+    isDanger?: boolean;// Tùy chọn: đánh dấu mục nguy hiểm (như Sign Out)
 }
 
 // 2. Khởi tạo mảng dữ liệu (như bạn yêu cầu)
@@ -16,6 +17,7 @@ const MAIN_MENU: MenuItem[] = [
     { id: 'my-activities', icon: 'fa-regular fa-calendar-check', label: 'Hoạt động của tôi' },
     { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Tổ chức' }, // Hoặc fa-user-group
     { id: 'achievements', icon: 'fa-solid fa-medal', label: 'Thành tích' },
+    { id: 'create-activity', icon: 'fa-solid fa-plus', label: 'Tạo hoạt động mới' },
 ];
 
 const BOTTOM_MENU: MenuItem[] = [
@@ -23,11 +25,18 @@ const BOTTOM_MENU: MenuItem[] = [
     { id: 'sign-out', icon: 'fa-solid fa-arrow-right-from-bracket', label: 'Đăng xuất', isDanger: true },
 ];
 
-interface SidebarProps {
-    onNavigate?: (id: string) => void;
-}
+// Ánh xạ menu ID tới routes
+const ROUTE_MAP: { [key: string]: string } = {
+    'explore': '/',
+    'my-activities': '/my-activities',
+    'organizations': '/organizations',
+    'achievements': '/achievements',
+    'create-activity': '/create-activity',
+    'settings': '/settings',
+};
 
-const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
+const Sidebar: React.FC = () => {
+    const navigate = useNavigate();
     // State để lưu mục đang được chọn (Mặc định là 'explore')
     const [activeId, setActiveId] = useState<string>('explore');
 
@@ -38,8 +47,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
         }
 
         setActiveId(item.id);
-        if (onNavigate) {
-            onNavigate(item.id);
+        // Chuyển trang dựa vào route map
+        const targetRoute = ROUTE_MAP[item.id];
+        if (targetRoute) {
+            navigate(targetRoute);
         }
     };
 

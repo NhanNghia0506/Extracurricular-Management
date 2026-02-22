@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -18,6 +18,7 @@ const locationIcon = new L.Icon({
 
 const ActivityDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -64,6 +65,11 @@ const ActivityDetail: React.FC = () => {
         }
     };
 
+    const handleConfigureAttendance = () => {
+        if (!id) return;
+        navigate(`/configure-attendance?activityId=${id}`);
+    };
+
     if (loading) return <div className="text-center py-5">Đang tải...</div>;
     if (error) return <div className="text-center py-5 text-danger">{error}</div>;
     if (!activity || !activity.category || !activity.organizer) {
@@ -102,7 +108,7 @@ const ActivityDetail: React.FC = () => {
                             <div className={styles.profileLeft}>
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" alt="Dr. Sarah" />
                                 <div>
-                                    <span className={styles.name}>Dr. Sarah Jenkins</span>
+                                    <span className={styles.name}>{activity.organizer.name}</span>
                                     <span className={styles.title}>Event Coordinator & Associate Professor</span>
                                 </div>
                             </div>
@@ -174,17 +180,27 @@ const ActivityDetail: React.FC = () => {
                                 }}
                             ></div>
                         </div>
-                        <button
-                            className={styles.registerBtn}
-                            onClick={handleRegister}
-                            disabled={registering || activity.isRegistered}
-                        >
-                            <i className="fa-solid fa-id-card"></i>
-                            {activity.isRegistered
-                                ? 'Đã đăng ký'
-                                : registering ? 'Đang đăng ký...' : 'Đăng ký ngay'
-                            }
-                        </button>
+                        {activity.isOwner ? (
+                            <button
+                                className={styles.registerBtn}
+                                onClick={handleConfigureAttendance}
+                            >
+                                <i className="fa-solid fa-gear"></i>
+                                Cấu hình điểm danh
+                            </button>
+                        ) : (
+                            <button
+                                className={styles.registerBtn}
+                                onClick={handleRegister}
+                                disabled={registering || activity.isRegistered}
+                            >
+                                <i className="fa-solid fa-id-card"></i>
+                                {activity.isRegistered
+                                    ? 'Đã đăng ký'
+                                    : registering ? 'Đang đăng ký...' : 'Đăng ký ngay'
+                                }
+                            </button>
+                        )}
                         <p className="text-center text-muted small m-0">Đăng ký kết thúc trong 2 ngày</p>
                     </div>
 

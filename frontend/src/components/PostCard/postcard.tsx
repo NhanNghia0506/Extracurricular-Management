@@ -15,7 +15,7 @@ export interface PostData {
     image: string;
     description: string;
     location: string;
-    points: number;
+    trainingScore: number;
     participants: string[]; // Mảng chứa URL ảnh avatar
     participantCount: number; // Tổng số người tham gia (để hiện +42)
     isMine?: boolean;
@@ -28,6 +28,11 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const navigate = useNavigate();
     const [showCommentModal, setShowCommentModal] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Kiểm tra description có dài hơn 150 ký tự không
+    const isLongDescription = data.description.length > 150;
+    const displayText = isExpanded ? data.description : data.description.slice(0, 150);
 
     const handleCardClick = () => {
         navigate(`/detail/${data.id}`);
@@ -74,9 +79,23 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
             />
 
             {/* 3. Nội dung mô tả */}
-            <p className={styles.description}>
-                {data.description}
-            </p>
+            <div className={styles.descriptionWrapper}>
+                <p className={`${styles.description} ${isExpanded ? styles.expanded : styles.collapsed}`}>
+                    {displayText}
+                    {!isExpanded && isLongDescription && '...'}
+                </p>
+                {isLongDescription && (
+                    <button 
+                        className={styles.toggleBtn}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(!isExpanded);
+                        }}
+                    >
+                        {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+                    </button>
+                )}
+            </div>
 
             {/* 4. Meta Info (Địa điểm & Điểm thưởng) */}
             <div className={styles.metaRow}>
@@ -86,7 +105,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                 </span>
                 <span className={`${styles.metaItem} ${styles.points}`}>
                     <i className="fa-solid fa-award"></i>
-                    {data.points} Điểm rèn luyện
+                    {data.trainingScore} điểm rèn luyện
                 </span>
             </div>
 

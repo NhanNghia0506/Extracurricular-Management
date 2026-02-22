@@ -72,7 +72,11 @@ export class CheckinService {
             createCheckinDto.userId
         );
 
-        if (!participant || participant.status !== ParticipantStatus.APPROVED) {
+        if (!participant) {
+            throw new BadRequestException('Bạn chưa tham gia hoạt động này');
+        }
+
+        if (participant.status && participant.status !== ParticipantStatus.APPROVED) {
             throw new BadRequestException('Bạn chưa được phê duyệt tham gia hoạt động này');
         }
 

@@ -84,4 +84,38 @@ export class ActivityParticipantRepository {
             userId: new Types.ObjectId(userId)
         }).exec();
     }
+
+    findActivitiesByUserId(userId: string) {
+        const objectId = new Types.ObjectId(userId);
+        return this.activityParticipantModel.aggregate([
+            { $match: { userId: objectId } },
+            {
+                $lookup: {
+                    from: 'activities',
+                    localField: 'activityId',
+                    foreignField: '_id',
+                    as: 'activity',
+                },
+            },
+            { $unwind: { path: '$activity', preserveNullAndEmptyArrays: false } },
+            {
+                $project: {
+                    _id: 0,
+                    activityId: '$activity._id',
+                    title: '$activity.title',
+                    description: '$activity.description',
+                    image: '$activity.image',
+                    location: '$activity.location',
+                    startAt: '$activity.startAt',
+                    endAt: '$activity.endAt',
+                    status: '$activity.status',
+                    trainingScore: '$activity.trainingScore',
+                    organizerId: '$activity.organizerId',
+                    categoryId: '$activity.categoryId',
+                    registeredAt: '$registeredAt',
+                    participantStatus: '$status'
+                },
+            },
+        ]).exec();
+    }
 }

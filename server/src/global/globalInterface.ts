@@ -38,6 +38,7 @@ export interface ActivityDetailResponse {
   category: any;
   participantCount: number;
   isRegistered: boolean;
+  isOwner: boolean;
 }
 
 export interface CustomJwtPayload {

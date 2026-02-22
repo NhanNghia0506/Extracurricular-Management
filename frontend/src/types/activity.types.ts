@@ -36,6 +36,7 @@ export interface ActivityListItem {
     createdAt?: string;
     updatedAt?: string;
     isMine?: boolean;
+    trainingScore?: number;
 }
 
 export interface ActivityDetailResponse {
@@ -59,4 +60,5 @@ export interface ActivityDetailResponse {
     };
     registeredCount: number;
     isRegistered: boolean;
+    isOwner: boolean;
 }
