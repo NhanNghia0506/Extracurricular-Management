@@ -3,6 +3,7 @@ import activityService from '../../services/activity.service';
 import { useActivityForm } from '../../hooks/useActivityForm';
 import { useLocationMap } from '../../hooks/useLocationMap';
 import { useActivityData } from '../../hooks/useActivityData';
+import { useToast } from '../../contexts/ToastContext';
 import CreateActivityForm from './CreateActivityForm';
 import styles from './create.activity.module.scss';
 
@@ -15,6 +16,9 @@ const CreateActivity: React.FC = () => {
 
     // Location & Map state
     const location = useLocationMap();
+
+    // Toast notification
+    const { showToast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -65,10 +69,21 @@ const CreateActivity: React.FC = () => {
 
             await activityService.createWithFile(form.organizerId, form.categoryId, formData);
 
-            alert('Tạo hoạt động thành công');
+            showToast({
+                type: 'success',
+                title: 'Tạo hoạt động thành công!',
+                message: 'Hoạt động của bạn đã được tạo và sẽ hiển thị trong danh sách hoạt động.',
+            });
+
             form.resetForm();
         } catch (error) {
             console.error('Lỗi tạo activity:', error);
+            showToast({
+                type: 'error',
+                title: 'Tạo hoạt động thất bại!',
+                message: 'Không thể tạo hoạt động. Vui lòng kiểm tra lại thông tin và thử lại.',
+                actionText: 'Thử lại',
+            });
             form.setErrorMessage('Không thể tạo hoạt động. Vui lòng thử lại.');
         } finally {
             form.setSubmitting(false);

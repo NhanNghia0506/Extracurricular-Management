@@ -1,0 +1,149 @@
+/* NotificationModal.module.scss */
+$success-green: #10b981;
+$error-red: #ef4444;
+$info-blue: #2563eb;
+$text-main: #1e293b;
+$text-muted: #64748b;
+
+.modalStack {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    z-index: 9999;
+    pointer-events: none;
+
+    >* {
+        pointer-events: auto;
+    }
+}
+
+.toast {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 400px;
+    display: flex;
+    gap: 1rem;
+    position: relative;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+
+    .closeBtn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        color: #cbd5e1;
+        cursor: pointer;
+        font-size: 0.9rem;
+
+        &:hover {
+            color: $text-main;
+        }
+    }
+
+    .iconContainer {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1.2rem;
+    }
+
+    .content {
+        flex: 1;
+
+        h5 {
+            font-weight: 800;
+            color: $text-main;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        p {
+            font-size: 0.9rem;
+            color: $text-muted;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+    }
+
+    /* Success Variant */
+    &.success {
+        .iconContainer {
+            background-color: #ecfdf5;
+            color: $success-green;
+        }
+
+        .actionLink {
+            background: none;
+            border: none;
+            color: $info-blue;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 0;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+    /* Error Variant */
+    &.error {
+        .iconContainer {
+            background-color: #fef2f2;
+            color: $error-red;
+        }
+
+        .actionBtn {
+            background: $info-blue;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+
+            &:hover {
+                background: darken($info-blue, 5%);
+            }
+        }
+    }
+
+    /* Info Variant */
+    &.info {
+        .iconContainer {
+            background-color: #eff6ff;
+            color: $info-blue;
+        }
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

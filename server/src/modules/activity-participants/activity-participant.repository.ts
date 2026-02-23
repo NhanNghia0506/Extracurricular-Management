@@ -99,6 +99,24 @@ export class ActivityParticipantRepository {
             },
             { $unwind: { path: '$activity', preserveNullAndEmptyArrays: false } },
             {
+                $lookup: {
+                    from: 'organizers',
+                    localField: 'activity.organizerId',
+                    foreignField: '_id',
+                    as: 'organizer',
+                },
+            },
+            { $unwind: { path: '$organizer', preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: 'activitycategories',
+                    localField: 'activity.categoryId',
+                    foreignField: '_id',
+                    as: 'category',
+                },
+            },
+            { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+            {
                 $project: {
                     _id: 0,
                     activityId: '$activity._id',
@@ -110,8 +128,8 @@ export class ActivityParticipantRepository {
                     endAt: '$activity.endAt',
                     status: '$activity.status',
                     trainingScore: '$activity.trainingScore',
-                    organizerId: '$activity.organizerId',
-                    categoryId: '$activity.categoryId',
+                    organizerId: { _id: '$organizer._id', name: '$organizer.name' },
+                    categoryId: { _id: '$category._id', name: '$category.name' },
                     registeredAt: '$registeredAt',
                     participantStatus: '$status'
                 },

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Activity } from "./activity.entity";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 
 
 @Injectable()
@@ -27,6 +27,23 @@ export class ActivityRepository {
     findById(id: string) {
         return this.activityModel
             .findById(id)
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .exec();
+    }
+
+    findByUserId(userId: string): Promise<Array<Activity & { _id: any }>> {
+        return this.activityModel
+            .find({ createdBy: new Types.ObjectId(userId) })
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .lean()
+            .exec();
+    }
+
+    update(id: string, updateData: Partial<Activity>): Promise<Activity | null> {
+        return this.activityModel
+            .findByIdAndUpdate(id, updateData, { new: true })
             .populate('organizerId', 'name')
             .populate('categoryId', 'name')
             .exec();

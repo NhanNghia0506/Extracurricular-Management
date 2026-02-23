@@ -1,13 +1,9 @@
 /* ActivityFeed.module.scss */
-$primary-blue: #2563eb;
-$bg-light: #f8fafc;
-$text-main: #1e293b;
-$text-muted: #64748b;
 $border-radius: 12px;
 
 .feedContainer {
-    padding: 2rem;
-    background-color: $bg-light;
+    padding: 1rem;
+    background-color: var(--color-bg-light);
     min-height: 100vh;
 }
 
@@ -25,8 +21,8 @@ $border-radius: 12px;
         button {
             padding: 0.6rem 1.2rem;
             border-radius: 99px;
-            border: 1px solid #e2e8f0;
-            background: white;
+            border: 1px solid var(--color-border-light);
+            background: var(--color-bg-white);
             font-weight: 600;
             font-size: 0.85rem;
             display: flex;
@@ -35,9 +31,9 @@ $border-radius: 12px;
             transition: all 0.2s;
 
             &.active {
-                background: $primary-blue;
-                color: white;
-                border-color: $primary-blue;
+                background: var(--color-primary-blue);
+                color: var(--color-bg-white);
+                border-color: var(--color-primary-blue);
             }
         }
     }
@@ -45,7 +41,7 @@ $border-radius: 12px;
     .sortAction {
         font-size: 0.85rem;
         font-weight: 700;
-        color: $text-main;
+        color: var(--color-text-main);
         cursor: pointer;
 
         i {
@@ -62,10 +58,43 @@ $border-radius: 12px;
     margin-bottom: 3rem;
 }
 
+// --- Section Title ---
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    margin-top: 2rem;
+    font-size: 1.3rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--color-border-light);
+
+    i {
+        color: var(--color-primary-blue);
+        font-size: 1.4rem;
+    }
+
+    span {
+        color: var(--color-text-main);
+    }
+
+    .badge {
+        background: linear-gradient(135deg, var(--color-primary-blue), #3b82f6);
+        color: var(--color-bg-white);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-left: auto;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+}
+
 .activityCard {
-    background: white;
+    background: var(--color-bg-white);
     border-radius: $border-radius;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border-light);
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
 
@@ -99,7 +128,7 @@ $border-radius: 12px;
             font-size: 0.65rem;
             font-weight: 800;
             text-transform: uppercase;
-            color: white;
+            color: var(--color-bg-white);
         }
 
         .saveBtn {
@@ -108,12 +137,12 @@ $border-radius: 12px;
             right: 12px;
             width: 32px;
             height: 32px;
-            background: white;
+            background: var(--color-bg-white);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: $primary-blue;
+            color: var(--color-primary-blue);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
     }
@@ -125,7 +154,7 @@ $border-radius: 12px;
             font-weight: 800;
             font-size: 1.1rem;
             margin-bottom: 1rem;
-            color: $text-main;
+            color: var(--color-text-main);
         }
 
         .infoRow {
@@ -133,11 +162,11 @@ $border-radius: 12px;
             align-items: center;
             gap: 10px;
             font-size: 0.85rem;
-            color: $text-muted;
+            color: var(--color-text-muted);
             margin-bottom: 8px;
 
             i {
-                color: $primary-blue;
+                color: var(--color-primary-blue);
                 width: 14px;
             }
         }
@@ -145,7 +174,7 @@ $border-radius: 12px;
 
     .cardFooter {
         padding: 1rem 1.25rem;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--color-border-lighter);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -168,7 +197,7 @@ $border-radius: 12px;
         .actionLink {
             font-size: 0.85rem;
             font-weight: 700;
-            color: $primary-blue;
+            color: var(--color-primary-blue);
             text-decoration: none;
 
             &:hover {
@@ -186,18 +215,28 @@ $border-radius: 12px;
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #94a3b8;
         font-weight: 800;
         margin-bottom: 1.5rem;
         font-size: 1.1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--color-border-light);
+
+        i {
+            color: var(--color-primary-blue);
+            font-size: 1.2rem;
+        }
+
+        span {
+            color: var(--color-text-main);
+        }
     }
 
     .miniCard {
         width: 280px;
-        background: #f1f5f9; // Nhạt hơn để tạo hiệu ứng preview
+        background: var(--color-border-lighter); // Nhạt hơn để tạo hiệu ứng preview
         border-radius: $border-radius;
         padding: 1.25rem;
-        border: 1px dashed #cbd5e1;
+        border: 1px dashed var(--color-border-light);
         opacity: 0.7;
 
         .miniHeader {
@@ -208,18 +247,18 @@ $border-radius: 12px;
             .iconBox {
                 width: 40px;
                 height: 40px;
-                background: white;
+                background: var(--color-bg-white);
                 border-radius: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: $primary-blue;
+                color: var(--color-primary-blue);
             }
 
             .count {
                 font-size: 0.65rem;
                 font-weight: 700;
-                color: $text-muted;
+                color: var(--color-text-muted);
             }
         }
 
@@ -230,19 +269,19 @@ $border-radius: 12px;
 
         p {
             font-size: 0.75rem;
-            color: $text-muted;
+            color: var(--color-text-muted);
             margin-bottom: 1.5rem;
         }
 
         .editBtn {
             width: 100%;
-            background: white;
-            border: 1px solid #e2e8f0;
+            background: var(--color-bg-white);
+            border: 1px solid var(--color-border-light);
             padding: 8px;
             border-radius: 8px;
             font-size: 0.75rem;
             font-weight: 700;
-            color: $primary-blue;
+            color: var(--color-primary-blue);
         }
     }
 }

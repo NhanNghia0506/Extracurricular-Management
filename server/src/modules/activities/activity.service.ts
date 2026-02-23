@@ -1,11 +1,13 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
 import { ActivityRepository } from './activity.repository';
 import { CreateActivityDto } from './dtos/create.activity.dto';
+import { UpdateActivityDto } from './dtos/update.activity.dto';
 import { Types } from 'mongoose';
 import { ActivityStatus } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 import { ActivityDetailResponse } from 'src/global/globalInterface';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
+import { UploadService } from '../../interceptors/upload.service';
 
 
 @Injectable()
@@ -14,6 +16,7 @@ export class ActivityService {
         private readonly activityRepository: ActivityRepository,
         @Inject(forwardRef(() => ActivityParticipantService))
         private readonly activityParticipantService: ActivityParticipantService,
+        private readonly uploadService: UploadService,
     ) { }
 
     /**
@@ -114,5 +117,88 @@ export class ActivityService {
 
     findById(id: string): Promise<Activity | null> {
         return this.activityRepository.findById(id);
+    }
+
+    async getMyActivities(
+        userId: string,
+    ): Promise<Array<Activity & { relation: 'created' | 'participated' }>> {
+        const myActivitiesCreated = await this.activityRepository.findByUserId(userId);
+        const myActivitiesParticipated = await this.activityParticipantService.findActivitiesByUserId(userId);
+
+        const createdItems = myActivitiesCreated.map((activity) => ({
+            ...activity,
+            relation: 'created' as const,
+        }));
+
+        const participatedItems = (myActivitiesParticipated as Activity[]).map((activity) => ({
+            ...activity,
+            relation: 'participated' as const,
+        }));
+
+        return [...createdItems, ...participatedItems];
+    }
+
+    /**
+     * Cập nhật activity - chỉ chủ sở hữu (createdBy) mới có thể cập nhật
+     * @param id - ID của activity
+     * @param userId - ID user hiện tại
+     * @param updateActivityDto - Dữ liệu cần cập nhật (partial)
+     * @param newImageFilename - Tên file ảnh mới (nếu có)
+     * @returns Activity đã cập nhật
+     */
+    async update(
+        id: string,
+        userId: string,
+        updateActivityDto: UpdateActivityDto,
+        newImageFilename?: string,
+    ): Promise<Activity> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('ID phải là MongoDB ObjectId hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(userId)) {
+            throw new BadRequestException('userId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        // Kiểm tra activity tồn tại
+        const activity = await this.activityRepository.findById(id);
+        if (!activity) {
+            throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        // Kiểm tra quyền: chỉ chủ sở hữu mới được chỉnh sửa
+        if (activity.createdBy.toString() !== userId) {
+            throw new ForbiddenException('Bạn chỉ có quyền chỉnh sửa hoạt động của chính mình');
+        }
+
+        // Chuẩn bị dữ liệu cập nhật
+        const updateData: Partial<Activity> = {};
+
+        // Chỉ cập nhật các trường được cung cấp
+        if (updateActivityDto.title) updateData.title = updateActivityDto.title;
+        if (updateActivityDto.description) updateData.description = updateActivityDto.description;
+        if (updateActivityDto.location) updateData.location = updateActivityDto.location;
+        if (updateActivityDto.status) updateData.status = updateActivityDto.status;
+        if (updateActivityDto.startAt) updateData.startAt = updateActivityDto.startAt;
+        if (updateActivityDto.endAt) updateData.endAt = updateActivityDto.endAt;
+        if (updateActivityDto.trainingScore !== undefined) updateData.trainingScore = updateActivityDto.trainingScore;
+        if (updateActivityDto.participantCount !== undefined) updateData.participantCount = updateActivityDto.participantCount;
+
+        // Xử lý ảnh: nếu có ảnh mới, xóa ảnh cũ rồi cập nhật ảnh mới
+        if (newImageFilename) {
+            // Xóa ảnh cũ nếu tồn tại
+            if (activity.image) {
+                this.uploadService.deleteFile(activity.image);
+            }
+            updateData.image = newImageFilename;
+        }
+
+        // Cập nhật vào database
+        const updatedActivity = await this.activityRepository.update(id, updateData);
+        if (!updatedActivity) {
+            throw new NotFoundException('Lỗi khi cập nhật hoạt động');
+        }
+
+        return updatedActivity;
     }
 }

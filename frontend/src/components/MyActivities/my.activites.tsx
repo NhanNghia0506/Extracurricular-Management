@@ -6,6 +6,7 @@ import activityService from '../../services/activity.service';
 import { LocationData } from '@/types/activity.types';
 
 interface MyActivityItem {
+    _id?: string;
     activityId: string;
     title: string;
     description?: string;
@@ -17,6 +18,7 @@ interface MyActivityItem {
     trainingScore?: number;
     registeredAt?: string;
     participantStatus?: string;
+    relation?: 'created' | 'participated';
 }
 
 const MyActivities: React.FC = () => {
@@ -41,6 +43,8 @@ const MyActivities: React.FC = () => {
 
         fetchMyActivities();
     }, []);
+
+    console.log('My Activities:', activities);
 
     const statusColorMap = useMemo(() => ({
         'ONGOING': '#10b981',
@@ -88,6 +92,11 @@ const MyActivities: React.FC = () => {
         }
     };
 
+    const getActivityId = (activity: MyActivityItem) => activity.activityId || activity._id || '';
+
+    const createdActivities = activities.filter((activity) => activity.relation === 'created');
+    const participatedActivities = activities.filter((activity) => activity.relation === 'participated');
+
     return (
         <div className={styles.feedContainer}>
             {/* Filter Bar */}
@@ -103,7 +112,7 @@ const MyActivities: React.FC = () => {
                 </div>
             </div>
 
-            {/* Grid */}
+            {/* Participated Activities */}
             <div className={styles.activityGrid}>
                 {loading && (
                     <div>Đang tải danh sách hoạt động...</div>
@@ -111,14 +120,12 @@ const MyActivities: React.FC = () => {
                 {!loading && error && (
                     <div>{error}</div>
                 )}
-                {!loading && !error && activities.length === 0 && (
-                    <div>Bạn chưa tham gia hoạt động nào.</div>
-                )}
-                {!loading && !error && activities.map((act) => {
+                {!loading && !error && participatedActivities.map((act) => {
                     const statusColor = statusColorMap[act.status || ''] || '#64748b';
                     const participantStatus = mapParticipantStatus(act.participantStatus);
+                    const activityId = getActivityId(act);
                     return (
-                        <div key={act.activityId} className={styles.activityCard}>
+                        <div key={activityId} className={styles.activityCard}>
                             <div className={`${styles.imageWrapper} ${act.status === 'ENDED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
                                 <span className={styles.statusTag} style={{ background: statusColor }}>{act.status || 'N/A'}</span>
@@ -135,27 +142,53 @@ const MyActivities: React.FC = () => {
                                 <span className={styles.statePill}>
                                     {participantStatus.label}
                                 </span>
-                                <Link to={`/detail/${act.activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                                <Link to={`/detail/${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Preview Section */}
-            <div className={styles.previewSection}>
-                <div className={styles.sectionTitle}>
-                    <i className="fa-solid fa-chart-simple"></i> Created by Me Preview
-                </div>
-                <div className={styles.miniCard}>
-                    <div className={styles.miniHeader}>
-                        <div className={styles.iconBox}><i className="fa-solid fa-users"></i></div>
-                        <span className={styles.count}>120 Registered</span>
-                    </div>
-                    <h6>UI Design Workshop</h6>
-                    <p>Starts in 3 days</p>
-                    <button className={styles.editBtn}><i className="fa-solid fa-pen"></i> Edit Activity</button>
-                </div>
+            {/* Created Activities */}
+            <div className={styles.sectionTitle}>
+                <i className="fa-solid fa-pen-to-square"></i>
+                <span>Hoạt động của bạn</span>
+                <span className={styles.badge}>{createdActivities.length}</span>
+            </div>
+            <div className={styles.activityGrid}>
+                {loading && (
+                    <div>Đang tải danh sách hoạt động...</div>
+                )}
+                {!loading && error && (
+                    <div>{error}</div>
+                )}
+                {!loading && !error && createdActivities.length === 0 && (
+                    <div>Bạn chưa tạo hoạt động nào.</div>
+                )}
+                {!loading && !error && createdActivities.map((act) => {
+                    const statusColor = statusColorMap[act.status || ''] || '#64748b';
+                    const activityId = getActivityId(act);
+                    return (
+                        <div key={activityId} className={styles.activityCard}>
+                            <div className={`${styles.imageWrapper} ${act.status === 'ENDED' ? styles.ended : ''}`}>
+                                <img src={getImageUrl(act.image)} alt={act.title} />
+                                <span className={styles.statusTag} style={{ background: statusColor }}>{act.status || 'N/A'}</span>
+                                <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
+                            </div>
+
+                            <div className={styles.cardBody}>
+                                <h5>{act.title}</h5>
+                                <div className={styles.infoRow}><i className="fa-regular fa-calendar"></i> {formatDateTime(act.startAt)}</div>
+                                <div className={styles.infoRow}><i className="fa-solid fa-location-dot"></i> {act.location?.address || 'Chưa cập nhật'}</div>
+                            </div>
+
+                            <div className={styles.cardFooter}>
+                                <span className={styles.statePill}>Bạn tạo</span>
+                                <Link to={`/detail/${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
