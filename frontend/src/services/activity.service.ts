@@ -9,6 +9,9 @@ const activityService = {
             formData
         );
     },
+    updateWithFile: (activityId: string, formData: FormData) => {
+        return apiService.put(`/activities/${activityId}`, formData);
+    },
     categories: () => apiService.get('/activity-categories'),
     list: () => apiService.get('/activities'),
     getDetail: (id: string) => apiService.get(`/activities/${id}`),

@@ -13,6 +13,7 @@ import ActivityParticipantsPage from '../pages/ActivityParticipantsPage';
 import ProtectedRoute from './ProtectedRoute';
 import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 import MyActivitiesPage from '../pages/MyActivitiesPage';
+import UpdateActivityPage from '../pages/UpdateActivityPage';
 
 const AppRoutes: React.FC = () => {
     return (
@@ -29,6 +30,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute>
                             <CreateActivityPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/update-activity"
+                    element={
+                        <ProtectedRoute>
+                            <UpdateActivityPage />
                         </ProtectedRoute>
                     }
                 />

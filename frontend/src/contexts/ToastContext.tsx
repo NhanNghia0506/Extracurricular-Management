@@ -30,7 +30,6 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ...toast,
             id: nextId,
         };
-        console.log('✅ Showing toast:', newToast);
         setToasts((prev) => [...prev, newToast]);
         setNextId((prev) => prev + 1);
 
