@@ -14,6 +14,7 @@ import ProtectedRoute from './ProtectedRoute';
 import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 import MyActivitiesPage from '../pages/MyActivitiesPage';
 import UpdateActivityPage from '../pages/UpdateActivityPage';
+import NotificationsCenterPage from '../pages/NotificationsCenter';
 
 const AppRoutes: React.FC = () => {
     return (
@@ -52,6 +53,7 @@ const AppRoutes: React.FC = () => {
 
             <Route element={<NoSidebarLayout />}>
                 <Route path="/participants/:activityId" element={<ActivityParticipantsPage />} />
+                <Route path="/notifications" element={<NotificationsCenterPage />} />
             </Route>
         </Routes>
     );

@@ -45,7 +45,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
 
     const handleEditClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        navigate(`/create-activity?editId=${data.id}`);
+        navigate(`/update-activity?activityId=${data.id}`);
     };
 
     return (
