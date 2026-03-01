@@ -15,6 +15,10 @@ import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 import MyActivitiesPage from '../pages/MyActivitiesPage';
 import UpdateActivityPage from '../pages/UpdateActivityPage';
 import NotificationsCenterPage from '../pages/NotificationsCenter';
+import NotificationDetailPage from '../pages/NotificationDetailPage';
+import CreateNotificationPage from '../pages/CreateNotificationPage';
+import AttendanceDashboardPage from '../pages/AttendanceDashboardPage';
+import OrganizersPage from '../pages/OrganizersPage';
 
 const AppRoutes: React.FC = () => {
     return (
@@ -49,11 +53,15 @@ const AppRoutes: React.FC = () => {
                 <Route path="/detail/:id" element={<ActivityDetailPage />} />
                 <Route path="/configure-attendance" element={<ConfigureAttendancePage />} />
                 <Route path="/my-activities" element={<MyActivitiesPage />} />
+                <Route path="/organizations" element={<OrganizersPage />} />
             </Route>
 
             <Route element={<NoSidebarLayout />}>
                 <Route path="/participants/:activityId" element={<ActivityParticipantsPage />} />
                 <Route path="/notifications" element={<NotificationsCenterPage />} />
+                <Route path="/notification-detail" element={<NotificationDetailPage />} />
+                <Route path="/create-notification" element={<CreateNotificationPage />} />
+                <Route path="/attendance-dashboard" element={<AttendanceDashboardPage />} />
             </Route>
         </Routes>
     );

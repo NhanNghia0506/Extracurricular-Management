@@ -1,0 +1,313 @@
+$primary-blue: #2563eb;
+$success-green: #10b981;
+$warning-orange: #f59e0b;
+$border-color: #f1f5f9;
+
+.dashboardContainer {
+    background: #f8fafc;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    .activeBadge {
+        background: #eff6ff;
+        color: $primary-blue;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+
+    h1 {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 6px 0;
+    }
+
+    .timeInfo {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .location {
+        font-size: 15px;
+        font-weight: 700;
+        color: #334155;
+    }
+
+    .timer {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+
+        .countdown {
+            display: flex;
+            gap: 8px;
+
+            .timeBlock {
+                text-align: center;
+
+                span {
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: $primary-blue;
+                }
+
+                small {
+                    display: block;
+                    font-size: 10px;
+                    color: #94a3b8;
+                }
+            }
+        }
+    }
+}
+
+.actionBar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    .searchBox {
+        background: white;
+        border: 1px solid $border-color;
+        padding: 8px 12px;
+        border-radius: 8px;
+        width: 400px;
+        font-size: 13px;
+
+        input {
+            border: none;
+            margin-left: 10px;
+            width: 90%;
+            outline: none;
+        }
+    }
+
+    .actions {
+        display: flex;
+        gap: 8px;
+
+        button {
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            line-height: 1.2;
+            cursor: pointer;
+
+            &.btnPrimary {
+                background: $primary-blue;
+                color: white;
+                border: none;
+            }
+
+            &.btnSecondary {
+                background: white;
+                border: 1px solid $border-color;
+                color: #64748b;
+            }
+        }
+    }
+}
+
+.statGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+
+    .statCard {
+        background: white;
+        padding: 14px;
+        border-radius: 10px;
+        border: 1px solid $border-color;
+
+        .statValue {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 6px 0;
+        }
+
+        label {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        &.green {
+            .statValue {
+                color: $success-green;
+            }
+
+            .progressBar div {
+                background: $success-green;
+            }
+        }
+
+        .progressBar {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+    }
+}
+
+.contentGrid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 16px;
+}
+
+.liveFeed {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid $border-color;
+    padding: 14px;
+
+    .feedHeader {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 14px;
+
+        h3 {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .realtimeTag {
+            color: $primary-blue;
+            font-size: 10px;
+            font-weight: 800;
+        }
+    }
+
+    .feedItem {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid $border-color;
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: #fef3c7;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            margin-right: 10px;
+        }
+
+        .itemInfo {
+            flex: 1;
+
+            strong {
+                display: block;
+                font-size: 13px;
+            }
+
+            small {
+                color: #94a3b8;
+                font-size: 12px;
+            }
+
+            .method {
+                font-size: 11px;
+                color: #64748b;
+                margin-top: 4px;
+                display: block;
+            }
+        }
+
+        .time {
+            font-size: 10px;
+            color: $primary-blue;
+            font-weight: 600;
+        }
+    }
+}
+
+.chartsArea {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .velocityChart {
+        background: white;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid $border-color;
+        height: 260px;
+
+        .chartHeader {
+            h3 {
+                font-size: 16px;
+                margin: 0;
+            }
+
+            select {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+        }
+
+        .chartPlaceholder {
+            height: 170px;
+            margin-top: 12px;
+            position: relative;
+        }
+    }
+
+    .bottomCharts {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 16px;
+
+        .methodDist,
+        .overallComp {
+            background: white;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid $border-color;
+
+            h3 {
+                font-size: 16px;
+                margin: 0 0 10px;
+            }
+        }
+
+        .distChartWrap {
+            height: 170px;
+        }
+
+        .pieChartWrap {
+            height: 170px;
+            position: relative;
+        }
+
+        .pieCenterLabel {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+
+            strong {
+                font-size: 18px;
+            }
+
+            small {
+                font-size: 10px;
+                color: #64748b;
+            }
+        }
+    }
+}

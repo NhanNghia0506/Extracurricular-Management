@@ -4,19 +4,16 @@ import { ActivityParticipantController } from './activity-participant.controller
 import { MongooseModule } from '@nestjs/mongoose';
 import { ActivityParticipant, ActivityParticipantSchema } from './activity-participant.entity';
 import { ActivityParticipantRepository } from './activity-participant.repository';
-import { JwtModule } from '@nestjs/jwt';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ActivityModule } from '../activities/activity.module';
+import { UserModule } from '../users/user.module';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: ActivityParticipant.name, schema: ActivityParticipantSchema },
         ]),
-        JwtModule.register({
-            secret: process.env.JWT_SECRET || 'your-secret-key',
-            signOptions: { expiresIn: '7d' },
-        }),
+        UserModule,
         forwardRef(() => ActivityModule),
     ],
     controllers: [ActivityParticipantController],

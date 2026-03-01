@@ -17,13 +17,13 @@ import { DeviceModule } from "../devices/device.module";
             { name: User.name, schema: UserSchema }
         ]),
         JwtModule.register({
-            secret: 'your-secret-key',
-            signOptions: { expiresIn: '24h' },
+            secret: process.env.JWT_SECRET || 'your-secret-key',
+            signOptions: { expiresIn: '7d' },
         }),
         DeviceModule,
     ],
     controllers: [UserController],
     providers: [UserService, UserRepository],
-    exports: [],
+    exports: [JwtModule],
 })
 export class UserModule {}

@@ -6,19 +6,16 @@ import { Activity, ActivitySchema } from './activity.entity';
 import { ActivityRepository } from './activity.repository';
 import { UploadService } from '../../interceptors/upload.service';
 import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
-import { JwtModule } from '@nestjs/jwt';
 import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
 import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
+import { UserModule } from '../users/user.module';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: Activity.name, schema: ActivitySchema },
         ]),
-        JwtModule.register({
-            secret: process.env.JWT_SECRET || 'your-secret-key',
-            signOptions: { expiresIn: '7d' },
-        }),
+        UserModule,
         forwardRef(() => ActivityParticipantModule),
         OrganizerMemberModule,
     ],

@@ -11,6 +11,8 @@ import { ActivityParticipantModule } from './modules/activity-participants/activ
 import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session.module';
 import { CheckinModule } from './modules/checkins/checkin.module';
 import { DeviceModule } from './modules/devices/device.module';
+import { NotificationModule } from './modules/notifications/notification.module';
+import { EventsGateway } from './events/events.gateway';
 
 @Module({
   imports: [
@@ -26,8 +28,9 @@ import { DeviceModule } from './modules/devices/device.module';
     CheckinSessionModule,
     CheckinModule,
     DeviceModule,
+    NotificationModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [EventsGateway],
 })
 export class AppModule { }

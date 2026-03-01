@@ -1,0 +1,280 @@
+$blue-primary: #2563eb;
+$text-dark: #1e293b;
+$text-muted: #64748b;
+$bg-light: #f8fafc;
+$border-color: #e2e8f0;
+
+.wrapper {
+    background-color: #f1f5f9;
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.mainContent {
+    width: 100%;
+    max-width: 900px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+
+        .brand {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+
+            .logoCircle {
+                width: 40px;
+                height: 40px;
+                background: #334155;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+
+                .innerLogo {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    opacity: 0.5;
+                }
+            }
+
+            .brandText {
+                h3 {
+                    margin: 0;
+                    font-size: 16px;
+                    color: $text-dark;
+                }
+
+                span {
+                    font-size: 13px;
+                    color: $text-muted;
+                }
+
+                .verifyIcon {
+                    color: $blue-primary;
+                    font-size: 14px;
+                    margin-left: 4px;
+                }
+            }
+        }
+
+        .meta {
+            text-align: right;
+
+            .badge {
+                background: #eff6ff;
+                color: $blue-primary;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+            }
+
+            p {
+                font-size: 12px;
+                color: $text-muted;
+                margin-top: 8px;
+            }
+        }
+    }
+
+    .title {
+        font-size: 28px;
+        color: $text-dark;
+        margin-bottom: 20px;
+        letter-spacing: -0.5px;
+    }
+
+    .description {
+        color: #475569;
+        margin-bottom: 16px;
+        line-height: 1.5;
+    }
+
+    .stats {
+        color: #475569;
+        margin-bottom: 30px;
+        line-height: 1.5;
+    }
+
+    .highlight {
+        color: $blue-primary;
+        font-weight: 700;
+    }
+
+    .courseBanner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid $border-color;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+
+        .courseInfo {
+            display: flex;
+            gap: 16px;
+
+            .courseImg img {
+                width: 140px;
+                height: 80px;
+                object-fit: cover;
+                border-radius: 8px;
+                background: #eee;
+            }
+
+            h4 {
+                margin: 0 0 4px;
+                font-size: 16px;
+            }
+
+            p {
+                font-size: 13px;
+                color: $text-muted;
+                margin-bottom: 8px;
+            }
+
+            a {
+                color: $blue-primary;
+                font-size: 13px;
+                text-decoration: none;
+                font-weight: 600;
+            }
+        }
+
+        .btnPrimary {
+            background: $blue-primary;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+
+            &:hover {
+                opacity: 0.9;
+            }
+        }
+    }
+
+    .cardFooter {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 20px;
+        border-top: 1px solid $border-color;
+
+        button {
+            background: none;
+            border: none;
+            color: $text-muted;
+            cursor: pointer;
+            font-size: 14px;
+
+            svg {
+                margin-right: 6px;
+            }
+
+            &:hover {
+                color: $text-dark;
+            }
+        }
+    }
+}
+
+.bottomGrid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 24px;
+}
+
+.policyNote {
+    background: #eff6ff;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    height: fit-content;
+
+    .infoIcon {
+        color: $blue-primary;
+        margin-top: 4px;
+    }
+
+    strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #1e3a8a;
+    }
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        color: #1e40af;
+        line-height: 1.4;
+    }
+}
+
+.sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+
+    .sidebarTitle {
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: $text-dark;
+    }
+
+    .notifItem {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        align-items: center;
+
+        .notifIcon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+        }
+
+        .warningBg {
+            background: #fff7ed;
+            color: #f97316;
+        }
+
+        .successBg {
+            background: #f0fdf4;
+            color: #22c55e;
+        }
+
+        .notifText {
+            strong {
+                display: block;
+                font-size: 13px;
+            }
+
+            span {
+                font-size: 12px;
+                color: $text-muted;
+            }
+        }
+    }
+}

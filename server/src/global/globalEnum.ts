@@ -46,3 +46,18 @@ export enum CheckinStatus {
     SUCCESS = 'SUCCESS',
     FAILED = 'FAILED',
 }
+
+export enum NotificationType {
+    OFFICE = 'OFFICE',        // Thông báo từ văn phòng
+    CLASS = 'CLASS',          // Thông báo từ lớp học
+    ALERT = 'ALERT',          // Cảnh báo hệ thống
+    EVENT = 'EVENT',          // Thông báo sự kiện
+    ACTIVITY = 'ACTIVITY',    // Thông báo hoạt động
+    SYSTEM = 'SYSTEM',        // Thông báo hệ thống
+}
+
+export enum NotificationPriority {
+    NORMAL = 'NORMAL',
+    HIGH = 'HIGH',
+    URGENT = 'URGENT',
+}
