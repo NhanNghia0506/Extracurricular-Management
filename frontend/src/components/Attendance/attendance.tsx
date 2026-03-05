@@ -4,6 +4,7 @@ import styles from './attendance.module.scss';
 import AttendanceMap from './attendance.map';
 import checkinSessionService from '../../services/checkin-session.service';
 import type { CheckinSession } from '@/types/checkin-session.types';
+import { formatTime } from '../../utils/date-time';
 
 const Attendance: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -169,11 +170,11 @@ const Attendance: React.FC = () => {
                             <div className="d-flex justify-content-between mb-3">
                                 <div>
                                     <small className="text-muted d-block">THỜI GIAN BẮT ĐẦU</small>
-                                    <span className="fw-bold small">{startTime.toLocaleTimeString('vi-VN')}</span>
+                                    <span className="fw-bold small">{formatTime(startTime)}</span>
                                 </div>
                                 <div>
                                     <small className="text-muted d-block">THỜI GIAN KẾT THÚC</small>
-                                    <span className="fw-bold small">{endTime.toLocaleTimeString('vi-VN')}</span>
+                                    <span className="fw-bold small">{formatTime(endTime)}</span>
                                 </div>
                             </div>
 
@@ -213,7 +214,7 @@ const Attendance: React.FC = () => {
                             )}
 
                             <p className="text-center text-muted mt-2 mb-0" style={{ fontSize: '0.65rem' }}>
-                                Điểm danh có hiệu lực đến {endTime.toLocaleTimeString('vi-VN')}
+                                Điểm danh có hiệu lực đến {formatTime(endTime)}
                             </p>
                         </div>
                     </div>

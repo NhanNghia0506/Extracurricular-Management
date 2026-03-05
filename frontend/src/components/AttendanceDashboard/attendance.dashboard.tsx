@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faSearch, faFilter, faFileExport, faPlus,
-    faUserFriends, faRss, faMapMarkerAlt,
-    faCheckCircle, faTimesCircle
+    faUserFriends, faMapMarkerAlt,
+    faCheckCircle, faTimesCircle,
+    faFeed
 } from '@fortawesome/free-solid-svg-icons';
 import {
     Bar,
@@ -25,32 +26,14 @@ import type { CheckinEvent, CheckinResponse } from '../../types/checkin.types';
 import type { ActivityDetailResponse } from '../../types/activity.types';
 import checkinSessionService from '../../services/checkin-session.service';
 import checkinService from '../../services/checkin.service';
+import activityService from '../../services/activity.service';
+import { formatTime } from '../../utils/date-time';
 import styles from './attendance.dashboard.module.scss';
-
-const velocityData = [
-    { minute: '09:00', checkins: 8 },
-    { minute: '09:05', checkins: 14 },
-    { minute: '09:10', checkins: 22 },
-    { minute: '09:15', checkins: 36 },
-    { minute: '09:20', checkins: 52 },
-    { minute: '09:25', checkins: 67 },
-    { minute: '09:30', checkins: 81 },
-    { minute: '09:35', checkins: 98 },
-    { minute: '09:40', checkins: 121 },
-    { minute: '09:45', checkins: 145 },
-    { minute: '09:50', checkins: 165 },
-    { minute: '09:55', checkins: 185 },
-];
 
 const methodData = [
     { name: 'QR Code', value: 142 },
     { name: 'Vân tay', value: 29 },
     { name: 'Thủ công', value: 14 },
-];
-
-const completionData = [
-    { name: 'Có mặt', value: 185 },
-    { name: 'Vắng mặt', value: 65 },
 ];
 
 const completionColors = ['#2563eb', '#e2e8f0'];
@@ -62,7 +45,10 @@ interface AttendanceDashboardProps {
 const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) => {
     const [checkins, setCheckins] = useState<CheckinResponse[]>([]);
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
+    const [checkinSession, setCheckinSession] = useState<any>(null);
+    const [totalRegistered, setTotalRegistered] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [remainingSeconds, setRemainingSeconds] = useState(0);
 
     // Fetch danh sách checkin ban đầu khi load trang
     useEffect(() => {
@@ -87,6 +73,21 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     }, [sessionId]);
 
     // Realtime socket connection cho checkin mới
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const fetchCheckinSession = async () => {
+            try {
+                const response = await checkinSessionService.getById(sessionId);
+                setCheckinSession(response.data?.data);
+            } catch (error) {
+                console.error('Không lấy được checkin session:', error);
+            }
+        };
+
+        fetchCheckinSession();
+    }, [sessionId]);
+
     useEffect(() => {
         if (!sessionId) return;
 
@@ -150,13 +151,45 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         fetchActivityBySessionId();
     }, [sessionId]);
 
-    const formatDateTime = (dateText?: string) => {
-        if (!dateText) return '--:--';
-        return new Date(dateText).toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
+    useEffect(() => {
+        if (!activity?.id) {
+            setTotalRegistered(0);
+            return;
+        }
+
+        const fetchParticipantCount = async () => {
+            try {
+                const participantCount = await activityService.participantsCountByActivity(activity.id);
+                setTotalRegistered(participantCount);
+            } catch (error) {
+                console.error('Không lấy được tổng số đăng ký:', error);
+                setTotalRegistered(0);
+            }
+        };
+
+        fetchParticipantCount();
+    }, [activity?.id]);
+
+    useEffect(() => {
+        if (!checkinSession?.endTime) {
+            setRemainingSeconds(0);
+            return;
+        }
+
+        const updateRemainingTime = () => {
+            const endTimeMs = new Date(checkinSession.endTime).getTime();
+            const nowMs = Date.now();
+            const diffSeconds = Math.max(Math.floor((endTimeMs - nowMs) / 1000), 0);
+            setRemainingSeconds(diffSeconds);
+        };
+
+        updateRemainingTime();
+        const timerId = window.setInterval(updateRemainingTime, 1000);
+
+        return () => {
+            window.clearInterval(timerId);
+        };
+    }, [checkinSession?.endTime]);
 
     const getRelativeTime = (timestamp: Date | string) => {
         const date = new Date(timestamp);
@@ -165,19 +198,88 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         if (seconds < 60) return `${seconds}s trước`;
         const minutes = Math.floor(seconds / 60);
         if (minutes < 60) return `${minutes} phút trước`;
-        return date.toLocaleTimeString('vi-VN');
+        return formatTime(date);
     };
 
-    console.log('Render AttendanceDashboard with checkins:', checkins);
+    const attendancePercent = totalRegistered > 0
+        ? Math.round((checkins.length / totalRegistered) * 100)
+        : 0;
+
+    const attendanceProgress = totalRegistered > 0
+        ? Math.min((checkins.length / totalRegistered) * 100, 100)
+        : 0;
+
+    const generateVelocityData = () => {
+        if (!checkinSession?.startTime || !checkinSession?.endTime || checkins.length === 0) return [];
+
+        const startTime = new Date(checkinSession.startTime);
+        const endTime = new Date(checkinSession.endTime);
+
+        const slots: Array<{ minute: string; checkins: number }> = [];
+
+        // Tạo các slot 5 phút
+        for (let time = new Date(startTime); time <= endTime; time.setMinutes(time.getMinutes() + 5)) {
+            const hours = String(time.getHours()).padStart(2, '0');
+            const minutes = String(time.getMinutes()).padStart(2, '0');
+            const slotKey = `${hours}:${minutes}`;
+            slots.push({ minute: slotKey, checkins: 0 });
+        }
+
+        // Đếm checkins vào từng slot 5 phút
+        checkins.forEach((item) => {
+            const checkinTime = new Date(item.createdAt);
+            const hours = String(checkinTime.getHours()).padStart(2, '0');
+            let currentMin = checkinTime.getMinutes();
+            currentMin = Math.floor(currentMin / 5) * 5; // Làm tròn xuống đến 5 phút gần nhất
+            const slotKey = `${hours}:${String(currentMin).padStart(2, '0')}`;
+
+            const slot = slots.find((s) => s.minute === slotKey);
+            if (slot) slot.checkins++;
+        });
+
+        return slots;
+    };
+
+    const chartData = generateVelocityData();
+
+    const generateCompletionData = () => {
+        const successCount = checkins.filter((item) => item.status === 'SUCCESS').length;
+        const absentCount = Math.max(totalRegistered - successCount, 0);
+        return [
+            { name: 'Có mặt', value: successCount },
+            { name: 'Vắng mặt', value: absentCount },
+        ];
+    };
+
+    const dynamicCompletionData = generateCompletionData();
+    const presentPercent = totalRegistered > 0
+        ? Math.round((dynamicCompletionData[0].value / totalRegistered) * 100)
+        : 0;
+
+    const remainingHours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
+    const remainingMinutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
+    const remainingDisplaySeconds = String(remainingSeconds % 60).padStart(2, '0');
+
+    const getSessionStatusLabel = () => {
+        if (!checkinSession?.startTime || !checkinSession?.endTime) return 'CHƯA XÁC ĐỊNH';
+
+        const now = Date.now();
+        const startTimeMs = new Date(checkinSession.startTime).getTime();
+        const endTimeMs = new Date(checkinSession.endTime).getTime();
+
+        if (now < startTimeMs) return 'CHƯA DIỄN RA';
+        if (now > endTimeMs) return 'ĐÃ KẾT THÚC';
+        return 'ĐANG DIỄN RA';
+    };
 
     return (
         <div className={styles.dashboardContainer}>
             {/* 1. Header Section */}
             <header className={styles.header}>
                 <div className={styles.headerInfo}>
-                    <span className={styles.activeBadge}>ĐANG DIỄN RA</span>
+                    <span className={styles.activeBadge}>{getSessionStatusLabel()}</span>
                     <p className={styles.timeInfo}>
-                        Bắt đầu: {formatDateTime(activity?.startAt)} | Kết thúc: {formatDateTime(activity?.endAt)}
+                        Bắt đầu: {formatTime(checkinSession?.startTime)} | Kết thúc: {formatTime(checkinSession?.endTime)}
                     </p>
                     <h1>{activity?.title || 'Đang tải hoạt động...'}</h1>
                     <p className={styles.location}>
@@ -187,9 +289,9 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                 <div className={styles.timer}>
                     <span className={styles.timerLabel}>THỜI GIAN CÒN LẠI</span>
                     <div className={styles.countdown}>
-                        <div className={styles.timeBlock}><span>00</span><small>GIỜ</small></div>
-                        <div className={styles.timeBlock}><span>45</span><small>PHÚT</small></div>
-                        <div className={styles.timeBlock}><span>12</span><small>GIÂY</small></div>
+                        <div className={styles.timeBlock}><span>{remainingHours}</span><small>GIỜ</small></div>
+                        <div className={styles.timeBlock}><span>{remainingMinutes}</span><small>PHÚT</small></div>
+                        <div className={styles.timeBlock}><span>{remainingDisplaySeconds}</span><small>GIÂY</small></div>
                     </div>
                 </div>
             </header>
@@ -211,20 +313,18 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
             <div className={styles.statGrid}>
                 <div className={styles.statCard}>
                     <label>Tổng đăng ký</label>
-                    <div className={styles.statValue}>250</div>
+                    <div className={styles.statValue}>{totalRegistered}</div>
                     <small><FontAwesomeIcon icon={faUserFriends} /> Sĩ số lớp</small>
                 </div>
                 <div className={`${styles.statCard} ${styles.green}`}>
                     <div className={styles.statHeader}>
                         <label>Đã check-in</label>
                         <span className={styles.percentage}>
-                            {Math.round((checkins.length / 250) * 100)}%
+                            {attendancePercent}%
                         </span>
                     </div>
                     <div className={styles.statValue}>{checkins.length}</div>
-                    <div className={styles.progressBar}>
-                        <div style={{ width: `${Math.min((checkins.length / 250) * 100, 100)}%` }} />
-                    </div>
+                    <progress className={styles.progressBarNative} value={attendanceProgress} max={100} />
                 </div>
                 {/* Tương tự cho Not Checked-in và Late Check-ins... */}
             </div>
@@ -234,17 +334,17 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                 {/* Left: Live Feed */}
                 <aside className={styles.liveFeed}>
                     <div className={styles.feedHeader}>
-                        <h3><FontAwesomeIcon icon={faRss} /> Luồng điểm danh trực tiếp</h3>
-                        <span className={styles.realtimeTag}>THỜI GIAN THỰC</span>
+                        <h3><FontAwesomeIcon icon={faFeed} /> Luồng điểm danh trực tiếp</h3>
+                        <span className={styles.realtimeTag}>REAL-TIME</span>
                     </div>
                     <div className={styles.feedList}>
                         {loading && (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                            <div className={styles.feedPlaceholder}>
                                 Đang tải danh sách checkin...
                             </div>
                         )}
                         {!loading && checkins.length === 0 && (
-                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                            <div className={styles.feedPlaceholder}>
                                 Chưa có ai checkin
                             </div>
                         )}
@@ -256,7 +356,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                                 <div className={styles.itemInfo}>
                                     <strong>{item.student.name}</strong>
                                     <small>MSSV: {item.student.mssv}</small>
-                                    <span className={styles.method}>
+                                    <span className={`${styles.method} ${item.status === 'SUCCESS' ? styles.success : styles.failed}`}>
                                         {item.status === 'SUCCESS' ? (
                                             <><FontAwesomeIcon icon={faCheckCircle} /> Thành công</>
                                         ) : (
@@ -279,7 +379,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                         </div>
                         <div className={styles.chartPlaceholder}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={velocityData}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
                                     <XAxis dataKey="minute" tick={{ fontSize: 11 }} />
                                     <YAxis tick={{ fontSize: 11 }} />
@@ -319,14 +419,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={completionData}
+                                            data={dynamicCompletionData}
                                             dataKey="value"
                                             nameKey="name"
                                             innerRadius={46}
                                             outerRadius={66}
                                             paddingAngle={2}
                                         >
-                                            {completionData.map((entry, index) => (
+                                            {dynamicCompletionData.map((entry, index) => (
                                                 <Cell key={entry.name} fill={completionColors[index % completionColors.length]} />
                                             ))}
                                         </Pie>
@@ -335,7 +435,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className={styles.pieCenterLabel}>
-                                    <strong>74%</strong>
+                                    <strong>{presentPercent}%</strong>
                                     <small>CÓ MẶT</small>
                                 </div>
                             </div>

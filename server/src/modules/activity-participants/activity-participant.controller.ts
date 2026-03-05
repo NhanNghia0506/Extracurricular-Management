@@ -30,6 +30,12 @@ export class ActivityParticipantController {
     }
 
     @UseGuards(AuthGuard)
+    @Get('countByActivity/:activityId')
+    getParticipantCountByActivity(@Param('activityId') activityId: string) {
+        return this.activityParticipantService.countParticipantsByActivity(activityId);
+    }
+
+    @UseGuards(AuthGuard)
     @Get('my-activities')
     getMyActivities(@Req() req: Request) {
         const userId = req.user?.id;

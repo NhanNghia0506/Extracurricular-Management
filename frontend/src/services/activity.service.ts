@@ -17,6 +17,11 @@ const activityService = {
     getDetail: (id: string) => apiService.get(`/activities/${id}`),
     register: (activityId: string) => apiService.post('/activity-participants', { activityId }),
     participantsByActivity: (activityId: string) => apiService.get(`/activity-participants/participantsByActivity/${activityId}`),
+    participantsCountByActivity: async (activityId: string): Promise<number> => {
+        const response = await apiService.get(`/activity-participants/countByActivity/${activityId}`);
+        const count = response.data?.data;
+        return typeof count === 'number' ? count : Number(count) || 0;
+    },
     myActivities: () => apiService.get('/activities/my-activities'),
 }
 

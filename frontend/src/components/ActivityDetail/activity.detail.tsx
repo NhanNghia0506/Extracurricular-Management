@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import styles from './activity.detail.module.scss';
 import activityService from '../../services/activity.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
+import { formatTime } from '../../utils/date-time';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -123,8 +124,8 @@ const ActivityDetail: React.FC = () => {
                             <label>Ngày & Giờ</label>
                             <p>{new Date(activity.startAt).toLocaleDateString('vi-VN')}</p>
                             <small>
-                                {new Date(activity.startAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                {activity.endAt && ` - ${new Date(activity.endAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`}
+                                {formatTime(activity.startAt)}
+                                {activity.endAt && ` - ${formatTime(activity.endAt)}`}
                             </small>
                         </div>
                         <div className={styles.infoBox}>

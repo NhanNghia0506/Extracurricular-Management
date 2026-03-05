@@ -8,6 +8,7 @@ import activityService from 'services/activity.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
 import checkinSessionService from 'services/checkin-session.service';
 import type { CreateCheckinSession } from '@/types/checkin-session.types';
+import { formatTime } from '../../utils/date-time';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -61,11 +62,7 @@ const parseTimeToMinutes = (value: string): number | null => {
 };
 
 const toLocalTimeValue = (value?: string): string => {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    const pad = (part: number) => String(part).padStart(2, '0');
-    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    return formatTime(value, '');
 };
 
 const formatDuration = (totalMinutes: number): string => {
