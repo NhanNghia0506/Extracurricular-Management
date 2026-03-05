@@ -26,7 +26,7 @@ class UserService {
 
         const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-        const { name, email, avatar, code, facultyId, classId } = userData;
+        const { name, email, avatar, code, classId } = userData;
 
         // Tạo user
         const user = await this.userRepository.create({
@@ -42,7 +42,7 @@ class UserService {
         await this.studentService.create({
             userId: user._id.toString(),
             studentCode: code,
-            facultyId,
+            // facultyId,
             classId,
         })
 

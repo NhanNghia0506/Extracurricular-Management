@@ -4,18 +4,31 @@ class SocketService {
     private socket: Socket | null = null;
     private isConnecting: boolean = false;
 
-    connect(): Socket {
+    connect(namespace?: string): Socket {
+        const baseUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
+        const normalizedNamespace = namespace?.replace(/^\//, '');
+        const socketUrl = normalizedNamespace
+            ? `${baseUrl.replace(/\/$/, '')}/${normalizedNamespace}`
+            : baseUrl;
+
+        // Nếu socket đã connected, return nó
         if (this.socket?.connected) {
             return this.socket;
         }
 
-        if (this.isConnecting) {
-            return this.socket!;
+        // Nếu socket connect tới URL khác, disconnect cái cũ
+        if (this.socket) {
+            this.socket.disconnect();
+            this.socket = null;
+        }
+
+        if (this.isConnecting && this.socket) {
+            return this.socket;
         }
 
         this.isConnecting = true;
 
-        this.socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001', {
+        this.socket = io(socketUrl, {
             transports: ['websocket'],
             autoConnect: true,
             reconnection: true,
@@ -26,7 +39,6 @@ class SocketService {
         });
 
         this.socket.on('connect', () => {
-            console.log('✅ WebSocket connected:', this.socket?.id);
             this.isConnecting = false;
         });
 
@@ -35,13 +47,8 @@ class SocketService {
             this.isConnecting = false;
         });
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('⚠️ WebSocket disconnected:', reason);
+        this.socket.on('disconnect', () => {
             this.isConnecting = false;
-        });
-
-        this.socket.on('reconnect', (attemptNumber) => {
-            console.log('🔄 WebSocket reconnected after', attemptNumber, 'attempts');
         });
 
         this.socket.on('reconnect_error', (error) => {
@@ -61,7 +68,6 @@ class SocketService {
             this.socket.disconnect();
             this.socket = null;
             this.isConnecting = false;
-            console.log('WebSocket disconnected manually');
         }
     }
 
@@ -73,13 +79,15 @@ class SocketService {
         if (this.socket?.connected) {
             this.socket.emit(event, data);
         } else {
-            console.warn('Cannot emit: Socket is not connected');
+            console.warn('⚠️ Cannot emit - Socket not connected. Event:', event, 'Data:', data);
         }
     }
 
     on(event: string, callback: (...args: any[]) => void): void {
         if (this.socket) {
-            this.socket.on(event, callback);
+            this.socket.on(event, (...args) => {
+                callback(...args);
+            });
         }
     }
 

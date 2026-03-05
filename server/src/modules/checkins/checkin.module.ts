@@ -7,6 +7,8 @@ import { CheckinService } from './checkin.service';
 import { CheckinSessionModule } from '../checkin-sessions/checkin-session.module';
 import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
 import { UserModule } from '../users/user.module';
+import { StudentModule } from '../students/student.module';
+import { CheckinGateway } from '../../events/checkin.gateway';
 
 @Module({
     imports: [
@@ -14,11 +16,12 @@ import { UserModule } from '../users/user.module';
             { name: Checkin.name, schema: CheckinSchema },
         ]),
         UserModule,
+        StudentModule,
         CheckinSessionModule,
-        ActivityParticipantModule
+        ActivityParticipantModule,
     ],
     controllers: [CheckinController],
-    providers: [CheckinService, CheckinRepository],
-    exports: [CheckinService],
+    providers: [CheckinService, CheckinRepository, CheckinGateway],
+    exports: [CheckinService, CheckinGateway],
 })
 export class CheckinModule { }

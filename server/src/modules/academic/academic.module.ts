@@ -15,7 +15,7 @@ import { AcademicService } from "./academic.services";
     ],
     controllers: [AcademicController],
     providers: [AcademicService, AcademicRepository],
-    exports: [],
+    exports: [AcademicService],
 })
 
 export class AcademicModule { }

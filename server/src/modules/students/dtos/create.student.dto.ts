@@ -12,8 +12,4 @@ export class CreateStudentDto {
     @IsString()
     @IsNotEmpty()
     classId: string;
-
-    @IsString()
-    @IsNotEmpty()
-    facultyId: string;
 }

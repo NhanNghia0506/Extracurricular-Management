@@ -47,3 +47,13 @@ export interface CustomJwtPayload {
   name: string;
   role: string;
 }
+
+export interface StudentProfile {
+  id: string;
+  mssv: string;
+  name: string;
+  email: string;
+  avatar: string;
+  class: string;
+  faculty: string;
+}

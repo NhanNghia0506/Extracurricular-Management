@@ -27,4 +27,17 @@ export class AcademicRepository {
         const id = new Types.ObjectId(facultyId);
         return this.classModel.find({ facultyId: id }).lean();
     }
+
+    findFacultyById(facultyId: string) {
+        const id = new Types.ObjectId(facultyId);
+        return this.facultyModel.findById(id).lean();
+    }
+
+    findClassById(classId: string) {
+        const id = new Types.ObjectId(classId);
+        return this.classModel.findById(id).populate({
+            path: 'facultyId',
+            select: 'name',
+        }).lean();
+    }
 }

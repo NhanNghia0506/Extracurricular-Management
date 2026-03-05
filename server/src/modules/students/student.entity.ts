@@ -20,13 +20,6 @@ export class Student {
 
     @Prop({
         type: Types.ObjectId,
-        ref: 'Faculty',
-        required: true,
-    })
-    facultyId: Types.ObjectId;
-
-    @Prop({
-        type: Types.ObjectId,
         ref: 'Class',
         required: true,
     })

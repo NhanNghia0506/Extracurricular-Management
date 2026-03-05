@@ -8,6 +8,10 @@ import { calculateHaversineDistance, isLocationWithinRadius } from 'src/utils/ha
 import { CheckinStatus } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { ParticipantStatus } from '../activity-participants/activity-participant.entity';
+import { CheckinGateway } from 'src/events/checkin.gateway';
+import StudentService from '../students/student.service';
+import UserService from '../users/user.service';
+import { StudentProfile } from 'src/global/globalInterface';
 
 @Injectable()
 export class CheckinService {
@@ -15,6 +19,9 @@ export class CheckinService {
         private readonly checkinRepository: CheckinRepository,
         private readonly checkinSessionService: CheckinSessionService,
         private readonly activityParticipantService: ActivityParticipantService,
+        private readonly checkinGateway: CheckinGateway,
+        private readonly studentService: StudentService,
+        private readonly userService: UserService,
     ) { }
 
     /**
@@ -112,6 +119,114 @@ export class CheckinService {
             } as Checkin;
         }
 
-        return this.checkinRepository.create(checkin);
+        const savedCheckin = await this.checkinRepository.create(checkin);
+
+        // Emit event khi checkin xong (non-blocking)
+        void this.emitCheckinEventAsync(savedCheckin, createCheckinDto.userId);
+
+        return savedCheckin;
     }
+
+    /**
+     * Helper method to emit checkin event with fallback for non-student users
+     */
+    private async emitCheckinEventAsync(checkin: Checkin, userId: string) {
+        try {
+            let studentProfile: StudentProfile;
+
+            try {
+                // Thử lấy thông tin student đầy đủ
+                studentProfile = await this.studentService.getStudentFullInfo(userId);
+                console.log('Student profile loaded:', studentProfile);
+            } catch (studentError) {
+                // Nếu không tìm thấy student record, fallback lấy từ user
+                const errorMessage = studentError instanceof Error ? studentError.message : String(studentError);
+                console.warn('Student record not found, using user fallback:', errorMessage);
+
+                const user = await this.userService.getProfile(userId);
+                studentProfile = {
+                    id: userId,
+                    mssv: 'N/A',
+                    name: user.name || 'Unknown',
+                    email: user.email || '',
+                    avatar: user.avatar || '',
+                    class: 'N/A',
+                    faculty: 'N/A',
+                };
+                console.log('Fallback user profile created:', studentProfile);
+            }
+
+            this.checkinGateway.emitNewCheckin({
+                checkin: checkin,
+                student: studentProfile,
+            });
+            console.log('CheckinGateway.emitNewCheckin called successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : '';
+            console.error('Error in emitNewCheckin flow:', errorMessage);
+            console.error('Stack:', errorStack);
+        }
+    }
+
+    /**
+     * Lấy danh sách người đã checkin theo sessionId kèm thông tin đầy đủ
+     * @param checkinSessionId - ID của checkin session
+     * @param status - (Optional) Lọc theo trạng thái (SUCCESS, FAILED, etc.)
+     */
+    async getCheckinsBySessionId(checkinSessionId: string, status?: CheckinStatus) {
+        // Validate session tồn tại
+        const session = await this.checkinSessionService.findById(checkinSessionId);
+        if (!session) {
+            throw new NotFoundException('Không tìm thấy checkin session');
+        }
+
+        // Lấy danh sách checkin
+        const checkins = await this.checkinRepository.findBySessionId(checkinSessionId, status);
+
+        // Populate thông tin user/student cho từng checkin
+        const checkinList = await Promise.all(
+            checkins.map(async (checkin) => {
+                try {
+                    // Thử lấy thông tin student đầy đủ
+                    const studentProfile = await this.studentService.getStudentFullInfo(
+                        checkin.userId.toString(),
+                    );
+
+                    return {
+                        distance: checkin.distance,
+                        status: checkin.status,
+                        failReason: checkin.failReason,
+                        createdAt: checkin.createdAt,
+                        student: studentProfile,
+                    };
+                } catch {
+                    // Fallback: nếu không tìm thấy student, lấy từ user
+                    const user = await this.userService.getProfile(checkin.userId.toString());
+                    return {
+                        
+                        distance: checkin.distance,
+                        status: checkin.status,
+                        failReason: checkin.failReason,
+                        createdAt: checkin.createdAt,
+                        student: {
+                            id: user.id.toString(),
+                            mssv: 'N/A',
+                            name: user.name || 'Unknown',
+                            email: user.email || '',
+                            avatar: user.avatar || '',
+                            class: 'N/A',
+                            faculty: 'N/A',
+                        },
+                    };
+                }
+            }),
+        );
+
+        return {
+            total: checkinList.length,
+            data: checkinList,
+        };
+    }
+
 }

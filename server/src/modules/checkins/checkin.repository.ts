@@ -28,4 +28,27 @@ export class CheckinRepository {
             status,
         }).exec();
     }
+
+    /**
+     * Lấy danh sách tất cả checkin theo sessionId
+     * @param checkinSessionId - ID của session
+     * @param status - (Optional) Lọc theo trạng thái checkin
+     */
+    async findBySessionId(
+        checkinSessionId: string,
+        status?: CheckinStatus,
+    ) {
+        const filter: any = {
+            checkinSessionId: new Types.ObjectId(checkinSessionId),
+        };
+
+        if (status) {
+            filter.status = status;
+        }
+
+        return this.checkinModel
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .exec();
+    }
 }

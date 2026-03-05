@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, BadRequestException } from "@nestjs/common";
+import { Controller, Post, Body, Get, Query, BadRequestException, Param } from "@nestjs/common";
 import { AcademicService } from "./academic.services";
 import { CreateFacultyDto } from "./dtos/create.faculty.dto";
 import { CreateClassDto } from "./dtos/create.class.dto";
@@ -31,5 +31,23 @@ export class AcademicController {
         }
 
         return this.academicService.findClassesByFacultyId(facultyId);
+    }
+
+    /**
+     * Lấy thông tin chi tiết của một khoa theo ID
+     * @param facultyId - ID của khoa
+     */
+    @Get("faculty/:id")
+    getFacultyById(@Param("id") facultyId: string) {
+        return this.academicService.getFacultyById(facultyId);
+    }
+
+    /**
+     * Lấy thông tin chi tiết của một lớp theo ID
+     * @param classId - ID của lớp
+     */
+    @Get("class/:id")
+    getClassById(@Param("id") classId: string) {
+        return this.academicService.getClassById(classId);
     }
 }

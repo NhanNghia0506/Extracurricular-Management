@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faSearch, faFilter, faFileExport, faPlus,
-    faUserFriends, faRss, faMapMarkerAlt, faQrcode
+    faUserFriends, faRss, faMapMarkerAlt,
+    faCheckCircle, faTimesCircle
 } from '@fortawesome/free-solid-svg-icons';
 import {
     Bar,
@@ -19,6 +20,11 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { socketService } from '../../services/socket.service';
+import type { CheckinEvent, CheckinResponse } from '../../types/checkin.types';
+import type { ActivityDetailResponse } from '../../types/activity.types';
+import checkinSessionService from '../../services/checkin-session.service';
+import checkinService from '../../services/checkin.service';
 import styles from './attendance.dashboard.module.scss';
 
 const velocityData = [
@@ -49,16 +55,134 @@ const completionData = [
 
 const completionColors = ['#2563eb', '#e2e8f0'];
 
-const AttendanceDashboard: React.FC = () => {
+interface AttendanceDashboardProps {
+    sessionId: string;
+}
+
+const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) => {
+    const [checkins, setCheckins] = useState<CheckinResponse[]>([]);
+    const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch danh sách checkin ban đầu khi load trang
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const fetchInitialCheckins = async () => {
+            try {
+                setLoading(true);
+                const response = await checkinService.getCheckinsBySessionId(sessionId, 'SUCCESS');
+                console.log('Initial checkins fetched:', response.data); // Kiểm tra dữ liệu trả về
+                // response = { total: number, data: CheckinResponse[] }
+                setCheckins(Array.isArray(response.data) ? response.data : []);
+            } catch (error) {
+                console.error('Không lấy được danh sách checkin:', error);
+                setCheckins([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInitialCheckins();
+    }, [sessionId]);
+
+    // Realtime socket connection cho checkin mới
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const socket = socketService.connect('checking');
+
+        const handleNewCheckin = (payload: CheckinEvent) => {
+            setCheckins((prev) => {
+                // Kiểm tra xem user này đã checkin chưa (dựa vào student.id)
+                const existingIndex = prev.findIndex(
+                    (item) => item.student.id === payload.student.id
+                );
+
+                // Nếu đã tồn tại, không thêm vào (tránh duplicate)
+                if (existingIndex !== -1) {
+                    return prev;
+                }
+
+                // Convert CheckinEvent sang CheckinResponse format
+                const newCheckin: CheckinResponse = {
+                    distance: payload.checkin.distance,
+                    status: payload.checkin.status,
+                    failReason: payload.checkin.failReason,
+                    createdAt: new Date(payload.checkin.createdAt).toISOString(),
+                    student: payload.student,
+                };
+
+                // Nếu chưa có, thêm vào đầu danh sách và giữ tối đa 30 items
+                return [newCheckin, ...prev].slice(0, 30);
+            });
+        };
+
+        socketService.on('checkin:new', handleNewCheckin);
+
+        // Chờ socket connected trước khi emit join-session
+        if (socket.connected) {
+            socketService.emit('join-session', { sessionId });
+        } else {
+            socket.once('connect', () => {
+                socketService.emit('join-session', { sessionId });
+            });
+        }
+
+        return () => {
+            socketService.emit('leave-session', { sessionId });
+            socketService.off('checkin:new', handleNewCheckin);
+        };
+    }, [sessionId]);
+
+    useEffect(() => {
+        if (!sessionId) return;
+
+        const fetchActivityBySessionId = async () => {
+            try {
+                const activityData = await checkinSessionService.getActivityBySessionId(sessionId);
+                setActivity(activityData);
+            } catch (error) {
+                console.error('Không lấy được hoạt động từ sessionId:', error);
+            }
+        };
+
+        fetchActivityBySessionId();
+    }, [sessionId]);
+
+    const formatDateTime = (dateText?: string) => {
+        if (!dateText) return '--:--';
+        return new Date(dateText).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const getRelativeTime = (timestamp: Date | string) => {
+        const date = new Date(timestamp);
+        const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+        if (seconds < 10) return 'VỪA XONG';
+        if (seconds < 60) return `${seconds}s trước`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} phút trước`;
+        return date.toLocaleTimeString('vi-VN');
+    };
+
+    console.log('Render AttendanceDashboard with checkins:', checkins);
+
     return (
         <div className={styles.dashboardContainer}>
             {/* 1. Header Section */}
             <header className={styles.header}>
                 <div className={styles.headerInfo}>
                     <span className={styles.activeBadge}>ĐANG DIỄN RA</span>
-                    <p className={styles.timeInfo}>Bắt đầu: 09:00 | Kết thúc: 10:30</p>
-                    <h1>CS101: Nhập môn Khoa học Máy tính</h1>
-                    <p className={styles.location}><FontAwesomeIcon icon={faMapMarkerAlt} /> Hội trường chính, Tòa nhà A</p>
+                    <p className={styles.timeInfo}>
+                        Bắt đầu: {formatDateTime(activity?.startAt)} | Kết thúc: {formatDateTime(activity?.endAt)}
+                    </p>
+                    <h1>{activity?.title || 'Đang tải hoạt động...'}</h1>
+                    <p className={styles.location}>
+                        <FontAwesomeIcon icon={faMapMarkerAlt} /> {activity?.location?.address || 'Đang tải địa điểm...'}
+                    </p>
                 </div>
                 <div className={styles.timer}>
                     <span className={styles.timerLabel}>THỜI GIAN CÒN LẠI</span>
@@ -93,10 +217,14 @@ const AttendanceDashboard: React.FC = () => {
                 <div className={`${styles.statCard} ${styles.green}`}>
                     <div className={styles.statHeader}>
                         <label>Đã check-in</label>
-                        <span className={styles.percentage}>74%</span>
+                        <span className={styles.percentage}>
+                            {Math.round((checkins.length / 250) * 100)}%
+                        </span>
                     </div>
-                    <div className={styles.statValue}>185</div>
-                    <div className={styles.progressBar}><div style={{ width: '74%' }} /></div>
+                    <div className={styles.statValue}>{checkins.length}</div>
+                    <div className={styles.progressBar}>
+                        <div style={{ width: `${Math.min((checkins.length / 250) * 100, 100)}%` }} />
+                    </div>
                 </div>
                 {/* Tương tự cho Not Checked-in và Late Check-ins... */}
             </div>
@@ -110,16 +238,35 @@ const AttendanceDashboard: React.FC = () => {
                         <span className={styles.realtimeTag}>THỜI GIAN THỰC</span>
                     </div>
                     <div className={styles.feedList}>
-                        <div className={styles.feedItem}>
-                            <div className={styles.avatar}>AT</div>
-                            <div className={styles.itemInfo}>
-                                <strong>Alex Thompson</strong>
-                                <small>MSSV: 2024-0012</small>
-                                <span className={styles.method}><FontAwesomeIcon icon={faQrcode} /> Quét mã QR</span>
+                        {loading && (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                Đang tải danh sách checkin...
                             </div>
-                            <span className={styles.time}>VỪA XONG</span>
-                        </div>
-                        {/* Thêm các FeedItem khác... */}
+                        )}
+                        {!loading && checkins.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                Chưa có ai checkin
+                            </div>
+                        )}
+                        {!loading && checkins.map((item, index) => (
+                            <div className={styles.feedItem} key={`${item.student.id}-${index}`}>
+                                <div className={styles.avatar}>
+                                    {item.student.name?.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className={styles.itemInfo}>
+                                    <strong>{item.student.name}</strong>
+                                    <small>MSSV: {item.student.mssv}</small>
+                                    <span className={styles.method}>
+                                        {item.status === 'SUCCESS' ? (
+                                            <><FontAwesomeIcon icon={faCheckCircle} /> Thành công</>
+                                        ) : (
+                                            <><FontAwesomeIcon icon={faTimesCircle} /> {item.failReason || 'Thất bại'}</>
+                                        )}
+                                    </span>
+                                </div>
+                                <span className={styles.time}>{getRelativeTime(item.createdAt)}</span>
+                            </div>
+                        ))}
                     </div>
                 </aside>
 
