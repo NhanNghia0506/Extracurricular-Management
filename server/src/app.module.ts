@@ -12,6 +12,8 @@ import { CheckinSessionModule } from './modules/checkin-sessions/checkin-session
 import { CheckinModule } from './modules/checkins/checkin.module';
 import { DeviceModule } from './modules/devices/device.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { ConversationModule } from './modules/conversations/conversation.module';
+import { MessageModule } from './modules/messages/message.module';
 import { EventsGateway } from './events/events.gateway';
 
 @Module({
@@ -29,6 +31,8 @@ import { EventsGateway } from './events/events.gateway';
     CheckinModule,
     DeviceModule,
     NotificationModule,
+    ConversationModule,
+    MessageModule,
   ],
   controllers: [],
   providers: [EventsGateway],

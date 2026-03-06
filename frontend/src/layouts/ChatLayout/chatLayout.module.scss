@@ -1,0 +1,30 @@
+.chatLayoutContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #f8fafc;
+
+    .chatBody {
+        display: flex;
+        flex: 1;
+        gap: 0;
+        overflow: hidden;
+
+        .leftSidebar {
+            flex-shrink: 0;
+            width: 350px;
+            height: 100%;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .chatContent {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+    }
+}

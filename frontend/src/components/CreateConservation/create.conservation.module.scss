@@ -1,0 +1,265 @@
+// Import colors from index.css
+$primary-blue: var(--color-primary-blue, #2563eb);
+$text-dark: var(--color-text-main, #1e293b);
+$text-muted: var(--color-text-muted, #64748b);
+$text-muted-light: var(--color-text-muted-light, #94a3b8);
+$bg-modal: var(--color-bg-white, #ffffff);
+$bg-light: var(--color-bg-light, #f8fafc);
+$border-color: var(--color-border-lighter, #f1f5f9);
+$border-light: var(--color-border-light, #e2e8f0);
+$gray-dark: var(--color-gray-dark, #475569);
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.modalContent {
+    background: $bg-modal;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+.header {
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid $bg-light;
+
+    .headerTitle {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        .iconBox {
+            width: 44px;
+            height: 44px;
+            background: var(--color-bg-blue-light, #eff6ff);
+            color: $primary-blue;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: $text-dark;
+            margin: 0;
+        }
+    }
+
+    .closeBtn {
+        background: none;
+        border: none;
+        color: $text-muted;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 5px;
+
+        &:hover {
+            color: $text-dark;
+        }
+    }
+}
+
+.formBody {
+    padding: 24px;
+
+    .inputGroup {
+        margin-bottom: 24px;
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: $gray-dark;
+            margin-bottom: 12px;
+        }
+
+        .selectWrapper {
+            position: relative;
+
+            select {
+                width: 100%;
+                padding: 14px 16px;
+                border: 1.5px solid $border-light;
+                border-radius: 12px;
+                appearance: none;
+                font-size: 15px;
+                color: $text-dark;
+                background: var(--color-bg-lighter, #fcfcfc);
+                outline: none;
+
+                &:focus {
+                    border-color: $primary-blue;
+                }
+            }
+
+            .chevron {
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: $text-muted-light;
+                pointer-events: none;
+            }
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid $border-light;
+            border-radius: 12px;
+            font-size: 15px;
+            background: var(--color-bg-lighter, #fcfcfc);
+            outline: none;
+
+            &:focus {
+                border-color: $primary-blue;
+            }
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                background: var(--color-bg-very-light, #f1f5f9);
+            }
+        }
+
+        .helperText {
+            font-size: 12px;
+            color: $text-muted-light;
+            margin-top: 8px;
+        }
+    }
+}
+
+.memberBanner {
+    background: $bg-light;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: $text-muted;
+
+    .avatarStack {
+        display: flex;
+
+        .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            margin-right: -8px; // Tạo hiệu ứng xếp chồng
+
+            &.blue {
+                background: var(--color-bg-blue-50, #dbeafe);
+                color: var(--color-primary-blue, #1e40af);
+            }
+
+            &.green {
+                background: var(--color-bg-green-light, #dcfce7);
+                color: var(--color-status-green, #15803d);
+            }
+
+            &.yellow {
+                background: #fef9c3;
+                color: #a16207;
+            }
+        }
+    }
+
+    .memberText {
+        flex: 1;
+        color: $text-muted;
+    }
+
+    .checkboxLabel {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        white-space: nowrap;
+        color: $text-dark;
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: $primary-blue;
+        }
+    }
+}
+
+.footer {
+    padding: 20px 24px;
+    background: var(--color-bg-lighter, #fcfcfc);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid $border-color;
+
+    button {
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+
+    .cancelBtn {
+        background: transparent;
+        border: none;
+        color: $text-muted;
+
+        &:hover:not(:disabled) {
+            background: var(--color-bg-very-light, #f1f5f9);
+        }
+    }
+
+    .submitBtn {
+        background: $primary-blue;
+        border: none;
+        color: white;
+
+        &:hover:not(:disabled) {
+            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+    }
+}

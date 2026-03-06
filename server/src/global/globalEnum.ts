@@ -61,3 +61,8 @@ export enum NotificationPriority {
     HIGH = 'HIGH',
     URGENT = 'URGENT',
 }
+
+export enum ConversationRole {
+    MEMBER = 'member',
+    ADMIN = 'admin',
+}

@@ -71,11 +71,10 @@ class AuthService {
 
     saveUserInfoFromToken(token: string): void {
         try {
-            const parts = token.split('.');
-            if (parts.length !== 3) return;
-
-            const payloadStr = atob(parts[1]);
-            const payload = JSON.parse(payloadStr);
+            const payload = this.parseJwtPayload(token);
+            if (!payload) {
+                return;
+            }
 
             const userInfo = {
                 id: payload.sub,
@@ -100,14 +99,27 @@ class AuthService {
 
     private getTokenPayload(token: string): { exp?: number } | null {
         try {
-            const parts = token.split('.');
-            if (parts.length !== 3) return null;
-
-            const payloadStr = atob(parts[1]);
-            return JSON.parse(payloadStr) as { exp?: number };
+            return this.parseJwtPayload(token) as { exp?: number } | null;
         } catch (error) {
             return null;
         }
+    }
+
+    private parseJwtPayload(token: string): Record<string, any> | null {
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        const base64 = parts[1]
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+        const paddedBase64 = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+        const binary = atob(paddedBase64);
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        const payloadStr = new TextDecoder().decode(bytes);
+
+        return JSON.parse(payloadStr) as Record<string, any>;
     }
 
     // Lấy role từ JWT token
@@ -118,14 +130,11 @@ class AuthService {
         }
 
         try {
-            const parts = token.split('.');
-
-            if (parts.length !== 3) {
+            const payload = this.parseJwtPayload(token);
+            if (!payload) {
                 return null;
             }
 
-            const payloadStr = atob(parts[1]);
-            const payload = JSON.parse(payloadStr);
             return payload.role || null;
         } catch (error) {
             return null;

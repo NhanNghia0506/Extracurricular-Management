@@ -5,8 +5,10 @@ import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './activity.detail.module.scss';
 import activityService from '../../services/activity.service';
+import conversationService from '../../services/conversation.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
 import { formatTime } from '../../utils/date-time';
+import CreateConservation from '../CreateConservation/create.conservation';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -24,6 +26,8 @@ const ActivityDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [registering, setRegistering] = useState(false);
+    const [showCreateChatModal, setShowCreateChatModal] = useState(false);
+    const [hasConversation, setHasConversation] = useState(false);
 
     useEffect(() => {
         const fetchActivityDetail = async () => {
@@ -37,6 +41,17 @@ const ActivityDetail: React.FC = () => {
                 const activityData = response.data.data
 
                 setActivity(activityData);
+
+                // Check if conversation exists for this activity
+                try {
+                    await conversationService.getByActivity(id);
+                    setHasConversation(true);
+                } catch (convErr: any) {
+                    // 404 means no conversation exists yet
+                    if (convErr.response?.status === 404) {
+                        setHasConversation(false);
+                    }
+                }
             } catch (err: any) {
                 setError(err.message || 'Không thể tải chi tiết hoạt động');
                 console.error('Error fetching activity detail:', err);
@@ -182,13 +197,25 @@ const ActivityDetail: React.FC = () => {
                             ></div>
                         </div>
                         {activity.isOwner ? (
-                            <button
-                                className={styles.registerBtn}
-                                onClick={handleConfigureAttendance}
-                            >
-                                <i className="fa-solid fa-gear"></i>
-                                Cấu hình điểm danh
-                            </button>
+                            <>
+                                <button
+                                    className={styles.registerBtn}
+                                    onClick={handleConfigureAttendance}
+                                >
+                                    <i className="fa-solid fa-gear"></i>
+                                    Cấu hình điểm danh
+                                </button>
+                                {!hasConversation && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={() => setShowCreateChatModal(true)}
+                                        style={{ marginTop: '10px' }}
+                                    >
+                                        <i className="fa-solid fa-comments"></i>
+                                        Tạo nhóm chat
+                                    </button>
+                                )}
+                            </>
                         ) : (
                             <button
                                 className={styles.registerBtn}
@@ -240,6 +267,15 @@ const ActivityDetail: React.FC = () => {
                     </div>
                 </aside>
             </div>
+
+            {showCreateChatModal && (
+                <CreateConservation
+                    onClose={() => setShowCreateChatModal(false)}
+                    activityId={id}
+                    activityTitle={activity.title}
+                    onSuccess={() => setHasConversation(true)}
+                />
+            )}
         </div>
     );
 };
