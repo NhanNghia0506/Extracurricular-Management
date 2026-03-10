@@ -20,7 +20,8 @@ import CreateNotificationPage from '../pages/CreateNotificationPage';
 import AttendanceDashboardPage from '../pages/AttendanceDashboardPage';
 import OrganizersPage from '../pages/OrganizersPage';
 import ChatLayout from '../layouts/ChatLayout/chatLayout';
-import ChatPage from '../pages/ChatPage';
+import ChatPage from '../pages/ChatPage/ChatPage';
+import LiveCheckinPage from '../pages/LiveCheckinPage';
 
 const AppRoutes: React.FC = () => {
     return (
@@ -64,6 +65,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="/notification-detail" element={<NotificationDetailPage />} />
                 <Route path="/create-notification" element={<CreateNotificationPage />} />
                 <Route path="/attendance-dashboard" element={<AttendanceDashboardPage />} />
+                <Route path="/live-checkin" element={<LiveCheckinPage />} />
             </Route>
 
             <Route element={<ChatLayout />}>

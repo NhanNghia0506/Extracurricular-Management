@@ -194,6 +194,10 @@ export class CheckinService {
                     );
 
                     return {
+                        _id: checkin._id,
+                        userId: checkin.userId,
+                        latitude: checkin.latitude,
+                        longitude: checkin.longitude,
                         distance: checkin.distance,
                         status: checkin.status,
                         failReason: checkin.failReason,
@@ -204,7 +208,10 @@ export class CheckinService {
                     // Fallback: nếu không tìm thấy student, lấy từ user
                     const user = await this.userService.getProfile(checkin.userId.toString());
                     return {
-                        
+                        _id: checkin._id,
+                        userId: checkin.userId,
+                        latitude: checkin.latitude,
+                        longitude: checkin.longitude,
                         distance: checkin.distance,
                         status: checkin.status,
                         failReason: checkin.failReason,

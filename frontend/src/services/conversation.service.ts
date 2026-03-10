@@ -36,6 +36,9 @@ const conversationService = {
 
     getUserConversations: (userId: string) =>
         apiService.get(`/conversations/user/${userId}`),
+
+    getRecommendedConversations: () =>
+        apiService.get('/conversations/recommended/me'),
 };
 
 export default conversationService;

@@ -26,7 +26,10 @@ export class ConversationRepository {
     }
 
     async findById(id: string): Promise<ConversationDocument | null> {
-        return this.conversationModel.findById(id).exec();
+        return this.conversationModel
+            .findById(id)
+            .populate('activityId', 'title image')
+            .exec();
     }
 
     async updateLastMessage(
@@ -118,7 +121,35 @@ export class ConversationRepository {
 
         return this.conversationModel
             .find({ _id: { $in: conversationIds }, isActive: true })
+            .populate('activityId', 'title image')
             .sort({ lastMessageAt: -1 })
+            .exec();
+    }
+
+    async findRecommendedConversationsByActivityIds(
+        activityIds: string[],
+        userId: string,
+    ): Promise<ConversationDocument[]> {
+        if (activityIds.length === 0) {
+            return [];
+        }
+
+        const normalizedActivityIds = activityIds.map((activityId) => new Types.ObjectId(activityId));
+        const joinedMemberships = await this.conversationMemberModel
+            .find({ userId: new Types.ObjectId(userId) })
+            .select('conversationId')
+            .exec();
+
+        const joinedConversationIds = joinedMemberships.map((membership) => membership.conversationId);
+
+        return this.conversationModel
+            .find({
+                activityId: { $in: normalizedActivityIds },
+                isActive: true,
+                ...(joinedConversationIds.length > 0 ? { _id: { $nin: joinedConversationIds } } : {}),
+            })
+            .populate('activityId', 'title image')
+            .sort({ lastMessageAt: -1, createdAt: -1 })
             .exec();
     }
 }

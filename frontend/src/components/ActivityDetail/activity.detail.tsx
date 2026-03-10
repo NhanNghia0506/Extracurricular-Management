@@ -8,7 +8,7 @@ import activityService from '../../services/activity.service';
 import conversationService from '../../services/conversation.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
 import { formatTime } from '../../utils/date-time';
-import CreateConservation from '../CreateConservation/create.conservation';
+import CreateConversation from '../CreateConversation/create.conversation';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -269,7 +269,7 @@ const ActivityDetail: React.FC = () => {
             </div>
 
             {showCreateChatModal && (
-                <CreateConservation
+                <CreateConversation
                     onClose={() => setShowCreateChatModal(false)}
                     activityId={id}
                     activityTitle={activity.title}

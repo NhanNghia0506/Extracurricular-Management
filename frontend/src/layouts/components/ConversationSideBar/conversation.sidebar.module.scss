@@ -54,6 +54,36 @@ $primary-blue: #2563eb;
     }
 }
 
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        border-right: none;
+
+        .sidebarHeader {
+            padding: 16px;
+        }
+
+        .searchBox {
+            margin: 0 16px 16px;
+        }
+    }
+
+    .chatList {
+        .chatItem {
+            padding: 14px 16px;
+
+            .chatMeta {
+                min-width: 0;
+
+                .chatTop strong,
+                p {
+                    max-width: none;
+                }
+            }
+        }
+    }
+}
+
 .chatList {
     flex: 1;
     overflow-y: auto;
@@ -89,31 +119,12 @@ $primary-blue: #2563eb;
             border-left-color: $primary-blue;
         }
 
-        .avatarGroup {
+        .activityAvatar {
             width: 48px;
             height: 48px;
-            position: relative;
-
-            img {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                border: 2px solid white;
-                position: absolute;
-                object-fit: cover;
-            }
-
-            img:last-child {
-                bottom: 0;
-                right: 0;
-            }
-        }
-
-        .singleAvatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            object-fit: cover;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
         }
 
         .chatMeta {

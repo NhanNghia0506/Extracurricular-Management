@@ -1,0 +1,36 @@
+.emptyState {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+}
+
+.emptyCard {
+    max-width: 420px;
+    padding: 32px 28px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    text-align: center;
+
+    h2 {
+        margin: 0 0 12px;
+        font-size: 24px;
+        color: #0f172a;
+    }
+
+    p {
+        margin: 0;
+        color: #475569;
+        line-height: 1.6;
+    }
+}
+
+@media (max-width: 768px) {
+    .emptyState {
+        display: none;
+    }
+}

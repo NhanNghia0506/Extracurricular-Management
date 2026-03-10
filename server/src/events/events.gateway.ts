@@ -1,11 +1,20 @@
-import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
-import { Server, Socket } from "socket.io";
-import { Logger } from "@nestjs/common";
+import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 
 interface MessageData {
     text: string;
     userId?: string;
     timestamp?: number;
+}
+
+interface ConversationRoomPayload {
+    conversationId: string;
+}
+
+interface ConversationOnlineCountPayload {
+    conversationId: string;
+    onlineCount: number;
 }
 
 @WebSocketGateway({
@@ -22,19 +31,43 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly logger = new Logger(EventsGateway.name);
     private connectedClients = new Map<string, Socket>();
 
-    handleConnection(client: Socket) {
-        // TODO: Xác thực người dùng từ token
-        // const token = client.handshake.auth.token || client.handshake.headers.authorization;
-        // if (!token) {
-        //     this.logger.warn(`Client ${client.id} rejected: No token provided`);
-        //     client.disconnect();
-        //     return;
-        // }
+    private getConversationRoom(conversationId: string) {
+        return `conversation:${conversationId}`;
+    }
 
+    private getConversationIdFromRoom(room: string) {
+        return room.replace('conversation:', '');
+    }
+
+    private async emitConversationOnlineCount(conversationId: string) {
+        const room = this.getConversationRoom(conversationId);
+        const sockets = await this.server.in(room).fetchSockets();
+        const payload: ConversationOnlineCountPayload = {
+            conversationId,
+            onlineCount: sockets.length,
+        };
+
+        this.server.to(room).emit('conversation:online-count', payload);
+        return payload;
+    }
+
+    handleConnection(client: Socket) {
         this.connectedClients.set(client.id, client);
         this.logger.log(`✅ Client connected: ${client.id} (Total: ${this.connectedClients.size})`);
 
-        // Gửi thông báo chào mừng
+        client.on('disconnecting', () => {
+            const joinedConversationRooms = Array.from(client.rooms).filter((room) => room.startsWith('conversation:'));
+
+            joinedConversationRooms.forEach((room) => {
+                const conversationId = this.getConversationIdFromRoom(room);
+                setTimeout(() => {
+                    this.emitConversationOnlineCount(conversationId).catch((error) => {
+                        this.logger.error(`Failed to emit online count for ${conversationId}:`, error);
+                    });
+                }, 0);
+            });
+        });
+
         client.emit('welcome', {
             message: 'Connected to WebSocket server',
             clientId: client.id,
@@ -44,6 +77,57 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     handleDisconnect(client: Socket) {
         this.connectedClients.delete(client.id);
         this.logger.log(`❌ Client disconnected: ${client.id} (Total: ${this.connectedClients.size})`);
+    }
+
+    @SubscribeMessage('join-conversation')
+    async joinConversation(
+        @MessageBody() payload: ConversationRoomPayload,
+        @ConnectedSocket() client: Socket,
+    ) {
+        const conversationId = payload?.conversationId?.trim();
+
+        if (!conversationId) {
+            return {
+                status: 'error',
+                message: 'conversationId is required',
+            };
+        }
+
+        const room = this.getConversationRoom(conversationId);
+        await client.join(room);
+        this.logger.log(`Client ${client.id} joined room ${room}`);
+        const onlinePayload = await this.emitConversationOnlineCount(conversationId);
+
+        return {
+            status: 'ok',
+            room,
+            data: onlinePayload,
+        };
+    }
+
+    @SubscribeMessage('leave-conversation')
+    async leaveConversation(
+        @MessageBody() payload: ConversationRoomPayload,
+        @ConnectedSocket() client: Socket,
+    ) {
+        const conversationId = payload?.conversationId?.trim();
+
+        if (!conversationId) {
+            return {
+                status: 'error',
+                message: 'conversationId is required',
+            };
+        }
+
+        const room = this.getConversationRoom(conversationId);
+        await client.leave(room);
+        this.logger.log(`Client ${client.id} left room ${room}`);
+        await this.emitConversationOnlineCount(conversationId);
+
+        return {
+            status: 'ok',
+            room,
+        };
     }
 
     @SubscribeMessage('send-message')
@@ -94,12 +178,36 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    // Helper method để broadcast tới tất cả clients
+    emitConversationMessage(message: any) {
+        const conversationId = String(message?.conversationId || '');
+
+        if (!conversationId) {
+            this.logger.warn('Skipping conversation message emit because conversationId is missing');
+            return;
+        }
+
+        this.server
+            .to(this.getConversationRoom(conversationId))
+            .emit('conversation:message:new', message);
+    }
+
+    emitConversationUpdated(conversation: any) {
+        if (!conversation?._id) {
+            return;
+        }
+
+        this.server.emit('conversation:updated', conversation);
+    }
+
+    async getConversationOnlineCount(conversationId: string) {
+        const payload = await this.emitConversationOnlineCount(conversationId);
+        return payload.onlineCount;
+    }
+
     broadcastToAll(event: string, data: any) {
         this.server.emit(event, data);
     }
 
-    // Helper method để gửi tới một client cụ thể
     sendToClient(clientId: string, event: string, data: any) {
         const client = this.connectedClients.get(clientId);
         if (client) {

@@ -6,6 +6,8 @@ $border-color: #e2e8f0;
     display: flex;
     flex-direction: column;
     background: #f8fafc;
+    min-width: 0;
+    min-height: 0;
 
     .header {
         padding: 15px 25px;
@@ -19,6 +21,20 @@ $border-color: #e2e8f0;
             display: flex;
             gap: 12px;
             align-items: center;
+
+            .mobileBackButton {
+                display: none;
+                width: 38px;
+                height: 38px;
+                border: none;
+                border-radius: 12px;
+                background: #eff6ff;
+                color: $primary-blue;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                flex-shrink: 0;
+            }
 
             .avatarGroupSmall {
                 width: 40px;
@@ -75,6 +91,7 @@ $border-color: #e2e8f0;
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-height: 0;
 
     .dateSeparator {
         text-align: center;
@@ -89,10 +106,25 @@ $border-color: #e2e8f0;
         }
     }
 
+    .messageItemWrapper {
+        display: flex;
+        width: 100%;
+        justify-content: flex-start;
+
+        &.sent {
+            justify-content: flex-end;
+        }
+    }
+
     .messageRow {
         display: flex;
         gap: 10px;
         max-width: 75%;
+        width: fit-content;
+
+        &.newMessage {
+            animation: messageSlideIn 0.35s ease-out, messageGlow 1.2s ease-out;
+        }
 
         .msgAvatar {
             width: 32px;
@@ -104,6 +136,7 @@ $border-color: #e2e8f0;
         .msgBody {
             display: flex;
             flex-direction: column;
+            max-width: 100%;
 
             .senderName {
                 font-size: 12px;
@@ -119,6 +152,12 @@ $border-color: #e2e8f0;
                 font-size: 14px;
                 border: 1px solid #f1f5f9;
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+                display: inline-block;
+                width: auto;
+                max-width: min(100%, 32rem);
+                white-space: pre-wrap;
+                word-break: normal;
+                overflow-wrap: break-word;
             }
 
             .time {
@@ -146,6 +185,32 @@ $border-color: #e2e8f0;
                 }
             }
         }
+    }
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes messageGlow {
+    0% {
+        filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0));
+    }
+
+    35% {
+        filter: drop-shadow(0 8px 18px rgba(37, 99, 235, 0.18));
+    }
+
+    100% {
+        filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0));
     }
 }
 
@@ -208,6 +273,79 @@ $border-color: #e2e8f0;
         &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .chatWindow {
+        min-height: 100%;
+
+        .header {
+            padding: 14px 16px;
+
+            .headerLeft {
+                gap: 10px;
+
+                .mobileBackButton {
+                    display: inline-flex;
+                }
+
+                .titleInfo {
+                    min-width: 0;
+
+                    h3 {
+                        max-width: 180px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    span {
+                        display: inline-block;
+                        max-width: 180px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                }
+            }
+
+            .headerRight button {
+                margin-left: 10px;
+                font-size: 16px;
+            }
+        }
+    }
+
+    .messageArea {
+        padding: 16px 14px;
+        gap: 14px;
+    }
+
+    .inputArea {
+        padding: 12px;
+        gap: 10px;
+
+        .tools {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tools button {
+            margin-right: 0;
+            padding: 6px;
+        }
+
+        .inputWrapper {
+            min-width: 0;
+        }
+
+        .sendBtn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
         }
     }
 }

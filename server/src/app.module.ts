@@ -14,7 +14,7 @@ import { DeviceModule } from './modules/devices/device.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ConversationModule } from './modules/conversations/conversation.module';
 import { MessageModule } from './modules/messages/message.module';
-import { EventsGateway } from './events/events.gateway';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -33,8 +33,9 @@ import { EventsGateway } from './events/events.gateway';
     NotificationModule,
     ConversationModule,
     MessageModule,
+    EventsModule,
   ],
   controllers: [],
-  providers: [EventsGateway],
+  providers: [],
 })
 export class AppModule { }

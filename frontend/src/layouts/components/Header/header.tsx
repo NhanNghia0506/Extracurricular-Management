@@ -5,12 +5,11 @@ import styles from './header.module.scss';
 
 // Fontawesome for icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell } from '@fortawesome/free-regular-svg-icons';
+import { faBell, faMessage } from '@fortawesome/free-regular-svg-icons';
 
-// Placeholder cho logo và avatar (Thay bằng đường dẫn thật của bạn)
 import logo from 'assets/images/logoUniActivity.png';
 import authService from 'services/auth.service';
-const avatarSrc = "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix";
+import UserAvatar from '../../../components/UserAvatar/user.avatar';
 
 interface HeaderProps {
     onSearch?: (value: string) => void;
@@ -40,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
 
     const isAuthenticated = Boolean(user);
     const displayName = user?.name || '';
-    const avatarUrl = user?.avatar || avatarSrc;
+    const avatarUrl = user?.avatar || undefined;
 
     return (
         <header className={styles.headerWrapper}>
@@ -49,13 +48,13 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
                 <div className="d-flex justify-content-between align-items-center">
 
                     {/* --- 1. Left: Logo & Brand --- */}
-                    <a href="/" className={styles.brandLink}>
+                    <Link to="/" className={styles.brandLink}>
                         <img
                             src={logo}
                             alt="UniActivity Logo"
                             className={styles.logoImage}
                         />
-                    </a>
+                    </Link>
 
                     {/* --- 2. Center: Search Bar --- */}
                     {/* d-none d-md-block: Ẩn trên mobile, hiện trên màn hình medium trở lên */}
@@ -78,17 +77,21 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
                                     <FontAwesomeIcon icon={faBell} />
                                 </button>
 
+                                <Link className={styles.actionBtnLink} to="/chat" aria-label="Tin nhắn">
+                                    <FontAwesomeIcon icon={faMessage} />
+                                </Link>
+
                                 {/* User Avatar */}
                                 <div className={styles.profileInfo}>
                                     {displayName && (
                                         <span className={styles.profileName}>{displayName}</span>
                                     )}
-                                    <div className={styles.avatar}>
-                                        <img
-                                            src={avatarUrl}
-                                            alt="User Profile"
-                                        />
-                                    </div>
+                                    <UserAvatar
+                                        src={avatarUrl}
+                                        name={displayName}
+                                        alt="User Profile"
+                                        className={styles.avatar}
+                                    />
                                 </div>
                             </>
                         ) : (

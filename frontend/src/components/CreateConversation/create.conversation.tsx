@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus, faTimes, faGraduationCap, faTag, faCommentDots } from '@fortawesome/free-solid-svg-icons';
-import styles from './create.conservation.module.scss';
+import styles from './create.conversation.module.scss';
 import conversationService from '../../services/conversation.service';
 
-interface CreateConservationProps {
+interface CreateConversationProps {
     onClose: () => void;
     activityId?: string;
     activityTitle?: string;
     onSuccess?: () => void;
 }
 
-const CreatConservation: React.FC<CreateConservationProps> = ({ onClose, activityId, activityTitle, onSuccess }) => {
+const CreateConversation: React.FC<CreateConversationProps> = ({ onClose, activityId, activityTitle, onSuccess }) => {
     const [title, setTitle] = useState(activityTitle || '');
     const [addAllMembers, setAddAllMembers] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -144,4 +144,4 @@ const CreatConservation: React.FC<CreateConservationProps> = ({ onClose, activit
     );
 };
 
-export default CreatConservation;
+export default CreateConversation;

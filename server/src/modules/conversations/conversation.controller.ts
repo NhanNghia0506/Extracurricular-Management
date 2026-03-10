@@ -36,6 +36,18 @@ export class ConversationController {
         return this.conversationService.getConversationByActivityId(activityId);
     }
 
+    @UseGuards(AuthGuard)
+    @Get('recommended/me')
+    async getRecommendedConversations(@Req() req: Request) {
+        const userId = req.user?.id;
+
+        if (!userId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.conversationService.getRecommendedConversations(userId);
+    }
+
     @Get(':id')
     async getById(@Param('id') id: string) {
         return this.conversationService.getConversationById(id);

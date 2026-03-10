@@ -5,6 +5,9 @@ import { faSearch, faEdit } from '@fortawesome/free-solid-svg-icons';
 import styles from './conversation.sidebar.module.scss';
 import conversationService from '../../../services/conversation.service';
 import authService from '../../../services/auth.service';
+import { socketService } from '../../../services/socket.service';
+import { ConversationUpdatedPayload, SocketEvent } from '../../../types/socket.types';
+import UserAvatar from '../../../components/UserAvatar/user.avatar';
 
 interface ConversationItem {
     _id: string;
@@ -13,9 +16,16 @@ interface ConversationItem {
     lastMessageContent?: string;
     lastMessageUserName?: string;
     participantsCount: number;
+    activityId?: {
+        _id?: string;
+        title?: string;
+        image?: string;
+    };
+    activityImage?: string;
 }
 
 const ConversationSidebar: React.FC = () => {
+    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const currentConversationId = searchParams.get('Id');
@@ -48,6 +58,42 @@ const ConversationSidebar: React.FC = () => {
         };
 
         fetchConversations();
+    }, [currentUser?.id]);
+
+    useEffect(() => {
+        if (!currentUser?.id) {
+            return;
+        }
+
+        socketService.connect();
+
+        const handleConversationUpdated = (updatedConversation: ConversationUpdatedPayload) => {
+            setConversations((prevConversations) => {
+                const hasConversation = prevConversations.some(
+                    (conversation) => conversation._id === updatedConversation._id,
+                );
+
+                if (!hasConversation) {
+                    return prevConversations;
+                }
+
+                return [...prevConversations]
+                    .map((conversation) => conversation._id === updatedConversation._id
+                        ? { ...conversation, ...updatedConversation }
+                        : conversation)
+                    .sort((left, right) => {
+                        const leftTime = left.lastMessageAt ? new Date(left.lastMessageAt).getTime() : 0;
+                        const rightTime = right.lastMessageAt ? new Date(right.lastMessageAt).getTime() : 0;
+                        return rightTime - leftTime;
+                    });
+            });
+        };
+
+        socketService.on(SocketEvent.CONVERSATION_UPDATED, handleConversationUpdated);
+
+        return () => {
+            socketService.off(SocketEvent.CONVERSATION_UPDATED, handleConversationUpdated);
+        };
     }, [currentUser?.id]);
 
     const filteredConversations = useMemo(() => {
@@ -86,6 +132,16 @@ const ConversationSidebar: React.FC = () => {
 
     const handleOpenConversation = (conversationId: string) => {
         navigate(`/chat?Id=${conversationId}`);
+    };
+
+    const getActivityImageUrl = (conversation: ConversationItem) => {
+        const imageName = conversation.activityImage || conversation.activityId?.image;
+
+        if (!imageName) {
+            return undefined;
+        }
+
+        return `${apiBaseUrl.replace(/\/$/, '')}/uploads/${imageName}`;
     };
 
     return (
@@ -127,10 +183,12 @@ const ConversationSidebar: React.FC = () => {
                         className={`${styles.chatItem} ${currentConversationId === conversation._id ? styles.active : ''}`}
                         onClick={() => handleOpenConversation(conversation._id)}
                     >
-                        <div className={styles.avatarGroup}>
-                            <img src={`https://i.pravatar.cc/150?u=${conversation._id}-1`} alt={conversation.title} />
-                            <img src={`https://i.pravatar.cc/150?u=${conversation._id}-2`} alt={conversation.title} />
-                        </div>
+                        <UserAvatar
+                            src={getActivityImageUrl(conversation)}
+                            name={conversation.activityId?.title || conversation.title}
+                            alt={conversation.title}
+                            className={styles.activityAvatar}
+                        />
                         <div className={styles.chatMeta}>
                             <div className={styles.chatTop}>
                                 <strong>{conversation.title}</strong>

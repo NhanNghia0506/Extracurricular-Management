@@ -1,12 +1,14 @@
 import React from 'react';
 import styles from '../ChatWindow/chat.window.module.scss';
+import UserAvatar from '../UserAvatar/user.avatar';
 
 interface MessageItemProps {
-    avatar: string;
+    avatar?: string;
     senderName?: string;
     content: string;
     time: string;
     isSent?: boolean;
+    isNew?: boolean;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
@@ -15,11 +17,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
     content,
     time,
     isSent = false,
+    isNew = false,
 }) => {
     return (
-        <div className={`${styles.messageRow} ${isSent ? styles.sent : ''}`}>
+        <div className={`${styles.messageRow} ${isSent ? styles.sent : ''} ${isNew ? styles.newMessage : ''}`}>
             {!isSent && (
-                <img src={avatar} className={styles.msgAvatar} alt={senderName} />
+                <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName} />
             )}
             <div className={styles.msgBody}>
                 {senderName && !isSent && (
@@ -29,7 +32,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 <span className={styles.time}>{time}</span>
             </div>
             {isSent && (
-                <img src={avatar} className={styles.msgAvatar} alt="You" />
+                <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName || 'You'} />
             )}
         </div>
     );

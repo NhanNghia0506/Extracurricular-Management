@@ -1,59 +1,144 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Modal } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import styles from './rightsidebar.module.scss';
+import conversationService from '../../../services/conversation.service';
+import authService from '../../../services/auth.service';
+import UserAvatar from '../../../components/UserAvatar/user.avatar';
 
-// --- Interfaces ---
 interface Club {
     id: string;
     name: string;
     members: string;
-    icon: string; // FontAwesome class
-    theme: 'purple' | 'green'; // Để chỉnh màu icon
+    conversationId: string;
+    activityImage?: string;
 }
 
-interface Message {
+interface ActiveConversation {
     id: string;
-    sender: string;
-    avatar: string;
+    conversationId: string;
+    title: string;
     preview: string;
-    isOnline: boolean;
+    activityImage?: string;
+    lastMessageAt?: string;
 }
-
-// --- Mock Data ---
-const CLUBS: Club[] = [
-    {
-        id: '1',
-        name: 'Debate Society',
-        members: '1.2k members',
-        icon: 'fa-solid fa-brain',
-        theme: 'purple'
-    },
-    {
-        id: '2',
-        name: 'Green Campus',
-        members: '850 members',
-        icon: 'fa-solid fa-leaf',
-        theme: 'green'
-    }
-];
-
-const MESSAGES: Message[] = [
-    {
-        id: '1',
-        sender: 'Sarah Miller',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-        preview: 'Are you coming to the meet?',
-        isOnline: true
-    },
-    {
-        id: '2',
-        sender: 'Alex Chen',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-        preview: 'The project files are ready.',
-        isOnline: true
-    }
-];
 
 const RightSidebar: React.FC = () => {
+    const navigate = useNavigate();
+    const currentUser = authService.getCurrentUser();
+    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+    const [clubs, setClubs] = useState<Club[]>([]);
+    const [isLoadingClubs, setIsLoadingClubs] = useState(true);
+    const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+    const [clubToJoin, setClubToJoin] = useState<Club | null>(null);
+
+    const mapConversationToActiveItem = useCallback((conversation: any): ActiveConversation => ({
+        id: conversation._id,
+        conversationId: conversation._id,
+        title: conversation.title,
+        preview: conversation.lastMessageContent || 'Chưa có tin nhắn nào',
+        activityImage: conversation.activityId?.image
+            ? `${apiBaseUrl.replace(/\/$/, '')}/uploads/${conversation.activityId.image}`
+            : undefined,
+        lastMessageAt: conversation.lastMessageAt,
+    }), [apiBaseUrl]);
+
+    const formatConversationTime = (value?: string) => {
+        if (!value) {
+            return '';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+
+        return date.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    useEffect(() => {
+        const fetchSidebarData = async () => {
+            if (!currentUser?.id) {
+                setClubs([]);
+                setIsLoadingClubs(false);
+                setActiveConversations([]);
+                setIsLoadingMessages(false);
+                return;
+            }
+
+            try {
+                setIsLoadingClubs(true);
+                setIsLoadingMessages(true);
+                const [recommendedResponse, activeResponse] = await Promise.all([
+                    conversationService.getRecommendedConversations(),
+                    conversationService.getUserConversations(currentUser.id),
+                ]);
+                const recommendedConversations = Array.isArray(recommendedResponse.data.data)
+                    ? recommendedResponse.data.data
+                    : [];
+                const joinedConversations = Array.isArray(activeResponse.data.data)
+                    ? activeResponse.data.data
+                    : [];
+
+                setClubs(recommendedConversations.map((conversation: any) => ({
+                    id: conversation._id,
+                    conversationId: conversation._id,
+                    name: conversation.title,
+                    members: `${conversation.participantsCount || 0} thành viên`,
+                    activityImage: conversation.activityId?.image
+                        ? `${apiBaseUrl.replace(/\/$/, '')}/uploads/${conversation.activityId.image}`
+                        : undefined,
+                })));
+                setActiveConversations(joinedConversations.map(mapConversationToActiveItem));
+            } catch (error) {
+                console.error('Failed to load sidebar chat data:', error);
+                setClubs([]);
+                setActiveConversations([]);
+            } finally {
+                setIsLoadingClubs(false);
+                setIsLoadingMessages(false);
+            }
+        };
+
+        fetchSidebarData();
+    }, [apiBaseUrl, currentUser?.id, mapConversationToActiveItem]);
+
+    const handleJoinConversation = async () => {
+        if (!currentUser?.id) {
+            return;
+        }
+
+        if (!clubToJoin) {
+            return;
+        }
+
+        try {
+            await conversationService.addMember(clubToJoin.conversationId, currentUser.id);
+            setClubs((prevClubs) => prevClubs.filter((club) => club.conversationId !== clubToJoin.conversationId));
+            setActiveConversations((prevConversations) => [
+                {
+                    id: clubToJoin.id,
+                    conversationId: clubToJoin.conversationId,
+                    title: clubToJoin.name,
+                    preview: 'Chưa có tin nhắn nào',
+                    activityImage: clubToJoin.activityImage,
+                },
+                ...prevConversations,
+            ]);
+            setClubToJoin(null);
+        } catch (error) {
+            console.error('Failed to join conversation:', error);
+        }
+    };
+
+    const handleOpenConversation = (conversationId: string) => {
+        navigate(`/chat?Id=${conversationId}`);
+    };
+
     return (
         <aside className={styles.wrapper}>
 
@@ -61,19 +146,27 @@ const RightSidebar: React.FC = () => {
             <div className="mb-5">
                 <div className={styles.sectionTitle}>Nhóm đề xuất</div>
 
-                {CLUBS.map((club) => (
+                {isLoadingClubs && <div className={styles.emptyState}>Đang tải nhóm đề xuất...</div>}
+
+                {!isLoadingClubs && clubs.length === 0 && (
+                    <div className={styles.emptyState}>Không có nhóm phù hợp để đề xuất</div>
+                )}
+
+                {!isLoadingClubs && clubs.map((club) => (
                     <div key={club.id} className={styles.clubItem}>
                         <div className={styles.clubInfo}>
-                            {/* Icon với class màu động */}
-                            <div className={`${styles.clubIcon} ${styles[club.theme]}`}>
-                                <i className={club.icon}></i>
-                            </div>
-                            <div>
+                            <UserAvatar
+                                src={club.activityImage}
+                                name={club.name}
+                                alt={club.name}
+                                className={styles.clubIcon}
+                            />
+                            <div className={styles.clubMeta}>
                                 <span className={styles.clubName}>{club.name}</span>
                                 <span className={styles.memberCount}>{club.members}</span>
                             </div>
                         </div>
-                        <button className={styles.joinBtn}>Join</button>
+                        <button className={styles.joinBtn} onClick={() => setClubToJoin(club)}>Tham gia</button>
                     </div>
                 ))}
             </div>
@@ -82,20 +175,36 @@ const RightSidebar: React.FC = () => {
             <div className="mb-5">
                 <div className={styles.sectionTitle}>
                     Tin nhắn đang hoạt động
-                    <span className={styles.badgeCount}>3</span>
+                    <span className={styles.badgeCount}>{activeConversations.length}</span>
                 </div>
 
-                {MESSAGES.map((msg) => (
-                    <div key={msg.id} className={styles.messageItem}>
-                        <div className={styles.avatarWrapper}>
-                            <img src={msg.avatar} alt={msg.sender} />
-                            {msg.isOnline && <span className={styles.onlineDot}></span>}
+                {isLoadingMessages && <div className={styles.emptyState}>Đang tải tin nhắn...</div>}
+
+                {!isLoadingMessages && activeConversations.length === 0 && (
+                    <div className={styles.emptyState}>Bạn chưa tham gia nhóm chat nào</div>
+                )}
+
+                {!isLoadingMessages && activeConversations.map((conversation) => (
+                    <button
+                        key={conversation.id}
+                        type="button"
+                        className={styles.messageItem}
+                        onClick={() => handleOpenConversation(conversation.conversationId)}
+                    >
+                        <UserAvatar
+                            src={conversation.activityImage}
+                            name={conversation.title}
+                            alt={conversation.title}
+                            className={styles.messageAvatar}
+                        />
+                        <div className={styles.messageMeta}>
+                            <div className={styles.messageTop}>
+                                <span className={styles.senderName}>{conversation.title}</span>
+                                <span className={styles.messageTime}>{formatConversationTime(conversation.lastMessageAt)}</span>
+                            </div>
+                            <span className={styles.previewText}>{conversation.preview}</span>
                         </div>
-                        <div>
-                            <span className={styles.senderName}>{msg.sender}</span>
-                            <span className={styles.previewText}>{msg.preview}</span>
-                        </div>
-                    </div>
+                    </button>
                 ))}
             </div>
 
@@ -106,6 +215,25 @@ const RightSidebar: React.FC = () => {
                     Hãy tham gia vào nhóm chat sau khi đăng ký tham gia hoạt động để nhận được các thông báo mới nhất <strong>Chúc thành công</strong>!
                 </p>
             </div>
+
+            <Modal show={Boolean(clubToJoin)} onHide={() => setClubToJoin(null)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Xác nhận tham gia nhóm</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {clubToJoin
+                        ? `Bạn có chắc muốn tham gia nhóm chat "${clubToJoin.name}" không?`
+                        : 'Bạn có chắc muốn tham gia nhóm chat này không?'}
+                </Modal.Body>
+                <Modal.Footer>
+                    <button type="button" className={styles.modalSecondaryBtn} onClick={() => setClubToJoin(null)}>
+                        Hủy
+                    </button>
+                    <button type="button" className={styles.modalPrimaryBtn} onClick={handleJoinConversation}>
+                        Tham gia
+                    </button>
+                </Modal.Footer>
+            </Modal>
 
         </aside>
     );

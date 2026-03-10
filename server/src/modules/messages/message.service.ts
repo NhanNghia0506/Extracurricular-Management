@@ -3,10 +3,25 @@ import { MessageRepository } from './message.repository';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessageDocument } from './message.entity';
+import { ConversationService } from '../conversations/conversation.service';
+import { EventsGateway } from '../../events/events.gateway';
 
 @Injectable()
 export class MessageService {
-    constructor(private readonly messageRepository: MessageRepository) { }
+    constructor(
+        private readonly messageRepository: MessageRepository,
+        private readonly conversationService: ConversationService,
+        private readonly eventsGateway: EventsGateway,
+    ) { }
+
+    private serializeMessage(message: MessageDocument) {
+        return {
+            ...message.toObject(),
+            _id: message._id.toString(),
+            conversationId: message.conversationId.toString(),
+            senderId: message.senderId.toString(),
+        };
+    }
 
     async createMessage(
         createMessageDto: CreateMessageDto,
@@ -17,11 +32,27 @@ export class MessageService {
             throw new BadRequestException('Message content cannot be empty');
         }
 
-        return this.messageRepository.create(
+        await this.conversationService.getConversationById(createMessageDto.conversationId);
+
+        const message = await this.messageRepository.create(
             createMessageDto,
             senderId,
             senderName,
         );
+
+        const updatedConversation = await this.conversationService.updateLastMessage(
+            createMessageDto.conversationId,
+            {
+                content: createMessageDto.content,
+                userId: senderId,
+                userName: senderName,
+            },
+        );
+
+        this.eventsGateway.emitConversationMessage(this.serializeMessage(message));
+        this.eventsGateway.emitConversationUpdated(updatedConversation?.toObject());
+
+        return message;
     }
 
     async getMessageById(messageId: string): Promise<MessageDocument> {

@@ -27,6 +27,10 @@ export interface CheckinEvent {
  * Cấu trúc checkin từ API endpoint GET /checkins/session/:sessionId
  */
 export interface CheckinResponse {
+    _id: string;
+    userId: string;
+    latitude: number;
+    longitude: number;
     distance: number;
     status: 'SUCCESS' | 'FAILED';
     failReason?: string | null;

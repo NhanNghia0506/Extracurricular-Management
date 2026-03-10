@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 class SocketService {
     private socket: Socket | null = null;
     private isConnecting: boolean = false;
+    private currentSocketUrl: string | null = null;
 
     connect(namespace?: string): Socket {
         const baseUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
@@ -11,22 +12,22 @@ class SocketService {
             ? `${baseUrl.replace(/\/$/, '')}/${normalizedNamespace}`
             : baseUrl;
 
-        // Nếu socket đã connected, return nó
-        if (this.socket?.connected) {
+        if (this.socket && this.currentSocketUrl === socketUrl) {
             return this.socket;
         }
 
-        // Nếu socket connect tới URL khác, disconnect cái cũ
-        if (this.socket) {
+        if (this.socket && this.currentSocketUrl !== socketUrl) {
             this.socket.disconnect();
             this.socket = null;
+            this.currentSocketUrl = null;
         }
 
-        if (this.isConnecting && this.socket) {
+        if (this.isConnecting && this.socket && this.currentSocketUrl === socketUrl) {
             return this.socket;
         }
 
         this.isConnecting = true;
+        this.currentSocketUrl = socketUrl;
 
         this.socket = io(socketUrl, {
             transports: ['websocket'],
@@ -68,6 +69,7 @@ class SocketService {
             this.socket.disconnect();
             this.socket = null;
             this.isConnecting = false;
+            this.currentSocketUrl = null;
         }
     }
 
@@ -85,9 +87,7 @@ class SocketService {
 
     on(event: string, callback: (...args: any[]) => void): void {
         if (this.socket) {
-            this.socket.on(event, (...args) => {
-                callback(...args);
-            });
+            this.socket.on(event, callback);
         }
     }
 

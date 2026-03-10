@@ -2,29 +2,69 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    min-height: 100dvh;
     background: #f8fafc;
+}
+
+.chatBody {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.leftSidebar {
+    flex-shrink: 0;
+    width: 350px;
+    height: 100%;
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    overflow: hidden;
+}
+
+.chatContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+}
+
+@media (max-width: 768px) {
+    .chatLayoutContainer {
+        height: 100dvh;
+    }
 
     .chatBody {
+        position: relative;
+    }
+
+    .leftSidebar,
+    .chatContent {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .leftSidebar {
+        border-right: none;
+    }
+
+    .mobileShowSidebar .leftSidebar {
+        display: block;
+    }
+
+    .mobileShowSidebar .chatContent {
+        display: none;
+    }
+
+    .mobileShowContent .leftSidebar {
+        display: none;
+    }
+
+    .mobileShowContent .chatContent {
         display: flex;
-        flex: 1;
-        gap: 0;
-        overflow: hidden;
-
-        .leftSidebar {
-            flex-shrink: 0;
-            width: 350px;
-            height: 100%;
-            background: white;
-            border-right: 1px solid #e2e8f0;
-            overflow: hidden;
-        }
-
-        .chatContent {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #f8fafc;
-            overflow: hidden;
-        }
     }
 }

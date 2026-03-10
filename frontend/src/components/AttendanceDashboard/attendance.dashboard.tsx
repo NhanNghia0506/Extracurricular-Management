@@ -107,6 +107,10 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
 
                 // Convert CheckinEvent sang CheckinResponse format
                 const newCheckin: CheckinResponse = {
+                    _id: payload.checkin._id,
+                    userId: payload.checkin.userId,
+                    latitude: payload.checkin.latitude,
+                    longitude: payload.checkin.longitude,
                     distance: payload.checkin.distance,
                     status: payload.checkin.status,
                     failReason: payload.checkin.failReason,

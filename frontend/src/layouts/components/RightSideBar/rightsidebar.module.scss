@@ -48,32 +48,21 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+
+.clubMeta {
+    min-width: 0;
+    flex: 1;
 }
 
 .clubIcon {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
     flex-shrink: 0;
-
-    // Màu mặc định
-    background-color: var(--color-bg-very-light);
-    color: var(--color-text-muted);
-
-    // Các biến thể màu (nếu cần)
-    &.purple {
-        background-color: var(--color-purple-light);
-        color: var(--color-purple);
-    }
-
-    &.green {
-        background-color: var(--color-status-success-light);
-        color: var(--color-status-success);
-    }
+    border-radius: 14px;
+    overflow: hidden;
 }
 
 .clubName {
@@ -81,6 +70,9 @@
     font-weight: 600;
     color: var(--color-text-dark);
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .memberCount {
@@ -96,6 +88,7 @@
     border: none;
     padding: 0;
     cursor: pointer;
+    flex-shrink: 0;
 
     &:hover {
         text-decoration: underline;
@@ -106,6 +99,10 @@
 .messageItem {
     display: flex;
     align-items: center;
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
     gap: 12px;
     margin-bottom: 1.2rem;
     cursor: pointer;
@@ -118,29 +115,30 @@
     }
 }
 
-.avatarWrapper {
-    position: relative;
+.messageAvatar {
     width: 40px;
     height: 40px;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
 
-    img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-    }
+.messageMeta {
+    min-width: 0;
+    flex: 1;
+}
 
-    // Chấm xanh Online
-    .onlineDot {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        width: 10px;
-        height: 10px;
-        background-color: #22c55e; // Green
-        border: 2px solid #fff;
-        border-radius: 50%;
-    }
+.messageTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.messageTime {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    flex-shrink: 0;
 }
 
 .senderName {
@@ -148,6 +146,9 @@
     font-weight: 600;
     color: #1e293b;
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .previewText {
@@ -181,4 +182,29 @@
         margin: 0;
         line-height: 1.5;
     }
+}
+
+.emptyState {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+}
+
+.modalPrimaryBtn,
+.modalSecondaryBtn {
+    border: none;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.modalPrimaryBtn {
+    background: var(--color-primary-blue);
+    color: var(--color-white);
+}
+
+.modalSecondaryBtn {
+    background: var(--color-bg-very-light, #f1f5f9);
+    color: var(--color-text-muted);
 }

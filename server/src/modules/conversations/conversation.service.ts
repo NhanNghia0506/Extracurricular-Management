@@ -114,6 +114,19 @@ export class ConversationService {
         return this.conversationRepository.findConversationsByUserId(userId);
     }
 
+    async getRecommendedConversations(userId: string) {
+        const participatedActivities = await this.activityParticipantService.findActivitiesByUserId(userId);
+        const activityIds = participatedActivities
+            .map((activity) => activity.activityId?.toString?.() || String(activity.activityId))
+            .filter(Boolean);
+
+        if (activityIds.length === 0) {
+            return [];
+        }
+
+        return this.conversationRepository.findRecommendedConversationsByActivityIds(activityIds, userId);
+    }
+
     async getUnreadCount(conversationId: string, userId: string): Promise<number> {
         return this.conversationRepository.getUnreadCount(conversationId, userId);
     }
