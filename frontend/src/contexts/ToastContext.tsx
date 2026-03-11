@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 
 export interface Toast {
     id: number;
@@ -16,33 +16,42 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastActionsContext = createContext<Pick<ToastContextType, 'showToast' | 'removeToast'> | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<Toast[]>([]);
-    const [nextId, setNextId] = useState(1);
+    const nextIdRef = useRef(1);
 
     const removeToast = useCallback((id: number) => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, []);
 
     const showToast = useCallback((toast: Omit<Toast, 'id'>) => {
+        const nextId = nextIdRef.current;
+        nextIdRef.current += 1;
+
         const newToast: Toast = {
             ...toast,
             id: nextId,
         };
+
         setToasts((prev) => [...prev, newToast]);
-        setNextId((prev) => prev + 1);
 
         // Tự động xóa toast sau 5 giây
         setTimeout(() => {
             removeToast(newToast.id);
         }, 5000);
-    }, [nextId, removeToast]);
+    }, [removeToast]);
+
+    const actionValue = useMemo(() => ({ showToast, removeToast }), [showToast, removeToast]);
+    const stateValue = useMemo(() => ({ toasts, showToast, removeToast }), [toasts, showToast, removeToast]);
 
     return (
-        <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
-            {children}
-        </ToastContext.Provider>
+        <ToastActionsContext.Provider value={actionValue}>
+            <ToastContext.Provider value={stateValue}>
+                {children}
+            </ToastContext.Provider>
+        </ToastActionsContext.Provider>
     );
 };
 
@@ -50,6 +59,14 @@ export const useToast = () => {
     const context = useContext(ToastContext);
     if (!context) {
         throw new Error('useToast must be used within a ToastProvider');
+    }
+    return context;
+};
+
+export const useToastActions = () => {
+    const context = useContext(ToastActionsContext);
+    if (!context) {
+        throw new Error('useToastActions must be used within a ToastProvider');
     }
     return context;
 };

@@ -71,8 +71,8 @@ const CreateActivity: React.FC = () => {
 
             showToast({
                 type: 'success',
-                title: 'Tạo hoạt động thành công!',
-                message: 'Hoạt động của bạn đã được tạo và sẽ hiển thị trong danh sách hoạt động.',
+                title: 'Gửi yêu cầu thành công!',
+                message: 'Hoạt động của bạn đã được gửi lên hệ thống và đang chờ phê duyệt.',
             });
 
             form.resetForm();
@@ -80,11 +80,11 @@ const CreateActivity: React.FC = () => {
             console.error('Lỗi tạo activity:', error);
             showToast({
                 type: 'error',
-                title: 'Tạo hoạt động thất bại!',
-                message: 'Không thể tạo hoạt động. Vui lòng kiểm tra lại thông tin và thử lại.',
+                title: 'Gửi yêu cầu thất bại!',
+                message: 'Không thể gửi yêu cầu tạo hoạt động. Vui lòng kiểm tra lại thông tin và thử lại.',
                 actionText: 'Thử lại',
             });
-            form.setErrorMessage('Không thể tạo hoạt động. Vui lòng thử lại.');
+            form.setErrorMessage('Không thể gửi yêu cầu tạo hoạt động. Vui lòng thử lại.');
         } finally {
             form.setSubmitting(false);
         }

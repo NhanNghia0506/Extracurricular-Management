@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout/mainlayout';
 import WithSidebarLayout from '../layouts/WithSidebarLayout/withsidebarlayout';
 import NoSidebarLayout from '../layouts/NoSidebarLayout/nosidebarlayout';
@@ -22,8 +22,16 @@ import OrganizersPage from '../pages/OrganizersPage';
 import ChatLayout from '../layouts/ChatLayout/chatLayout';
 import ChatPage from '../pages/ChatPage/ChatPage';
 import LiveCheckinPage from '../pages/LiveCheckinPage';
+import ActivityApprovalPage from '../pages/ActivityApprovalPage';
+import authService from '../services/auth.service';
 
 const AppRoutes: React.FC = () => {
+    const location = useLocation();
+
+    useEffect(() => {
+        console.log('AppRoutes current user:', authService.getCurrentUser());
+    }, [location.pathname]);
+
     return (
         <Routes>
             {/* Login không dùng layout */}
@@ -66,6 +74,14 @@ const AppRoutes: React.FC = () => {
                 <Route path="/create-notification" element={<CreateNotificationPage />} />
                 <Route path="/attendance-dashboard" element={<AttendanceDashboardPage />} />
                 <Route path="/live-checkin" element={<LiveCheckinPage />} />
+                <Route
+                    path="/activity-approval"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ActivityApprovalPage />
+                        </ProtectedRoute>
+                    }
+                />
             </Route>
 
             <Route element={<ChatLayout />}>

@@ -82,7 +82,7 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
             {/* 1. Header Bar */}
             <div className={styles.topHeader}>
                 <button className="btn p-0"><i className="fa-solid fa-arrow-left"></i></button>
-                <h4>Đăng hoạt động</h4>
+                <h4>Gửi yêu cầu hoạt động</h4>
             </div>
 
             {/* 2. Upload Cover Photo */}
@@ -222,9 +222,8 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
                 <div className={styles.mainActions}>
                     <button className={styles.btnPrimaryLarge} type="submit" disabled={submitting}>
                         <i className="fa-solid fa-paper-plane"></i>
-                        {submitting ? 'Đang gửi...' : 'Đăng bài'}
+                        {submitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu'}
                     </button>
-                    <button className={styles.btnDraft} type="button" disabled={submitting}>Lưu Bản Nháp</button>
                 </div>
             </form>
         </>

@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ActivityStatus } from '../../global/globalEnum';
+import { ActivityApprovalStatus, ActivityStatus } from '../../global/globalEnum';
 import type { LocationData } from 'src/global/globalInterface';
 
 export type ActivityDocument = Activity & Document;
@@ -24,6 +24,7 @@ export class Activity {
     startAt: Date;
 
     @Prop({
+        type: Date,
         default: null,
     })
     endAt: Date;
@@ -82,6 +83,44 @@ export class Activity {
         default: 0,
     })
     participantCount: number;
+
+    @Prop({
+        required: true,
+        default: ActivityApprovalStatus.PENDING,
+        enum: Object.values(ActivityApprovalStatus),
+    })
+    approvalStatus: ActivityApprovalStatus;
+
+    @Prop({
+        type: String,
+        required: false,
+        default: null,
+    })
+    reviewNote?: string | null;
+
+    @Prop({
+        type: Types.ObjectId,
+        ref: 'User',
+        required: false,
+        default: null,
+    })
+    reviewedBy?: Types.ObjectId | null;
+
+    @Prop({
+        type: Date,
+        required: false,
+        default: null,
+    })
+    reviewedAt?: Date | null;
+
+    @Prop({
+        required: true,
+        default: false,
+    })
+    isPriority: boolean;
+
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 export const ActivitySchema = SchemaFactory.createForClass(Activity);

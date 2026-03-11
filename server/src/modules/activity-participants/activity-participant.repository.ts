@@ -85,6 +85,12 @@ export class ActivityParticipantRepository {
         }).exec();
     }
 
+    deleteByActivityId(activityId: string) {
+        return this.activityParticipantModel.deleteMany({
+            activityId: new Types.ObjectId(activityId),
+        }).exec();
+    }
+
     findActivitiesByUserId(userId: string) {
         const objectId = new Types.ObjectId(userId);
         return this.activityParticipantModel.aggregate([

@@ -19,9 +19,9 @@ export interface UploadResponse {
 
 // Type cho location (địa chỉ + tọa độ)
 export interface LocationData {
-    address: string;
-    latitude: number;
-    longitude: number;
+  address: string;
+  latitude: number;
+  longitude: number;
 }
 
 export interface ActivityDetailResponse {
@@ -39,6 +39,65 @@ export interface ActivityDetailResponse {
   participantCount: number;
   isRegistered: boolean;
   isOwner: boolean;
+  canDelete: boolean;
+  approvalStatus: string;
+  reviewNote?: string | null;
+}
+
+export interface ActivityApprovalStatsResponse {
+  pending: number;
+  approved: number;
+  needsEdit: number;
+  rejected: number;
+  overdue: number;
+}
+
+export interface ActivityApprovalListItemResponse {
+  id: string;
+  code: string;
+  title: string;
+  image?: string;
+  organizer: {
+    id?: string;
+    name?: string;
+  };
+  category: {
+    id?: string;
+    name?: string;
+  };
+  createdBy: {
+    id?: string;
+    name?: string;
+    email?: string;
+  };
+  startAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  approvalStatus: string;
+  status: string;
+  isPriority: boolean;
+  reviewNote?: string | null;
+  warningTag?: string | null;
+}
+
+export interface ActivityApprovalDetailResponse extends ActivityApprovalListItemResponse {
+  description: string;
+  endAt?: Date;
+  image?: string;
+  location: LocationData;
+  trainingScore?: number;
+  participantCount?: number;
+  reviewedAt?: Date | null;
+  reviewedBy?: {
+    id?: string;
+    name?: string;
+    email?: string;
+  } | null;
+}
+
+export interface ActivityApprovalDashboardResponse {
+  items: ActivityApprovalListItemResponse[];
+  stats: ActivityApprovalStatsResponse;
 }
 
 export interface CustomJwtPayload {

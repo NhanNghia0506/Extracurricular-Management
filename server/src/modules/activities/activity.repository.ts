@@ -2,6 +2,24 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Activity } from "./activity.entity";
 import { Model, Types } from "mongoose";
+import { ActivityApprovalStatus } from "src/global/globalEnum";
+
+export interface ActivityNamedReference {
+    _id?: Types.ObjectId;
+    name?: string;
+}
+
+export interface ActivityUserReference extends ActivityNamedReference {
+    email?: string;
+}
+
+export interface ActivityApprovalRecord extends Omit<Activity, 'organizerId' | 'categoryId' | 'createdBy' | 'reviewedBy'> {
+    _id: Types.ObjectId;
+    organizerId: ActivityNamedReference;
+    categoryId: ActivityNamedReference;
+    createdBy: Types.ObjectId | ActivityUserReference;
+    reviewedBy?: ActivityUserReference | null;
+}
 
 
 @Injectable()
@@ -16,11 +34,11 @@ export class ActivityRepository {
 
     findAll(): Promise<Array<Activity & { _id: any }>> {
         return this.activityModel
-            .find()
+            .find({ approvalStatus: ActivityApprovalStatus.APPROVED })
             .populate('organizerId', 'name')
             .populate('categoryId', 'name')
             .sort({ createdAt: -1 })
-            .lean()
+            .lean<Array<Activity & { _id: Types.ObjectId }>>()
             .exec();
     }
 
@@ -37,8 +55,37 @@ export class ActivityRepository {
             .find({ createdBy: new Types.ObjectId(userId) })
             .populate('organizerId', 'name')
             .populate('categoryId', 'name')
-            .lean()
+            .sort({ createdAt: -1 })
+            .lean<Array<Activity & { _id: Types.ObjectId }>>()
             .exec();
+    }
+
+        findAllForApproval(approvalStatus?: ActivityApprovalStatus): Promise<ActivityApprovalRecord[]> {
+        const filter = approvalStatus ? { approvalStatus } : {};
+        return this.activityModel
+            .find(filter)
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .populate('createdBy', 'name email')
+            .populate('reviewedBy', 'name email')
+            .sort({ isPriority: -1, createdAt: -1 })
+            .lean<ActivityApprovalRecord[]>()
+            .exec();
+    }
+
+        findApprovalById(id: string): Promise<ActivityApprovalRecord | null> {
+        return this.activityModel
+            .findById(id)
+            .populate('organizerId', 'name')
+            .populate('categoryId', 'name')
+            .populate('createdBy', 'name email')
+            .populate('reviewedBy', 'name email')
+            .lean<ActivityApprovalRecord | null>()
+            .exec();
+    }
+
+    countByApprovalStatus(approvalStatus: ActivityApprovalStatus): Promise<number> {
+        return this.activityModel.countDocuments({ approvalStatus }).exec();
     }
 
     update(id: string, updateData: Partial<Activity>): Promise<Activity | null> {
@@ -47,5 +94,9 @@ export class ActivityRepository {
             .populate('organizerId', 'name')
             .populate('categoryId', 'name')
             .exec();
+    }
+
+    delete(id: string): Promise<Activity | null> {
+        return this.activityModel.findByIdAndDelete(id).exec();
     }
 }

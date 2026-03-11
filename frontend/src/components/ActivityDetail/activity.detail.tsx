@@ -9,6 +9,7 @@ import conversationService from '../../services/conversation.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
 import { formatTime } from '../../utils/date-time';
 import CreateConversation from '../CreateConversation/create.conversation';
+import authService from '../../services/auth.service';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -20,12 +21,14 @@ const locationIcon = new L.Icon({
 });
 
 const ActivityDetail: React.FC = () => {
+    const deleteNoticePeriodInMs = 2 * 24 * 60 * 60 * 1000;
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [registering, setRegistering] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [showCreateChatModal, setShowCreateChatModal] = useState(false);
     const [hasConversation, setHasConversation] = useState(false);
 
@@ -86,6 +89,35 @@ const ActivityDetail: React.FC = () => {
         navigate(`/configure-attendance?activityId=${id}`);
     };
 
+    const handleGoToUpdate = () => {
+        if (!id) return;
+        navigate(`/update-activity?activityId=${id}`);
+    };
+
+    const handleDelete = async () => {
+        if (!id || !activity?.canDelete || deleting) return;
+
+        const confirmed = window.confirm(
+            'Bạn có chắc chắn muốn xóa hoạt động này? Dữ liệu đăng ký tham gia của hoạt động cũng sẽ bị xóa.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setDeleting(true);
+            await activityService.delete(id);
+            alert('Xóa hoạt động thành công!');
+            navigate('/my-activities');
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Không thể xóa hoạt động. Vui lòng thử lại!');
+            console.error('Error deleting activity:', err);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) return <div className="text-center py-5">Đang tải...</div>;
     if (error) return <div className="text-center py-5 text-danger">{error}</div>;
     if (!activity || !activity.category || !activity.organizer) {
@@ -95,6 +127,14 @@ const ActivityDetail: React.FC = () => {
     const campusLocation: LatLngExpression = activity.location
         ? [activity.location.latitude, activity.location.longitude]
         : [10.76, 106.66]; // Default location nếu không có
+    const currentUserRole = authService.getRole();
+    const canManageDeletion = activity.isOwner || currentUserRole === 'ADMIN';
+    const isApproved = activity.approvalStatus === 'APPROVED';
+    const needsEdit = activity.approvalStatus === 'NEEDS_EDIT';
+    const deleteDeadline = new Date(new Date(activity.startAt).getTime() - deleteNoticePeriodInMs);
+    const directionsUrl = activity.location
+        ? `https://www.google.com/maps/search/?api=1&query=${activity.location.latitude},${activity.location.longitude}`
+        : 'https://www.google.com/maps';
 
     return (
         <div className={styles.detailPage}>
@@ -163,6 +203,16 @@ const ActivityDetail: React.FC = () => {
                             <p>{activity.description}</p>
                         </div>
 
+                        {needsEdit && activity.reviewNote && (
+                            <div className={styles.reviewNoteBox}>
+                                <div className={styles.reviewNoteTitle}>
+                                    <i className="fa-solid fa-pen-to-square"></i>
+                                    Yêu cầu chỉnh sửa từ quản trị viên
+                                </div>
+                                <p className="m-0">{activity.reviewNote}</p>
+                            </div>
+                        )}
+
                         <div className={styles.noticeBox}>
                             <i className="fa-solid fa-circle-info"></i>
                             <p className="m-0">Điểm danh sẽ được theo dõi qua GPS. Vui lòng bật dịch vụ định vị trên ứng dụng UniActivity khi đến nơi.</p>
@@ -198,14 +248,16 @@ const ActivityDetail: React.FC = () => {
                         </div>
                         {activity.isOwner ? (
                             <>
-                                <button
-                                    className={styles.registerBtn}
-                                    onClick={handleConfigureAttendance}
-                                >
-                                    <i className="fa-solid fa-gear"></i>
-                                    Cấu hình điểm danh
-                                </button>
-                                {!hasConversation && (
+                                {isApproved && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={handleConfigureAttendance}
+                                    >
+                                        <i className="fa-solid fa-gear"></i>
+                                        Cấu hình điểm danh
+                                    </button>
+                                )}
+                                {isApproved && !hasConversation && (
                                     <button
                                         className={styles.registerBtn}
                                         onClick={() => setShowCreateChatModal(true)}
@@ -213,6 +265,15 @@ const ActivityDetail: React.FC = () => {
                                     >
                                         <i className="fa-solid fa-comments"></i>
                                         Tạo nhóm chat
+                                    </button>
+                                )}
+                                {needsEdit && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={handleGoToUpdate}
+                                    >
+                                        <i className="fa-solid fa-pen-to-square"></i>
+                                        Chỉnh sửa hoạt động
                                     </button>
                                 )}
                             </>
@@ -229,7 +290,23 @@ const ActivityDetail: React.FC = () => {
                                 }
                             </button>
                         )}
-                        <p className="text-center text-muted small m-0">Đăng ký kết thúc trong 2 ngày</p>
+                        {activity.canDelete && (
+                            <button
+                                className={`${styles.registerBtn} ${styles.deleteBtn}`}
+                                onClick={handleDelete}
+                                disabled={deleting}
+                            >
+                                <i className="fa-solid fa-trash"></i>
+                                {deleting ? 'Đang xóa...' : 'Xóa hoạt động'}
+                            </button>
+                        )}
+                        {isApproved && canManageDeletion && !activity.canDelete && (
+                            <p className={styles.deleteHint}>
+                                Chỉ được xóa hoạt động trước ngày diễn ra ít nhất 2 ngày.
+                                Hạn xóa: {deleteDeadline.toLocaleDateString('vi-VN')} {formatTime(deleteDeadline.toISOString())}
+                            </p>
+                        )}
+                        {/* <p className="text-center text-muted small m-0">Đăng ký kết thúc trong 2 ngày</p> */}
                     </div>
 
                     <div className={styles.whiteCard}>
@@ -255,7 +332,14 @@ const ActivityDetail: React.FC = () => {
                                 <i className="fa-solid fa-location-arrow me-1"></i>
                                 {activity.location?.address || 'Địa điểm sự kiện'}
                             </span>
-                            <a href="#" className="small text-primary text-decoration-none fw-bold">Lấy chỉ đường</a>
+                            <a
+                                href={directionsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="small text-primary text-decoration-none fw-bold"
+                            >
+                                Lấy chỉ đường
+                            </a>
                         </div>
 
                         <button className={styles.actionBtnOutline}>

@@ -61,4 +61,70 @@ export interface ActivityDetailResponse {
     registeredCount: number;
     isRegistered: boolean;
     isOwner: boolean;
+    canDelete: boolean;
+    approvalStatus?: string;
+    reviewNote?: string | null;
+}
+
+export interface ActivityApprovalStatsResponse {
+    pending: number;
+    approved: number;
+    needsEdit: number;
+    rejected: number;
+    overdue: number;
+}
+
+export interface ActivityApprovalListItemResponse {
+    id: string;
+    code: string;
+    title: string;
+    image?: string;
+    organizer: {
+        id?: string;
+        name?: string;
+    };
+    category: {
+        id?: string;
+        name?: string;
+    };
+    createdBy: {
+        id?: string;
+        name?: string;
+        email?: string;
+    };
+    startAt: string;
+    createdAt?: string;
+    updatedAt?: string;
+    approvalStatus: string;
+    status: string;
+    isPriority: boolean;
+    reviewNote?: string | null;
+    warningTag?: string | null;
+}
+
+export interface ActivityApprovalDetailResponse extends ActivityApprovalListItemResponse {
+    description: string;
+    endAt?: string;
+    image?: string;
+    location: LocationData;
+    trainingScore?: number;
+    participantCount?: number;
+    reviewedAt?: string | null;
+    reviewedBy?: {
+        id?: string;
+        name?: string;
+        email?: string;
+    } | null;
+}
+
+export interface ActivityApprovalDashboardResponse {
+    items: ActivityApprovalListItemResponse[];
+    stats: ActivityApprovalStatsResponse;
+}
+
+export interface ActivityApprovalReviewPayload {
+    approvalStatus: 'APPROVED' | 'NEEDS_EDIT' | 'REJECTED';
+    reviewNote?: string;
+    isPriority?: boolean;
+    notifyOrganizer?: boolean;
 }

@@ -63,7 +63,8 @@ class AuthService {
             const userInfo = {
                 id: user.id,
                 name: user.name,
-                email: user.email
+                email: user.email,
+                role: user.role,
             };
             localStorage.setItem(this.USER_INFO_KEY, JSON.stringify(userInfo));
         }
@@ -79,7 +80,8 @@ class AuthService {
             const userInfo = {
                 id: payload.sub,
                 name: payload.name,
-                email: payload.email
+                email: payload.email,
+                role: payload.role,
             };
             localStorage.setItem(this.USER_INFO_KEY, JSON.stringify(userInfo));
         } catch (error) {
@@ -157,5 +159,6 @@ class AuthService {
     }
 }
 
+const authService = new AuthService();
 
-export default new AuthService();
+export default authService;

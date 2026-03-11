@@ -1,4 +1,10 @@
-import { CreateActivity } from "@/types/activity.types";
+import {
+    ActivityApprovalDashboardResponse,
+    ActivityApprovalDetailResponse,
+    ActivityApprovalReviewPayload,
+    CreateActivity,
+} from "@/types/activity.types";
+import { SuccessResponse } from "@/types/response.types";
 import apiService from "./api.service";
 
 const activityService = {
@@ -12,9 +18,13 @@ const activityService = {
     updateWithFile: (activityId: string, formData: FormData) => {
         return apiService.put(`/activities/${activityId}`, formData);
     },
+    delete: (activityId: string) => apiService.delete(`/activities/${activityId}`),
     categories: () => apiService.get('/activity-categories'),
     list: () => apiService.get('/activities'),
     getDetail: (id: string) => apiService.get(`/activities/${id}`),
+    approvalDashboard: () => apiService.get<SuccessResponse<ActivityApprovalDashboardResponse>>('/activities/admin/approval'),
+    approvalDetail: (id: string) => apiService.get<SuccessResponse<ActivityApprovalDetailResponse>>(`/activities/admin/approval/${id}`),
+    reviewApproval: (id: string, payload: ActivityApprovalReviewPayload) => apiService.patch<SuccessResponse<ActivityApprovalDetailResponse>>(`/activities/admin/approval/${id}`, payload),
     register: (activityId: string) => apiService.post('/activity-participants', { activityId }),
     participantsByActivity: (activityId: string) => apiService.get(`/activity-participants/participantsByActivity/${activityId}`),
     participantsCountByActivity: async (activityId: string): Promise<number> => {

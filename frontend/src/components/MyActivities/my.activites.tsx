@@ -14,6 +14,7 @@ interface MyActivityItem {
     startAt?: string;
     endAt?: string;
     status?: string;
+    approvalStatus?: string;
     location?: LocationData;
     trainingScore?: number;
     registeredAt?: string;
@@ -21,10 +22,27 @@ interface MyActivityItem {
     relation?: 'created' | 'participated';
 }
 
+type StatusFilterKey =
+    | 'ALL'
+    | 'PENDING'
+    | 'NEEDS_EDIT'
+    | 'REJECTED'
+    | 'OPEN'
+    | 'ONGOING'
+    | 'COMPLETED'
+    | 'CANCELLED'
+    | 'CLOSED';
+
+interface StatusPresentation {
+    label: string;
+    color: string;
+}
+
 const MyActivities: React.FC = () => {
     const [activities, setActivities] = useState<MyActivityItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activeStatusFilter, setActiveStatusFilter] = useState<StatusFilterKey>('ALL');
 
     useEffect(() => {
         const fetchMyActivities = async () => {
@@ -44,16 +62,60 @@ const MyActivities: React.FC = () => {
         fetchMyActivities();
     }, []);
 
-    console.log('My Activities:', activities);
+    const statusPresentationMap = useMemo(() => ({
+        PENDING: { label: 'Chờ phê duyệt', color: '#f59e0b' },
+        NEEDS_EDIT: { label: 'Cần chỉnh sửa', color: '#f97316' },
+        REJECTED: { label: 'Bị từ chối', color: '#ef4444' },
+        OPEN: { label: 'Đang mở đăng ký', color: '#10b981' },
+        ONGOING: { label: 'Đang diễn ra', color: '#2563eb' },
+        COMPLETED: { label: 'Đã hoàn thành', color: '#64748b' },
+        CANCELLED: { label: 'Đã hủy', color: '#dc2626' },
+        CLOSED: { label: 'Đã đóng đăng ký', color: '#7c3aed' },
+    } as Record<Exclude<StatusFilterKey, 'ALL'>, StatusPresentation>), []);
 
-    const statusColorMap = useMemo(() => ({
-        'ONGOING': '#10b981',
-        'UPCOMING': '#2563eb',
-        'OPEN': '#10b981',
-        'WAITLIST': '#f59e0b',
-        'ENDED': '#64748b',
-        'CANCELLED': '#ef4444',
-    } as Record<string, string>), []);
+    const statusFilterConfig = useMemo(() => ([
+        { key: 'ALL' as const, label: 'Tất cả trạng thái', icon: 'fa-table-cells-large' },
+        { key: 'PENDING' as const, label: 'Chờ duyệt', icon: 'fa-hourglass-half' },
+        { key: 'NEEDS_EDIT' as const, label: 'Cần sửa', icon: 'fa-pen-to-square' },
+        { key: 'OPEN' as const, label: 'Mở đăng ký', icon: 'fa-door-open' },
+        { key: 'ONGOING' as const, label: 'Đang diễn ra', icon: 'fa-person-running' },
+        { key: 'COMPLETED' as const, label: 'Đã hoàn thành', icon: 'fa-circle-check' },
+        { key: 'CANCELLED' as const, label: 'Đã hủy', icon: 'fa-ban' },
+        { key: 'REJECTED' as const, label: 'Bị từ chối', icon: 'fa-circle-xmark' },
+    ]), []);
+
+    const getActivityStatusKey = useMemo(() => (activity: MyActivityItem): StatusFilterKey => {
+        if (activity.relation === 'created') {
+            if (activity.approvalStatus === 'PENDING') return 'PENDING';
+            if (activity.approvalStatus === 'NEEDS_EDIT') return 'NEEDS_EDIT';
+            if (activity.approvalStatus === 'REJECTED') return 'REJECTED';
+        }
+
+        switch (activity.status) {
+            case 'OPEN':
+                return 'OPEN';
+            case 'ONGOING':
+                return 'ONGOING';
+            case 'COMPLETED':
+                return 'COMPLETED';
+            case 'CANCELLED':
+                return 'CANCELLED';
+            case 'CLOSED':
+                return 'CLOSED';
+            default:
+                return 'ALL';
+        }
+    }, []);
+
+    const getStatusPresentation = useMemo(() => (activity: MyActivityItem): StatusPresentation => {
+        const statusKey = getActivityStatusKey(activity);
+
+        if (statusKey === 'ALL') {
+            return { label: 'Chưa cập nhật', color: '#64748b' };
+        }
+
+        return statusPresentationMap[statusKey];
+    }, [getActivityStatusKey, statusPresentationMap]);
 
     const formatDateTime = (value?: string) => {
         if (!value) return 'Chưa cập nhật';
@@ -94,22 +156,65 @@ const MyActivities: React.FC = () => {
 
     const getActivityId = (activity: MyActivityItem) => activity.activityId || activity._id || '';
 
-    const createdActivities = activities.filter((activity) => activity.relation === 'created');
-    const participatedActivities = activities.filter((activity) => activity.relation === 'participated');
+    const filteredByStatus = useMemo(() => {
+        if (activeStatusFilter === 'ALL') {
+            return activities;
+        }
+
+        return activities.filter((activity) => getActivityStatusKey(activity) === activeStatusFilter);
+    }, [activities, activeStatusFilter, getActivityStatusKey]);
+
+    const filterCounts = useMemo(() => {
+        const counts = activities.reduce<Record<StatusFilterKey, number>>((accumulator, activity) => {
+            const key = getActivityStatusKey(activity);
+            accumulator.ALL += 1;
+            accumulator[key] += 1;
+            return accumulator;
+        }, {
+            ALL: 0,
+            PENDING: 0,
+            NEEDS_EDIT: 0,
+            REJECTED: 0,
+            OPEN: 0,
+            ONGOING: 0,
+            COMPLETED: 0,
+            CANCELLED: 0,
+            CLOSED: 0,
+        });
+
+        return counts;
+    }, [activities, getActivityStatusKey]);
+
+    const createdActivities = filteredByStatus.filter((activity) => activity.relation === 'created');
+    const participatedActivities = filteredByStatus.filter((activity) => activity.relation === 'participated');
 
     return (
         <div className={styles.feedContainer}>
             {/* Filter Bar */}
             <div className={styles.filterBar}>
                 <div className={styles.categoryGroup}>
-                    <button className={styles.active}><i className="fa-solid fa-table-cells-large"></i> All Categories</button>
-                    <button><i className="fa-solid fa-laptop-code"></i> Workshop</button>
-                    <button><i className="fa-solid fa-microphone"></i> Seminar</button>
-                    <button><i className="fa-solid fa-basketball"></i> Sports</button>
+                    {statusFilterConfig
+                        .filter((item) => item.key === 'ALL' || filterCounts[item.key] > 0)
+                        .map((item) => (
+                            <button
+                                key={item.key}
+                                className={activeStatusFilter === item.key ? styles.active : ''}
+                                onClick={() => setActiveStatusFilter(item.key)}
+                            >
+                                <i className={`fa-solid ${item.icon}`}></i>
+                                {item.label} ({filterCounts[item.key]})
+                            </button>
+                        ))}
                 </div>
                 <div className={styles.sortAction}>
-                    <i className="fa-solid fa-arrow-down-wide-short"></i> Sort by: Date
+                    <i className="fa-solid fa-arrow-down-wide-short"></i> Lọc theo trạng thái
                 </div>
+            </div>
+
+            <div className={styles.sectionTitle}>
+                <i className="fa-solid fa-user-check"></i>
+                <span>Hoạt động bạn tham gia</span>
+                <span className={styles.badge}>{participatedActivities.length}</span>
             </div>
 
             {/* Participated Activities */}
@@ -120,15 +225,18 @@ const MyActivities: React.FC = () => {
                 {!loading && error && (
                     <div>{error}</div>
                 )}
+                {!loading && !error && participatedActivities.length === 0 && (
+                    <div>Không có hoạt động tham gia nào phù hợp với trạng thái đang chọn.</div>
+                )}
                 {!loading && !error && participatedActivities.map((act) => {
-                    const statusColor = statusColorMap[act.status || ''] || '#64748b';
+                    const statusPresentation = getStatusPresentation(act);
                     const participantStatus = mapParticipantStatus(act.participantStatus);
                     const activityId = getActivityId(act);
                     return (
                         <div key={activityId} className={styles.activityCard}>
-                            <div className={`${styles.imageWrapper} ${act.status === 'ENDED' ? styles.ended : ''}`}>
+                            <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
-                                <span className={styles.statusTag} style={{ background: statusColor }}>{act.status || 'N/A'}</span>
+                                <span className={styles.statusTag} style={{ background: statusPresentation.color }}>{statusPresentation.label}</span>
                                 <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 
@@ -163,16 +271,16 @@ const MyActivities: React.FC = () => {
                     <div>{error}</div>
                 )}
                 {!loading && !error && createdActivities.length === 0 && (
-                    <div>Bạn chưa tạo hoạt động nào.</div>
+                    <div>Không có hoạt động bạn tạo nào phù hợp với trạng thái đang chọn.</div>
                 )}
                 {!loading && !error && createdActivities.map((act) => {
-                    const statusColor = statusColorMap[act.status || ''] || '#64748b';
+                    const statusPresentation = getStatusPresentation(act);
                     const activityId = getActivityId(act);
                     return (
                         <div key={activityId} className={styles.activityCard}>
-                            <div className={`${styles.imageWrapper} ${act.status === 'ENDED' ? styles.ended : ''}`}>
+                            <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
-                                <span className={styles.statusTag} style={{ background: statusColor }}>{act.status || 'N/A'}</span>
+                                <span className={styles.statusTag} style={{ background: statusPresentation.color }}>{statusPresentation.label}</span>
                                 <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 

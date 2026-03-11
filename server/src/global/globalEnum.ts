@@ -31,6 +31,13 @@ export enum ActivityStatus {
     CANCELLED = 'CANCELLED',  // Bị hủy
 }
 
+export enum ActivityApprovalStatus {
+    PENDING = 'PENDING',
+    NEEDS_EDIT = 'NEEDS_EDIT',
+    APPROVED = 'APPROVED',
+    REJECTED = 'REJECTED',
+}
+
 export enum OrganizerStatus {
     ACTIVE = 1,
     INACTIVE = 2

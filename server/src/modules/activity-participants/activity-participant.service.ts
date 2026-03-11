@@ -1,9 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from "@nestjs/common";
 import { ActivityParticipantRepository } from "./activity-participant.repository";
 import { CreateActivityParticipantDto } from "./dtos/create.activity-participant.dto";
 import { ActivityParticipant } from "./activity-participant.entity";
 import { Types } from "mongoose";
 import { ActivityService } from "../activities/activity.service";
+import { ActivityApprovalStatus } from "src/global/globalEnum";
 
 @Injectable()
 export class ActivityParticipantService {
@@ -18,6 +19,10 @@ export class ActivityParticipantService {
         const activity = await this.activityService.findById(activityParticipantData.activityId);
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        if (activity.approvalStatus !== ActivityApprovalStatus.APPROVED) {
+            throw new ForbiddenException('Hoạt động chưa được duyệt nên chưa thể đăng ký tham gia');
         }
 
         const participantQuantity = await this.countParticipantsByActivity(activityParticipantData.activityId);
@@ -57,6 +62,10 @@ export class ActivityParticipantService {
 
     findByActivityAndUserId(activityId: string, userId: string): Promise<ActivityParticipant | null> {
         return this.activityParticipantRepository.findByActivityAndUserId(activityId, userId);
+    }
+
+    deleteByActivityId(activityId: string) {
+        return this.activityParticipantRepository.deleteByActivityId(activityId);
     }
 
     // Lấy danh sách hoạt động mà user đã tham gia

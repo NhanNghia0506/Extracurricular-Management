@@ -12,6 +12,8 @@ import {
     Request,
     Req,
     Put,
+    Delete,
+    Patch,
 } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dtos/create.activity.dto';
@@ -25,6 +27,12 @@ import { AuthGuard } from "src/guards/auth.guard";
 import { OrganizerManagerGuard } from 'src/guards/organizer.manager.guard';
 import type { Request as ExpressRequest } from 'express';
 import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
+import {
+    ActivityApprovalDashboardResponse,
+    ActivityApprovalDetailResponse,
+} from 'src/global/globalInterface';
+import { ActivityApprovalQueryDto } from './dtos/activity-approval-query.dto';
+import { UpdateActivityApprovalDto } from './dtos/update-activity-approval.dto';
 
 
 @Controller('activities')
@@ -86,7 +94,7 @@ export class ActivityController {
                 createActivityDto.image = file.filename;
             }
 
-            return await this.activityService.create(req.user!.id!, createActivityDto);
+            return await this.activityService.create(req.user!.id!, req.user?.role, createActivityDto);
         } catch (error) {
             // Xóa file nếu tạo activity thất bại
             if (uploadedFilename) {
@@ -107,6 +115,37 @@ export class ActivityController {
         return this.activityService.findAll(req.user?.id);
     }
 
+    @ResponseMessage('Lấy dashboard duyệt hoạt động thành công')
+    @Get('admin/approval')
+    @UseGuards(AuthGuard)
+    async getApprovalDashboard(
+        @Req() req: ExpressRequest,
+        @Query() query: ActivityApprovalQueryDto,
+    ): Promise<ActivityApprovalDashboardResponse> {
+        return this.activityService.getApprovalDashboard(req.user?.role, query.approvalStatus);
+    }
+
+    @ResponseMessage('Lấy chi tiết duyệt hoạt động thành công')
+    @Get('admin/approval/:id')
+    @UseGuards(AuthGuard)
+    async getApprovalDetail(
+        @Param('id') id: string,
+        @Req() req: ExpressRequest,
+    ): Promise<ActivityApprovalDetailResponse> {
+        return this.activityService.getApprovalDetail(id, req.user?.role);
+    }
+
+    @ResponseMessage('Cập nhật trạng thái duyệt hoạt động thành công')
+    @Patch('admin/approval/:id')
+    @UseGuards(AuthGuard)
+    async reviewActivity(
+        @Param('id') id: string,
+        @Body() reviewDto: UpdateActivityApprovalDto,
+        @Req() req: ExpressRequest,
+    ): Promise<ActivityApprovalDetailResponse> {
+        return this.activityService.reviewActivity(id, req.user!.id!, req.user?.role, reviewDto);
+    }
+
     @ResponseMessage('Lấy danh sách hoạt động của tôi thành công')
     @Get('my-activities')
     @UseGuards(AuthGuard)
@@ -121,7 +160,7 @@ export class ActivityController {
     @Get(':id')
     @UseGuards(AuthGuard)
     async getActivityById(@Param('id') id: string, @Req() req: ExpressRequest): Promise<ActivityDetailResponse | null> {
-        return this.activityService.findActivityDetailById(id, req.user?.id);
+        return this.activityService.findActivityDetailById(id, req.user?.id, req.user?.role);
     }
 
     /**
@@ -162,7 +201,7 @@ export class ActivityController {
                 }
             }
 
-            return await this.activityService.update(id, userId, updateActivityDto, uploadedFilename);
+            return await this.activityService.update(id, userId, req.user?.role, updateActivityDto, uploadedFilename);
         } catch (error) {
             // Xóa file nếu cập nhật thất bại
             if (uploadedFilename) {
@@ -170,5 +209,15 @@ export class ActivityController {
             }
             throw error;
         }
+    }
+
+    @ResponseMessage('Xóa hoạt động thành công')
+    @Delete(':id')
+    @UseGuards(AuthGuard)
+    async delete(
+        @Param('id') id: string,
+        @Req() req: ExpressRequest,
+    ): Promise<Activity> {
+        return this.activityService.delete(id, req.user!.id!, req.user?.role);
     }
 }

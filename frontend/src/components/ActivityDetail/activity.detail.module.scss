@@ -190,6 +190,25 @@ $border-radius: 16px;
     }
 }
 
+.reviewNoteBox {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+    line-height: 1.6;
+}
+
+.reviewNoteTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
 // --- Sidebar Section ---
 .sidebar {
     display: flex;
@@ -249,6 +268,56 @@ $border-radius: 16px;
         justify-content: center;
         gap: 10px;
         margin-bottom: 0.75rem;
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    }
+
+    .utilityActions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .singleUtilityAction {
+        grid-template-columns: 1fr;
+    }
+
+    .utilityBtn {
+        width: 100%;
+        min-height: 56px;
+        padding: 0.9rem 1rem;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: white;
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    }
+
+    .chatUtilityBtn {
+        background: #0f766e;
+    }
+
+    .deleteBtn {
+        background: #dc2626;
+    }
+
+    .deleteHint {
+        margin: 0 0 0.75rem;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #b45309;
     }
 }
 
