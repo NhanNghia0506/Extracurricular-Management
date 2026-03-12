@@ -1,4 +1,4 @@
-import { IsOptional, IsBoolean, IsEnum, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsBoolean, IsEnum, IsNumber, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NotificationType } from 'src/global/globalEnum';
 
@@ -23,4 +23,8 @@ export class GetNotificationsQueryDto {
     @IsEnum(NotificationType)
     @IsOptional()
     type?: NotificationType;
+
+    @IsString()
+    @IsOptional()
+    senderType?: string;
 }

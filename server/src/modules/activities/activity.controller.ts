@@ -33,6 +33,7 @@ import {
 } from 'src/global/globalInterface';
 import { ActivityApprovalQueryDto } from './dtos/activity-approval-query.dto';
 import { UpdateActivityApprovalDto } from './dtos/update-activity-approval.dto';
+import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
 
 
 @Controller('activities')
@@ -161,6 +162,22 @@ export class ActivityController {
     @UseGuards(AuthGuard)
     async getActivityById(@Param('id') id: string, @Req() req: ExpressRequest): Promise<ActivityDetailResponse | null> {
         return this.activityService.findActivityDetailById(id, req.user?.id, req.user?.role);
+    }
+
+    @ResponseMessage('Gửi thông báo cho thành viên hoạt động thành công')
+    @Post(':id/notifications')
+    @UseGuards(AuthGuard)
+    async sendActivityNotification(
+        @Param('id') id: string,
+        @Body() payload: SendActivityNotificationDto,
+        @Req() req: ExpressRequest,
+    ) {
+        return this.activityService.sendNotificationToParticipants(
+            id,
+            req.user!.id!,
+            req.user?.role,
+            payload,
+        );
     }
 
     /**

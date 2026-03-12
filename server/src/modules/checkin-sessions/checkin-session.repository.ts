@@ -17,4 +17,11 @@ export class CheckinSessionRepository {
         const newId = new Types.ObjectId(id);
         return this.checkinSessionModel.findById(newId);
     }
+
+    findByActivityId(activityId: string): Promise<CheckinSession | null> {
+        return this.checkinSessionModel
+            .findOne({ activityId: new Types.ObjectId(activityId) })
+            .sort({ createdAt: -1 })
+            .exec();
+    }
 }

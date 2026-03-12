@@ -25,6 +25,7 @@ export class NotificationRepository {
             skip?: number;
             isRead?: boolean;
             type?: NotificationType;
+            senderType?: string;
         }
     ) {
         const query: Record<string, any> = { userId: new Types.ObjectId(userId) };
@@ -37,6 +38,10 @@ export class NotificationRepository {
             query.type = options.type;
         }
 
+        if (options?.senderType) {
+            query.senderType = options.senderType;
+        }
+
         return this.notificationModel
             .find(query)
             .sort({ createdAt: -1 })
@@ -45,10 +50,13 @@ export class NotificationRepository {
             .exec();
     }
 
-    async countByUserId(userId: string, isRead?: boolean) {
+    async countByUserId(userId: string, isRead?: boolean, senderType?: string) {
         const query: Record<string, any> = { userId: new Types.ObjectId(userId) };
         if (isRead !== undefined) {
             query.isRead = isRead;
+        }
+        if (senderType) {
+            query.senderType = senderType;
         }
         return this.notificationModel.countDocuments(query);
     }

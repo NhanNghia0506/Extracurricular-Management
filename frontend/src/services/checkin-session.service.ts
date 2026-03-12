@@ -7,6 +7,7 @@ import type { ActivityDetailResponse } from '@/types/activity.types';
 const checkinSessionService = {
     create: (data: CreateCheckinSession) => apiService.post('/checkin-sessions', data),
     getById: (id: string) => apiService.get(`/checkin-sessions/${id}`),
+    getByActivityId: (activityId: string) => apiService.get(`/checkin-sessions/activity/${activityId}`),
     getActivityBySessionId: async (sessionId: string): Promise<ActivityDetailResponse> => {
         const sessionResponse = await apiService.get(`/checkin-sessions/${sessionId}`);
         const sessionData = sessionResponse.data?.data;

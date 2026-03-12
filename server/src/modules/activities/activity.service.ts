@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef, ForbiddenException, Logger } from '@nestjs/common';
 import {
     ActivityApprovalRecord,
     ActivityNamedReference,
@@ -6,9 +6,10 @@ import {
     ActivityUserReference,
 } from './activity.repository';
 import { CreateActivityDto } from './dtos/create.activity.dto';
+import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
 import { UpdateActivityDto } from './dtos/update.activity.dto';
 import { Types } from 'mongoose';
-import { ActivityStatus, UserRole } from '../../global/globalEnum';
+import { ActivityStatus, NotificationPriority, NotificationType, UserRole } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 import {
     ActivityApprovalDashboardResponse,
@@ -19,6 +20,7 @@ import {
 } from 'src/global/globalInterface';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { UploadService } from '../../interceptors/upload.service';
+import { NotificationService } from '../notifications/notification.service';
 
 type ActivityApprovalValue = Activity['approvalStatus'];
 
@@ -40,12 +42,14 @@ interface ActivityApprovalReviewPayload {
 @Injectable()
 export class ActivityService {
     private static readonly DELETE_NOTICE_PERIOD_IN_MS = 2 * 24 * 60 * 60 * 1000;
+    private readonly logger = new Logger(ActivityService.name);
 
     constructor(
         private readonly activityRepository: ActivityRepository,
         @Inject(forwardRef(() => ActivityParticipantService))
         private readonly activityParticipantService: ActivityParticipantService,
         private readonly uploadService: UploadService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     /**
@@ -190,6 +194,78 @@ export class ActivityService {
         }));
 
         return [...createdItems, ...participatedItems];
+    }
+
+    async sendNotificationToParticipants(
+        activityId: string,
+        senderUserId: string,
+        senderUserRole: string | undefined,
+        payload: SendActivityNotificationDto,
+    ): Promise<{ recipientCount: number; activityId: string }> {
+        if (!Types.ObjectId.isValid(activityId)) {
+            throw new BadRequestException('activityId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(senderUserId)) {
+            throw new BadRequestException('senderUserId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const activity = await this.activityRepository.findById(activityId);
+        if (!activity) {
+            throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        this.ensureParticipantNotificationAllowed(activity, senderUserId, senderUserRole);
+
+        const participants = await this.activityParticipantService.findByActivityId(activityId);
+        const participantUserIds = Array.from(
+            new Set(participants.map((participant) => participant.userId?.toString()).filter((value): value is string => Boolean(value))),
+        );
+
+        if (participantUserIds.length === 0) {
+            throw new BadRequestException('Hoạt động hiện chưa có thành viên để gửi thông báo');
+        }
+
+        let targetUserIds = participantUserIds;
+        if (payload.recipientMode === 'SELECTED') {
+            const selectedUserIds = Array.from(
+                new Set((payload.recipientUserIds || []).map((value) => value.trim()).filter(Boolean)),
+            );
+
+            if (selectedUserIds.length === 0) {
+                throw new BadRequestException('Vui lòng chọn ít nhất một thành viên để gửi thông báo');
+            }
+
+            const participantUserIdSet = new Set(participantUserIds);
+            const invalidUserIds = selectedUserIds.filter((userId) => !participantUserIdSet.has(userId));
+            if (invalidUserIds.length > 0) {
+                throw new ForbiddenException('Có người nhận không thuộc danh sách thành viên của hoạt động');
+            }
+
+            targetUserIds = selectedUserIds;
+        }
+
+        await this.notificationService.createBulkNotifications(targetUserIds, {
+            senderName: payload.senderName?.trim() || activity.title,
+            senderType: payload.senderType?.trim() || 'activity-owner',
+            title: payload.title.trim(),
+            message: payload.message.trim(),
+            type: payload.type || NotificationType.ACTIVITY,
+            priority: payload.priority || NotificationPriority.NORMAL,
+            linkUrl: payload.linkUrl?.trim() || `/detail/${activityId}`,
+            groupKey: payload.groupKey?.trim() || `activity-notification:${activityId}`,
+            meta: {
+                activityId,
+                activityTitle: activity.title,
+                recipientMode: payload.recipientMode,
+                ...(payload.meta || {}),
+            },
+        });
+
+        return {
+            recipientCount: targetUserIds.length,
+            activityId,
+        };
     }
 
     /**
@@ -401,6 +477,8 @@ export class ActivityService {
             throw new NotFoundException('Lỗi khi cập nhật trạng thái duyệt hoạt động');
         }
 
+        await this.notifyCreatorOnReview(activity, approvalStatus, reviewNote, reviewDto.notifyOrganizer);
+
         return this.getApprovalDetail(id, userRole);
     }
 
@@ -440,6 +518,15 @@ export class ActivityService {
         const deleteDeadline = new Date(activity.startAt).getTime() - ActivityService.DELETE_NOTICE_PERIOD_IN_MS;
 
         return (isOwner || isAdmin) && Date.now() <= deleteDeadline;
+    }
+
+    private ensureParticipantNotificationAllowed(activity: Activity, userId: string, userRole?: string): void {
+        const isOwner = activity.createdBy?.toString() === userId;
+        const isAdmin = userRole === UserRole.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenException('Chỉ người tạo hoạt động hoặc admin hệ thống mới có quyền gửi thông báo');
+        }
     }
 
     /**
@@ -578,6 +665,84 @@ export class ActivityService {
             id: createdBy._id?.toString(),
             name: createdBy.name,
             email: createdBy.email,
+        };
+    }
+
+    private async notifyCreatorOnReview(
+        activity: Activity,
+        approvalStatus: ActivityApprovalValue,
+        reviewNote?: string,
+        notifyOrganizer?: boolean,
+    ): Promise<void> {
+        if (notifyOrganizer === false) {
+            return;
+        }
+
+        if (![ACTIVITY_APPROVAL_STATUS.NEEDS_EDIT, ACTIVITY_APPROVAL_STATUS.REJECTED].includes(approvalStatus)) {
+            return;
+        }
+
+        const creatorId = activity.createdBy?.toString();
+        if (!creatorId) {
+            return;
+        }
+
+        const activityId = ((activity as Activity & { _id?: Types.ObjectId })._id)?.toString();
+        if (!activityId) {
+            return;
+        }
+
+        const notificationContent = this.buildReviewNotificationContent(activity.title, approvalStatus, reviewNote);
+
+        try {
+            await this.notificationService.create({
+                userId: creatorId,
+                senderName: 'Hệ thống phê duyệt hoạt động',
+                senderType: 'system',
+                title: notificationContent.title,
+                message: notificationContent.message,
+                type: NotificationType.ACTIVITY,
+                priority: notificationContent.priority,
+                linkUrl: `/detail/${activityId}`,
+                groupKey: `activity-review:${activityId}`,
+                meta: {
+                    activityId,
+                    activityTitle: activity.title,
+                    approvalStatus,
+                    reviewNote: reviewNote || null,
+                },
+            });
+        } catch (error) {
+            this.logger.error(
+                `Không thể tạo thông báo duyệt hoạt động cho activity ${activityId}`,
+                error instanceof Error ? error.stack : undefined,
+            );
+        }
+    }
+
+    private buildReviewNotificationContent(
+        activityTitle: string,
+        approvalStatus: ActivityApprovalValue,
+        reviewNote?: string,
+    ): { title: string; message: string; priority: NotificationPriority } {
+        const normalizedReviewNote = reviewNote?.trim();
+
+        if (approvalStatus === ACTIVITY_APPROVAL_STATUS.NEEDS_EDIT) {
+            return {
+                title: 'Hoạt động cần chỉnh sửa trước khi duyệt',
+                message: normalizedReviewNote
+                    ? `Hoạt động "${activityTitle}" đã được admin phản hồi và yêu cầu chỉnh sửa. Ghi chú: ${normalizedReviewNote}`
+                    : `Hoạt động "${activityTitle}" đã được admin phản hồi và yêu cầu chỉnh sửa. Vui lòng mở chi tiết để xem thêm.`,
+                priority: NotificationPriority.HIGH,
+            };
+        }
+
+        return {
+            title: 'Hoạt động đã bị từ chối',
+            message: normalizedReviewNote
+                ? `Hoạt động "${activityTitle}" đã bị từ chối. Lý do: ${normalizedReviewNote}`
+                : `Hoạt động "${activityTitle}" đã bị từ chối. Vui lòng mở chi tiết để xem thêm.`,
+            priority: NotificationPriority.URGENT,
         };
     }
 }

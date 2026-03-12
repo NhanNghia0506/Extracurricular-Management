@@ -4,8 +4,9 @@ import {
     faSearch, faFilter, faFileExport, faPlus,
     faUserFriends, faMapMarkerAlt,
     faCheckCircle, faTimesCircle,
-    faFeed
+    faFeed, faLocationCrosshairs, faTableColumns
 } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 import {
     Bar,
     BarChart,
@@ -43,6 +44,7 @@ interface AttendanceDashboardProps {
 }
 
 const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) => {
+    const navigate = useNavigate();
     const [checkins, setCheckins] = useState<CheckinResponse[]>([]);
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [checkinSession, setCheckinSession] = useState<any>(null);
@@ -276,6 +278,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         return 'ĐANG DIỄN RA';
     };
 
+    const goToLiveMap = () => {
+        if (!sessionId) {
+            return;
+        }
+
+        navigate(`/live-checkin?checkinsession=${sessionId}`);
+    };
+
     return (
         <div className={styles.dashboardContainer}>
             {/* 1. Header Section */}
@@ -307,6 +317,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                     <input type="text" placeholder="Tìm theo tên hoặc mã sinh viên..." />
                 </div>
                 <div className={styles.actions}>
+                    <div className={styles.viewSwitch}>
+                        <button type="button" className={`${styles.switchBtn} ${styles.activeSwitchBtn}`}>
+                            <FontAwesomeIcon icon={faTableColumns} /> Dashboard
+                        </button>
+                        <button type="button" className={styles.switchBtn} onClick={goToLiveMap} disabled={!sessionId}>
+                            <FontAwesomeIcon icon={faLocationCrosshairs} /> Bản đồ realtime
+                        </button>
+                    </div>
                     <button className={styles.btnSecondary}><FontAwesomeIcon icon={faFilter} /> Bộ lọc</button>
                     <button className={styles.btnSecondary}><FontAwesomeIcon icon={faFileExport} /> Xuất CSV</button>
                     <button className={styles.btnPrimary}><FontAwesomeIcon icon={faPlus} /> Nhập thủ công</button>

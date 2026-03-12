@@ -71,7 +71,14 @@ const AppRoutes: React.FC = () => {
                 <Route path="/participants/:activityId" element={<ActivityParticipantsPage />} />
                 <Route path="/notifications" element={<NotificationsCenterPage />} />
                 <Route path="/notification-detail" element={<NotificationDetailPage />} />
-                <Route path="/create-notification" element={<CreateNotificationPage />} />
+                <Route
+                    path="/create-notification"
+                    element={
+                        <ProtectedRoute>
+                            <CreateNotificationPage />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route path="/attendance-dashboard" element={<AttendanceDashboardPage />} />
                 <Route path="/live-checkin" element={<LiveCheckinPage />} />
                 <Route

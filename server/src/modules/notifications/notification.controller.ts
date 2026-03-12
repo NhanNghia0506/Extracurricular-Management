@@ -1,5 +1,6 @@
 import { 
     Controller, 
+    ForbiddenException,
     Get, 
     Post, 
     Patch, 
@@ -12,6 +13,7 @@ import {
     UnauthorizedException 
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { UserRole } from 'src/global/globalEnum';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dtos/create-notification.dto';
 import { GetNotificationsQueryDto } from './dtos/get-notifications-query.dto';
@@ -63,7 +65,14 @@ export class NotificationController {
 
     @ResponseMessage('Tạo thông báo thành công')
     @Post()
-    async createNotification(@Body() createNotificationDto: CreateNotificationDto) {
+    async createNotification(
+        @Req() req: Request,
+        @Body() createNotificationDto: CreateNotificationDto,
+    ) {
+        if (req.user?.role !== UserRole.ADMIN) {
+            throw new ForbiddenException('Chỉ admin hệ thống mới có quyền tạo thông báo');
+        }
+
         return this.notificationService.create(createNotificationDto);
     }
 

@@ -1,109 +1,209 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faCheckCircle,
+    faArrowLeft,
+    faArrowUpRightFromSquare,
+    faBell,
+    faCalendarAlt,
+    faCircleInfo,
     faClock,
-    faExternalLinkAlt,
-    faArchive,
-    faTrashAlt,
-    faFlag,
-    faInfoCircle,
-    faExclamationTriangle,
-    faCalendarAlt
+    faMicrochip,
+    faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './notification.detail.module.scss';
+import notificationService from '../../services/notification.service';
+import type { NotificationItem } from '../../types/notification.types';
+
+const formatNotificationTime = (value?: string) => {
+    if (!value) {
+        return 'Không xác định';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return 'Không xác định';
+    }
+
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(date);
+};
+
+const getNotificationMeta = (notification: NotificationItem | null) => {
+    if (!notification) {
+        return {
+            badge: 'Thông báo',
+            icon: faBell,
+            accentClass: '',
+            description: '',
+        };
+    }
+
+    if (notification.senderType === 'system') {
+        return {
+            badge: 'Thông báo hệ thống',
+            icon: faMicrochip,
+            accentClass: styles.systemTone,
+            description: 'Được gửi bởi hệ thống tự động của UniActivity.',
+        };
+    }
+
+    if (notification.type === 'ACTIVITY') {
+        return {
+            badge: 'Thông báo hoạt động',
+            icon: faBell,
+            accentClass: styles.activityTone,
+            description: 'Được gửi từ chủ hoạt động hoặc người quản lý hoạt động.',
+        };
+    }
+
+    if (notification.type === 'ALERT') {
+        return {
+            badge: 'Cảnh báo',
+            icon: faTriangleExclamation,
+            accentClass: styles.alertTone,
+            description: 'Nội dung cần được chú ý sớm.',
+        };
+    }
+
+    return {
+        badge: 'Thông báo',
+        icon: faCircleInfo,
+        accentClass: '',
+        description: 'Thông báo được gửi tới tài khoản của bạn.',
+    };
+};
 
 const NotificationDetail: React.FC = () => {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const notificationId = searchParams.get('id') || '';
+
+    const [notification, setNotification] = useState<NotificationItem | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadNotification = async () => {
+            if (!notificationId) {
+                setErrorMessage('Thiếu id thông báo.');
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+                setErrorMessage(null);
+                const response = await notificationService.getById(notificationId);
+                const nextNotification = response.data.data;
+                setNotification(nextNotification);
+
+                if (!nextNotification.isRead) {
+                    await notificationService.markAsRead(notificationId);
+                    setNotification({
+                        ...nextNotification,
+                        isRead: true,
+                        readAt: new Date().toISOString(),
+                    });
+                }
+            } catch (error) {
+                const responseMessage = (error as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
+                setErrorMessage(Array.isArray(responseMessage) ? responseMessage.join(', ') : responseMessage || 'Không thể tải chi tiết thông báo.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadNotification();
+    }, [notificationId]);
+
+    const notificationMeta = useMemo(() => getNotificationMeta(notification), [notification]);
+    const activityTitle = typeof notification?.meta?.activityTitle === 'string' ? notification.meta.activityTitle : null;
+    const notificationLinkUrl = notification?.linkUrl;
+
+    if (isLoading) {
+        return <div className={styles.stateBox}>Đang tải chi tiết thông báo...</div>;
+    }
+
+    if (errorMessage || !notification) {
+        return <div className={styles.stateBox}>{errorMessage || 'Không tìm thấy thông báo.'}</div>;
+    }
+
     return (
         <div className={styles.wrapper}>
             <div className={styles.mainContent}>
-                {/* Card xác nhận chính */}
+                <div className={styles.topBar}>
+                    <button type="button" className={styles.backBtn} onClick={() => navigate('/notifications')}>
+                        <FontAwesomeIcon icon={faArrowLeft} /> Quay lại trung tâm thông báo
+                    </button>
+                </div>
+
                 <section className={styles.card}>
                     <header className={styles.header}>
                         <div className={styles.brand}>
-                            <div className={styles.logoCircle}>
-                                <div className={styles.innerLogo} />
+                            <div className={`${styles.logoCircle} ${notificationMeta.accentClass}`}>
+                                <FontAwesomeIcon icon={notificationMeta.icon} />
                             </div>
                             <div className={styles.brandText}>
-                                <h3>Academic Registry <FontAwesomeIcon icon={faCheckCircle} className={styles.verifyIcon} /></h3>
-                                <span>Official University Communication</span>
+                                <h3>{notification.senderName}</h3>
+                                <span>{notificationMeta.description}</span>
                             </div>
                         </div>
                         <div className={styles.meta}>
-                            <span className={styles.badge}>ATTENDANCE CONFIRMATION</span>
-                            <p><FontAwesomeIcon icon={faClock} /> Oct 24, 2023 • 09:45 AM</p>
+                            <span className={`${styles.badge} ${notificationMeta.accentClass}`}>{notificationMeta.badge}</span>
+                            <p><FontAwesomeIcon icon={faClock} /> {formatNotificationTime(notification.createdAt)}</p>
                         </div>
                     </header>
 
-                    <h1 className={styles.title}>Attendance Confirmed: Computer Science 101 - Lecture 08</h1>
+                    <h1 className={styles.title}>{notification.title}</h1>
 
-                    <p className={styles.description}>
-                        Hello Alex, this is an automated confirmation that your attendance for the
-                        "Advanced Data Structures" lecture held today has been successfully recorded.
-                    </p>
-
-                    <p className={styles.stats}>
-                        Your current attendance rate for this module is now <span className={styles.highlight}>94%</span>.
-                        Keep up the consistent participation to maintain your academic standing and eligibility for final assessments.
-                    </p>
-
-                    <div className={styles.courseBanner}>
-                        <div className={styles.courseInfo}>
-                            <div className={styles.courseImg}>
-                                <img src="https://via.placeholder.com/150x80" alt="Lecture room" />
-                            </div>
-                            <div className={styles.courseText}>
-                                <h4>CS101: Advanced Data Structures</h4>
-                                <p>Room 402, Engineering Building • 08:00 AM - 09:30 AM</p>
-                                <a href="#">View Activity Details <FontAwesomeIcon icon={faExternalLinkAlt} size="sm" /></a>
-                            </div>
-                        </div>
-                        <button className={styles.btnPrimary}>Go to Dashboard</button>
-                    </div>
-
-                    <footer className={styles.cardFooter}>
-                        <div className={styles.footerLeft}>
-                            <button><FontAwesomeIcon icon={faArchive} /> Archive</button>
-                            <button><FontAwesomeIcon icon={faTrashAlt} /> Delete</button>
-                        </div>
-                        <button className={styles.reportBtn}><FontAwesomeIcon icon={faFlag} /> Report issue</button>
-                    </footer>
-                </section>
-
-                {/* Phần dưới cùng: Policy và Sidebar */}
-                <div className={styles.bottomGrid}>
-                    <div className={styles.policyNote}>
-                        <FontAwesomeIcon icon={faInfoCircle} className={styles.infoIcon} />
+                    <div className={styles.metaPanel}>
                         <div>
-                            <strong>Attendance Policy Note</strong>
-                            <p>Remember that a minimum of 80% attendance is required for this course to be eligible for the final examination. You can track your overall progress in the Attendance tab.</p>
+                            <span className={styles.metaLabel}>Loại</span>
+                            <strong>{notification.type}</strong>
+                        </div>
+                        <div>
+                            <span className={styles.metaLabel}>Nguồn gửi</span>
+                            <strong>{notification.senderType || 'Không xác định'}</strong>
+                        </div>
+                        <div>
+                            <span className={styles.metaLabel}>Trạng thái</span>
+                            <strong>{notification.isRead ? 'Đã đọc' : 'Chưa đọc'}</strong>
                         </div>
                     </div>
 
-                    <aside className={styles.sidebar}>
-                        <p className={styles.sidebarTitle}>Other notifications</p>
+                    <p className={styles.description}>{notification.message}</p>
 
-                        <div className={styles.notifItem}>
-                            <div className={`${styles.notifIcon} ${styles.warningBg}`}>
-                                <FontAwesomeIcon icon={faExclamationTriangle} />
-                            </div>
-                            <div className={styles.notifText}>
-                                <strong>Profile Update Required</strong>
-                                <span>2 hours ago</span>
-                            </div>
-                        </div>
-
-                        <div className={styles.notifItem}>
-                            <div className={`${styles.notifIcon} ${styles.successBg}`}>
+                    {activityTitle ? (
+                        <div className={styles.relatedCard}>
+                            <div className={styles.relatedIcon}>
                                 <FontAwesomeIcon icon={faCalendarAlt} />
                             </div>
-                            <div className={styles.notifText}>
-                                <strong>New Seminar Scheduled</strong>
-                                <span>Yesterday</span>
+                            <div className={styles.relatedContent}>
+                                <h4>{activityTitle}</h4>
+                                <p>Thông báo này gắn với một hoạt động cụ thể. Bạn có thể mở activity để xem thêm chi tiết.</p>
                             </div>
+                            {notificationLinkUrl ? (
+                                <button type="button" className={styles.primaryBtn} onClick={() => navigate(notificationLinkUrl)}>
+                                    Mở hoạt động <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                                </button>
+                            ) : null}
                         </div>
-                    </aside>
-                </div>
+                    ) : null}
+
+                    {notificationLinkUrl && !activityTitle ? (
+                        <div className={styles.actionRow}>
+                            <button type="button" className={styles.primaryBtn} onClick={() => navigate(notificationLinkUrl)}>
+                                Mở liên kết đính kèm <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                            </button>
+                        </div>
+                    ) : null}
+                </section>
             </div>
         </div>
     );

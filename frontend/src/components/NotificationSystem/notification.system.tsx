@@ -31,7 +31,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ id, type, title, message, actionT
                 <h5>{title}</h5>
                 <p>{message}</p>
 
-                {type === 'success' && actionText && (
+                {(type === 'success' || type === 'info') && actionText && (
                     <button className={styles.actionLink} onClick={onAction}>
                         {actionText} <i className="fa-solid fa-arrow-right"></i>
                     </button>

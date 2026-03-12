@@ -16,6 +16,16 @@ export class CheckinSessionController {
     }
 
     @ResponseMessage('Lấy phiên điểm danh thành công')
+    @Get('activity/:activityId')
+    async getByActivityId(@Param('activityId') activityId: string) {
+        const checkinSession = await this.checkinSessionService.findByActivityId(activityId);
+        if (!checkinSession) {
+            throw new NotFoundException('Không tìm thấy phiên điểm danh cho hoạt động này');
+        }
+        return checkinSession;
+    }
+
+    @ResponseMessage('Lấy phiên điểm danh thành công')
     @Get(':id')
     async getById(@Param('id') id: string) {
         const checkinSession = await this.checkinSessionService.findById(id);

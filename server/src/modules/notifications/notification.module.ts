@@ -5,6 +5,7 @@ import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
 import { NotificationRepository } from './notification.repository';
 import { UserModule } from '../users/user.module';
+import { EventsModule } from '../../events/events.module';
 
 @Module({
     imports: [
@@ -12,6 +13,7 @@ import { UserModule } from '../users/user.module';
             { name: Notification.name, schema: NotificationSchema }
         ]),
         UserModule,
+        EventsModule,
     ],
     controllers: [NotificationController],
     providers: [NotificationService, NotificationRepository],

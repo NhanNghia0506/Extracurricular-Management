@@ -9,6 +9,7 @@ import { ActivityParticipantModule } from '../activity-participants/activity-par
 import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
 import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
 import { UserModule } from '../users/user.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { UserModule } from '../users/user.module';
             { name: Activity.name, schema: ActivitySchema },
         ]),
         UserModule,
+        NotificationModule,
         forwardRef(() => ActivityParticipantModule),
         OrganizerMemberModule,
     ],

@@ -3,18 +3,55 @@ import { NotificationRepository } from './notification.repository';
 import { CreateNotificationDto } from './dtos/create-notification.dto';
 import { GetNotificationsQueryDto } from './dtos/get-notifications-query.dto';
 import { Types } from 'mongoose';
+import { NotificationGateway } from '../../events/notification.gateway';
+import { NotificationDocument } from './notification.entity';
 
 @Injectable()
 export class NotificationService {
     constructor(
         private readonly notificationRepository: NotificationRepository,
+        private readonly notificationGateway: NotificationGateway,
     ) { }
+
+    private serializeNotification(notification: NotificationDocument | null) {
+        if (!notification) {
+            return null;
+        }
+
+        const serialized = notification.toObject() as Record<string, unknown> & {
+            _id?: { toString(): string } | string;
+            userId?: { toString(): string } | string;
+            readAt?: Date | string;
+            createdAt?: Date | string;
+            updatedAt?: Date | string;
+        };
+
+        return {
+            ...serialized,
+            _id: serialized._id ? String(serialized._id) : undefined,
+            userId: serialized.userId ? String(serialized.userId) : undefined,
+            readAt: serialized.readAt ? new Date(serialized.readAt).toISOString() : undefined,
+            createdAt: serialized.createdAt ? new Date(serialized.createdAt).toISOString() : undefined,
+            updatedAt: serialized.updatedAt ? new Date(serialized.updatedAt).toISOString() : undefined,
+        };
+    }
 
     async create(createNotificationDto: CreateNotificationDto) {
         const notification = await this.notificationRepository.create({
             ...createNotificationDto,
             userId: new Types.ObjectId(createNotificationDto.userId),
         });
+
+        const unreadCount = await this.notificationRepository.countByUserId(createNotificationDto.userId, false);
+        const serializedNotification = this.serializeNotification(notification as NotificationDocument);
+        if (serializedNotification) {
+            this.notificationGateway.emitNotificationCreated(
+                createNotificationDto.userId,
+                serializedNotification,
+                unreadCount,
+            );
+        }
+
         return notification;
     }
 
@@ -24,9 +61,10 @@ export class NotificationService {
             skip: query.skip,
             isRead: query.isRead,
             type: query.type,
+            senderType: query.senderType,
         });
 
-        const totalCount = await this.notificationRepository.countByUserId(userId);
+        const totalCount = await this.notificationRepository.countByUserId(userId, undefined, query.senderType);
         const unreadCount = await this.notificationRepository.countByUserId(userId, false);
 
         return {
@@ -59,18 +97,25 @@ export class NotificationService {
             return notification;
         }
 
-        return this.notificationRepository.markAsRead(id);
+        const updatedNotification = await this.notificationRepository.markAsRead(id);
+        const unreadCount = await this.notificationRepository.countByUserId(userId, false);
+        this.notificationGateway.emitNotificationRead(userId, id, unreadCount);
+
+        return updatedNotification;
     }
 
     async markAllAsRead(userId: string) {
         await this.notificationRepository.markAllAsRead(userId);
+        this.notificationGateway.emitAllNotificationsRead(userId);
         return { success: true, message: 'All notifications marked as read' };
     }
 
     async deleteNotification(id: string, userId: string) {
         // Verify ownership before deleting
-        await this.getNotificationById(id, userId);
+        const notification = await this.getNotificationById(id, userId);
         await this.notificationRepository.deleteById(id);
+        const unreadCount = await this.notificationRepository.countByUserId(userId, false);
+        this.notificationGateway.emitNotificationDeleted(userId, id, unreadCount, notification.type, notification.senderType);
         return { success: true, message: 'Notification deleted successfully' };
     }
 

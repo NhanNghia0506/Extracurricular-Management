@@ -1,8 +1,8 @@
 /* ActivityDetail.module.scss */
-$primary-blue: #2563eb;
-$text-dark: #0f172a;
-$text-muted: #64748b;
-$bg-light: #f8fafc;
+$primary-blue: var(--color-primary-blue);
+$text-dark: var(--color-text-dark);
+$text-muted: var(--color-text-muted);
+$bg-light: var(--color-bg-light);
 $border-radius: 16px;
 
 .detailPage {
@@ -60,10 +60,10 @@ $border-radius: 16px;
 }
 
 .whiteCard {
-    background: white;
+    background: var(--color-bg-white);
     padding: 1.5rem;
     border-radius: $border-radius;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border-light);
 }
 
 .headerInfo {
@@ -81,7 +81,7 @@ $border-radius: 16px;
     }
 
     .upcomingBadge {
-        background: #eff6ff;
+        background: var(--color-bg-blue-light);
         color: $primary-blue;
         padding: 4px 12px;
         border-radius: 99px;
@@ -125,8 +125,8 @@ $border-radius: 16px;
         width: 40px;
         height: 40px;
         border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        background: white;
+        border: 1px solid var(--color-border-light);
+        background: var(--color-bg-white);
         color: $primary-blue;
     }
 }
@@ -137,15 +137,15 @@ $border-radius: 16px;
     gap: 1rem;
 
     .infoBox {
-        background: white;
+        background: var(--color-bg-white);
         padding: 1.25rem;
         border-radius: $border-radius;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-border-light);
 
         .icon {
             width: 36px;
             height: 36px;
-            background: #eff6ff;
+            background: var(--color-bg-blue-light);
             color: $primary-blue;
             border-radius: 8px;
             display: flex;
@@ -175,7 +175,7 @@ $border-radius: 16px;
 }
 
 .noticeBox {
-    background-color: #f8fafc;
+    background-color: var(--color-bg-light);
     padding: 1.25rem;
     border-radius: 12px;
     display: flex;
@@ -244,7 +244,7 @@ $border-radius: 16px;
 
     .progressBar {
         height: 8px;
-        background: #f1f5f9;
+        background: var(--color-border-lighter);
         border-radius: 4px;
         margin-bottom: 1.5rem;
 
@@ -259,7 +259,7 @@ $border-radius: 16px;
         width: 100%;
         padding: 1rem;
         background: $primary-blue;
-        color: white;
+        color: var(--color-white);
         border: none;
         border-radius: 12px;
         font-weight: 700;
@@ -306,18 +306,57 @@ $border-radius: 16px;
     }
 
     .chatUtilityBtn {
-        background: #0f766e;
+        background: var(--color-status-teal);
+    }
+
+    .dashboardUtilityBtn {
+        background: var(--color-primary-blue);
     }
 
     .deleteBtn {
-        background: #dc2626;
+        background: var(--color-status-error-dark);
+    }
+
+    .chatJoinBtn {
+        background: var(--color-status-teal);
     }
 
     .deleteHint {
         margin: 0 0 0.75rem;
         font-size: 0.85rem;
         line-height: 1.5;
-        color: #b45309;
+        color: var(--color-status-warning);
+    }
+}
+
+.iconActionRow {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.iconActionBtn {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-light);
+    background: var(--color-bg-white);
+    color: var(--color-text-dark);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+
+    &:hover:not(:disabled) {
+        opacity: 0.8;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 }
 
@@ -336,8 +375,8 @@ $border-radius: 16px;
 .actionBtnOutline {
     width: 100%;
     padding: 0.75rem;
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--color-bg-white);
+    border: 1px solid var(--color-border-light);
     border-radius: 12px;
     font-weight: 600;
     font-size: 0.9rem;
@@ -347,4 +386,93 @@ $border-radius: 16px;
     gap: 10px;
     margin-bottom: 0.75rem;
     color: $text-dark;
+    transition: opacity 0.2s ease;
+
+    &:hover:not(:disabled) {
+        opacity: 0.8;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1200;
+}
+
+.modalCard {
+    width: min(100%, 480px);
+    background: var(--color-bg-white);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    padding: 1.5rem;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    h3 {
+        margin: 0;
+        color: $text-dark;
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+}
+
+.modalCloseBtn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: var(--color-border-lighter);
+    color: $text-dark;
+}
+
+.modalBodyText {
+    margin: 0;
+    color: $text-muted;
+    line-height: 1.7;
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+
+    @media (max-width: 576px) {
+        flex-direction: column-reverse;
+    }
+}
+
+.modalSecondaryBtn,
+.modalPrimaryBtn {
+    min-width: 140px;
+    padding: 0.9rem 1.2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    border: none;
+}
+
+.modalSecondaryBtn {
+    background: #e2e8f0;
+    color: $text-dark;
+}
+
+.modalPrimaryBtn {
+    background: $primary-blue;
+    color: var(--color-white);
 }

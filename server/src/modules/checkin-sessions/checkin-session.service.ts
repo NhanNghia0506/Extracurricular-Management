@@ -40,4 +40,12 @@ export class CheckinSessionService {
     findById(id: string): Promise<CheckinSession | null> {
         return this.checkinSessionRepository.findById(id);
     }
+
+    async findByActivityId(activityId: string): Promise<CheckinSession | null> {
+        if (!Types.ObjectId.isValid(activityId)) {
+            throw new BadRequestException('activityId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        return this.checkinSessionRepository.findByActivityId(activityId);
+    }
 }

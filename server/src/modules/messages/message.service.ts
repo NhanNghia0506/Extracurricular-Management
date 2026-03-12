@@ -4,19 +4,27 @@ import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { MessageDocument } from './message.entity';
 import { ConversationService } from '../conversations/conversation.service';
-import { EventsGateway } from '../../events/events.gateway';
+import { ChatGateway } from '../../events/chat.gateway';
+
+type ConversationMessage = Record<string, unknown> & {
+    _id: string;
+    conversationId: string;
+    senderId: string;
+};
 
 @Injectable()
 export class MessageService {
     constructor(
         private readonly messageRepository: MessageRepository,
         private readonly conversationService: ConversationService,
-        private readonly eventsGateway: EventsGateway,
+        private readonly chatGateway: ChatGateway,
     ) { }
 
-    private serializeMessage(message: MessageDocument) {
+    private serializeMessage(message: MessageDocument): ConversationMessage {
+        const serializedMessage = message.toObject() as Record<string, unknown>;
+
         return {
-            ...message.toObject(),
+            ...serializedMessage,
             _id: message._id.toString(),
             conversationId: message.conversationId.toString(),
             senderId: message.senderId.toString(),
@@ -49,8 +57,8 @@ export class MessageService {
             },
         );
 
-        this.eventsGateway.emitConversationMessage(this.serializeMessage(message));
-        this.eventsGateway.emitConversationUpdated(updatedConversation?.toObject());
+        this.chatGateway.emitConversationMessage(this.serializeMessage(message));
+        this.chatGateway.emitConversationUpdated(updatedConversation?.toObject());
 
         return message;
     }
@@ -86,7 +94,6 @@ export class MessageService {
     ): Promise<MessageDocument> {
         const message = await this.getMessageById(messageId);
 
-        // Chỉ người gửi mới có thể chỉnh sửa
         if (message.senderId.toString() !== currentUserId) {
             throw new BadRequestException(
                 'You can only edit your own messages',
@@ -102,7 +109,6 @@ export class MessageService {
     ): Promise<any> {
         const message = await this.getMessageById(messageId);
 
-        // Chỉ người gửi hoặc admin mới có thể xoá
         if (message.senderId.toString() !== currentUserId) {
             throw new BadRequestException(
                 'You can only delete your own messages',
@@ -137,7 +143,7 @@ export class MessageService {
     ): Promise<MessageDocument> {
         const message = await this.getMessageById(messageId);
 
-        message.reactions = message.reactions.filter(r => r !== emoji);
+        message.reactions = message.reactions.filter((reaction) => reaction !== emoji);
         message.updatedAt = new Date();
         await message.save();
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 // Import CSS Module
 import styles from './header.module.scss';
 
@@ -9,14 +9,18 @@ import { faBell, faMessage } from '@fortawesome/free-regular-svg-icons';
 
 import logo from 'assets/images/logoUniActivity.png';
 import authService from 'services/auth.service';
+import notificationService from 'services/notification.service';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
+import { NOTIFICATION_UNREAD_COUNT_EVENT } from '../../../utils/notification-realtime';
 
 interface HeaderProps {
     onSearch?: (value: string) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onSearch }) => {
+    const navigate = useNavigate();
     const [user, setUser] = useState<{ name: string; email: string; avatar?: string | null } | null>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         let isMounted = true;
@@ -34,6 +38,34 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
 
         return () => {
             isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        notificationService.getUnreadCount()
+            .then((response) => {
+                if (!isMounted) {
+                    return;
+                }
+
+                setUnreadCount(response.data.data.unreadCount);
+            })
+            .catch(() => {
+                // Ignore unread count fetch errors in header.
+            });
+
+        const handleUnreadCount = (event: Event) => {
+            const customEvent = event as CustomEvent<{ unreadCount: number }>;
+            setUnreadCount(customEvent.detail?.unreadCount || 0);
+        };
+
+        window.addEventListener(NOTIFICATION_UNREAD_COUNT_EVENT, handleUnreadCount);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener(NOTIFICATION_UNREAD_COUNT_EVENT, handleUnreadCount);
         };
     }, []);
 
@@ -73,8 +105,9 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
                         {isAuthenticated ? (
                             <>
                                 {/* Notification Bell */}
-                                <button className={styles.actionBtn} aria-label="Notifications">
+                                <button className={styles.actionBtn} aria-label="Notifications" onClick={() => navigate('/notifications')}>
                                     <FontAwesomeIcon icon={faBell} />
+                                    {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
                                 </button>
 
                                 <Link className={styles.actionBtnLink} to="/chat" aria-label="Tin nhắn">

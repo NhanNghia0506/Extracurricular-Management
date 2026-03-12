@@ -62,6 +62,7 @@ export class ActivityParticipantRepository {
             {
                 $project: {
                     _id: 1,
+                    userId: '$user._id',
                     studentCode: '$student.studentCode',
                     studentName: '$user.name',
                     status: 1,

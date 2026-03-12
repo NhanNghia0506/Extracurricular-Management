@@ -17,6 +17,16 @@ interface ConversationOnlineCountPayload {
     onlineCount: number;
 }
 
+interface ConversationMessagePayload {
+    conversationId?: string | number;
+    [key: string]: unknown;
+}
+
+interface ConversationUpdatePayload {
+    _id?: string | number;
+    [key: string]: unknown;
+}
+
 @WebSocketGateway({
     cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -24,11 +34,11 @@ interface ConversationOnlineCountPayload {
     },
     transports: ['websocket'],
 })
-export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server: Server;
 
-    private readonly logger = new Logger(EventsGateway.name);
+    private readonly logger = new Logger(ChatGateway.name);
     private connectedClients = new Map<string, Socket>();
 
     private getConversationRoom(conversationId: string) {
@@ -136,7 +146,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket
     ) {
         try {
-            // Validate dữ liệu
             if (!data || typeof data !== 'object') {
                 this.logger.warn(`Invalid data from client ${client.id}`);
                 return {
@@ -153,15 +162,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 };
             }
 
-            // Thêm timestamp nếu chưa có
             const messageData: MessageData = {
                 ...data,
                 timestamp: data.timestamp || Date.now(),
             };
 
             this.logger.log(`📩 Message from ${client.id}: ${messageData.text}`);
-
-            // Broadcast tới tất cả clients khác
             client.broadcast.emit('receive-message', messageData);
 
             return {
@@ -178,8 +184,11 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
-    emitConversationMessage(message: any) {
-        const conversationId = String(message?.conversationId || '');
+    emitConversationMessage(message: unknown) {
+        const payload = typeof message === 'object' && message !== null
+            ? message as ConversationMessagePayload
+            : {};
+        const conversationId = String(payload.conversationId || '');
 
         if (!conversationId) {
             this.logger.warn('Skipping conversation message emit because conversationId is missing');
@@ -188,15 +197,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         this.server
             .to(this.getConversationRoom(conversationId))
-            .emit('conversation:message:new', message);
+            .emit('conversation:message:new', payload);
     }
 
-    emitConversationUpdated(conversation: any) {
-        if (!conversation?._id) {
+    emitConversationUpdated(conversation: unknown) {
+        const payload = typeof conversation === 'object' && conversation !== null
+            ? conversation as ConversationUpdatePayload
+            : {};
+
+        if (!payload._id) {
             return;
         }
 
-        this.server.emit('conversation:updated', conversation);
+        this.server.emit('conversation:updated', payload);
     }
 
     async getConversationOnlineCount(conversationId: string) {

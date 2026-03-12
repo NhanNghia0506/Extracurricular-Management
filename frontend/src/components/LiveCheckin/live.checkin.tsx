@@ -3,15 +3,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
   faCircle,
+  faTableColumns,
   faClock,
   faCrosshairs,
   faExpand,
   faLocationDot,
+  faLocationCrosshairs,
   faMapLocationDot,
   faSignal,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L, { DivIcon, LatLngBounds, LatLngExpression, LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -165,6 +167,7 @@ const MapViewportController: React.FC<{
 };
 
 const LiveCheckin: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('checkinsession');
   const [checkinSession, setCheckinSession] = useState<CheckinSession | null>(null);
@@ -185,6 +188,14 @@ const LiveCheckin: React.FC = () => {
 
   const sessionStatus = getSessionStatus(checkinSession);
   const latestCheckin = selectedCheckin || checkins[0] || null;
+
+  const goToDashboard = () => {
+    if (!sessionId) {
+      return;
+    }
+
+    navigate(`/attendance-dashboard?sessionId=${sessionId}`);
+  };
 
   const loadData = async (options?: { silent?: boolean }) => {
     if (!sessionId) {
@@ -380,6 +391,14 @@ const LiveCheckin: React.FC = () => {
           </div>
 
           <div className={styles.actionRow}>
+            <div className={styles.viewSwitch}>
+              <button type="button" className={styles.switchBtn} onClick={goToDashboard} disabled={!sessionId}>
+                <FontAwesomeIcon icon={faTableColumns} /> Dashboard
+              </button>
+              <button type="button" className={`${styles.switchBtn} ${styles.activeSwitchBtn}`}>
+                <FontAwesomeIcon icon={faLocationCrosshairs} /> Bản đồ realtime
+              </button>
+            </div>
             <button type="button" className={styles.secondaryButton} onClick={() => loadData({ silent: true })}>
               <FontAwesomeIcon icon={faArrowsRotate} /> {refreshing ? 'Đang làm mới...' : 'Làm mới dữ liệu'}
             </button>
