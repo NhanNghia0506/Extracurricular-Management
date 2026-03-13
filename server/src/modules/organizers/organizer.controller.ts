@@ -1,21 +1,75 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Put, Delete, Req, UploadedFile, UseGuards, UseInterceptors, Patch, Query } from "@nestjs/common";
 import { OrganizerService } from "./organizer.service";
 import { CreateOrganizerDto } from "./dtos/create.organizer.dto";
+import { AuthGuard } from "src/guards/auth.guard";
+import { createUploadImageInterceptor } from "src/interceptors/upload-image.interceptor";
+import { UploadService } from "src/interceptors/upload.service";
+import type { Request as ExpressRequest } from 'express';
+import { OrganizerApprovalQueryDto } from "./dtos/organizer-approval-query.dto";
+import { UpdateOrganizerApprovalDto } from "./dtos/update-organizer-approval.dto";
 
 @Controller("organizers")
 export class OrganizerController {
     constructor(
-        private readonly organizerService: OrganizerService
-    ) {}
+        private readonly organizerService: OrganizerService,
+        private readonly uploadService: UploadService,
+    ) { }
 
     @Post()
-    create(@Body() createOrganizerDto: CreateOrganizerDto) {
-        return this.organizerService.create(createOrganizerDto);
+    @UseGuards(AuthGuard)
+    @UseInterceptors(createUploadImageInterceptor())
+    async create(
+        @Body() createOrganizerDto: CreateOrganizerDto,
+        @Req() req: ExpressRequest,
+        @UploadedFile() file: Express.Multer.File | undefined,
+    ) {
+        const uploadedFilename = file?.filename;
+
+        try {
+            if (uploadedFilename) {
+                createOrganizerDto.image = uploadedFilename;
+            }
+
+            return await this.organizerService.create(req.user!.id!, createOrganizerDto);
+        } catch (error) {
+            if (uploadedFilename) {
+                this.uploadService.deleteFile(uploadedFilename);
+            }
+            throw error;
+        }
     }
 
     @Get()
     findAll() {
         return this.organizerService.findAll();
+    }
+
+    @Get('admin/approval')
+    @UseGuards(AuthGuard)
+    getApprovalDashboard(
+        @Req() req: ExpressRequest,
+        @Query() query: OrganizerApprovalQueryDto,
+    ) {
+        return this.organizerService.getApprovalDashboard(req.user?.role, query);
+    }
+
+    @Get('admin/approval/:id')
+    @UseGuards(AuthGuard)
+    getApprovalDetail(
+        @Param('id') id: string,
+        @Req() req: ExpressRequest,
+    ) {
+        return this.organizerService.getApprovalDetail(id, req.user?.role);
+    }
+
+    @Patch('admin/approval/:id')
+    @UseGuards(AuthGuard)
+    reviewOrganizer(
+        @Param('id') id: string,
+        @Body() reviewDto: UpdateOrganizerApprovalDto,
+        @Req() req: ExpressRequest,
+    ) {
+        return this.organizerService.reviewOrganizer(id, req.user!.id!, req.user?.role, reviewDto);
     }
 
     @Get(":id")

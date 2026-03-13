@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import activityService from '../../services/activity.service';
+import authService from '../../services/auth.service';
 import { useActivityForm } from '../../hooks/useActivityForm';
 import { useLocationMap } from '../../hooks/useLocationMap';
 import { useActivityData } from '../../hooks/useActivityData';
@@ -23,6 +24,8 @@ const formatDateTimeLocal = (value?: string) => {
 };
 
 const UpdateActivity: React.FC = () => {
+    const currentUser = authService.getCurrentUser();
+    const isAdmin = currentUser?.role === 'ADMIN';
     const { organizers, categories } = useActivityData();
     const form = useActivityForm();
     const location = useLocationMap();
@@ -192,6 +195,7 @@ const UpdateActivity: React.FC = () => {
     return (
         <div className={styles.createWrapper}>
             <CreateActivityForm
+                isAdmin={isAdmin}
                 title={form.title}
                 description={form.description}
                 categoryId={form.categoryId}

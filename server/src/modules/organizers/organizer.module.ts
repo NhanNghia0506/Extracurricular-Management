@@ -5,6 +5,10 @@ import { OrganizerController } from "./organizer.controller";
 import { OrganizerService } from "./organizer.service";
 import { OrganizerRepository } from "./organizer.repository";
 import { OrganizerMemberModule } from "../organizer-members/organizer-member.module";
+import { UserModule } from "../users/user.module";
+import { NotificationModule } from "../notifications/notification.module";
+import { UploadService } from "src/interceptors/upload.service";
+import { AuthGuard } from "src/guards/auth.guard";
 
 @Module({
     imports: [
@@ -12,9 +16,11 @@ import { OrganizerMemberModule } from "../organizer-members/organizer-member.mod
             { name: Organizer.name, schema: OrganizerSchema }
         ]),
         OrganizerMemberModule,
+        UserModule,
+        NotificationModule,
     ],
     controllers: [OrganizerController],
-    providers: [OrganizerService, OrganizerRepository],
+    providers: [OrganizerService, OrganizerRepository, UploadService, AuthGuard],
     exports: [OrganizerService, OrganizerRepository],
 })
-export class OrganizerModule {}
+export class OrganizerModule { }

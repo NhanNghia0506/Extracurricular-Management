@@ -12,4 +12,10 @@ export class CreateOrganizerDto {
     @IsString()
     @IsNotEmpty()
     phone: string;
+
+    @IsString()
+    @IsNotEmpty()
+    description: string;
+
+    image?: string;
 }

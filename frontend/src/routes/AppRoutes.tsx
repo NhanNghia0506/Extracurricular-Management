@@ -19,10 +19,12 @@ import NotificationDetailPage from '../pages/NotificationDetailPage';
 import CreateNotificationPage from '../pages/CreateNotificationPage';
 import AttendanceDashboardPage from '../pages/AttendanceDashboardPage';
 import OrganizersPage from '../pages/OrganizersPage';
+import CreateOraganizerPage from '../pages/CreateOraganizerPage';
 import ChatLayout from '../layouts/ChatLayout/chatLayout';
 import ChatPage from '../pages/ChatPage/ChatPage';
 import LiveCheckinPage from '../pages/LiveCheckinPage';
 import ActivityApprovalPage from '../pages/ActivityApprovalPage';
+import OrganizerApprovalPage from '../pages/OrganizerApprovalPage';
 import authService from '../services/auth.service';
 
 const AppRoutes: React.FC = () => {
@@ -65,6 +67,14 @@ const AppRoutes: React.FC = () => {
                 <Route path="/configure-attendance" element={<ConfigureAttendancePage />} />
                 <Route path="/my-activities" element={<MyActivitiesPage />} />
                 <Route path="/organizations" element={<OrganizersPage />} />
+                <Route
+                    path="/create-organizer"
+                    element={
+                        <ProtectedRoute>
+                            <CreateOraganizerPage />
+                        </ProtectedRoute>
+                    }
+                />
             </Route>
 
             <Route element={<NoSidebarLayout />}>
@@ -86,6 +96,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <ActivityApprovalPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/organizer-approval"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <OrganizerApprovalPage />
                         </ProtectedRoute>
                     }
                 />

@@ -43,6 +43,13 @@ export enum OrganizerStatus {
     INACTIVE = 2
 }
 
+export enum OrganizerApprovalStatus {
+    PENDING = 'PENDING',
+    NEEDS_EDIT = 'NEEDS_EDIT',
+    APPROVED = 'APPROVED',
+    REJECTED = 'REJECTED',
+}
+
 export enum OrganizerMemberRole {
     MANAGER = 'MANAGER',
     ADMIN = 'ADMIN',
@@ -60,6 +67,7 @@ export enum NotificationType {
     ALERT = 'ALERT',          // Cảnh báo hệ thống
     EVENT = 'EVENT',          // Thông báo sự kiện
     ACTIVITY = 'ACTIVITY',    // Thông báo hoạt động
+    ORGANIZER = 'ORGANIZER',  // Thông báo ban tổ chức
     SYSTEM = 'SYSTEM',        // Thông báo hệ thống
 }
 

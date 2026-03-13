@@ -1,5 +1,6 @@
 import React from 'react';
 import activityService from '../../services/activity.service';
+import authService from '../../services/auth.service';
 import { useActivityForm } from '../../hooks/useActivityForm';
 import { useLocationMap } from '../../hooks/useLocationMap';
 import { useActivityData } from '../../hooks/useActivityData';
@@ -8,6 +9,9 @@ import CreateActivityForm from './CreateActivityForm';
 import styles from './create.activity.module.scss';
 
 const CreateActivity: React.FC = () => {
+    const currentUser = authService.getCurrentUser();
+    const isAdmin = currentUser?.role === 'ADMIN';
+
     // Fetch data
     const { organizers, categories } = useActivityData();
 
@@ -71,8 +75,10 @@ const CreateActivity: React.FC = () => {
 
             showToast({
                 type: 'success',
-                title: 'Gửi yêu cầu thành công!',
-                message: 'Hoạt động của bạn đã được gửi lên hệ thống và đang chờ phê duyệt.',
+                title: isAdmin ? 'Tạo hoạt động thành công!' : 'Gửi yêu cầu thành công!',
+                message: isAdmin
+                    ? 'Hoạt động đã được tạo và phê duyệt ngay do bạn đang đăng nhập với quyền quản trị.'
+                    : 'Hoạt động của bạn đã được gửi lên hệ thống và đang chờ phê duyệt.',
             });
 
             form.resetForm();
@@ -93,6 +99,7 @@ const CreateActivity: React.FC = () => {
     return (
         <div className={styles.createWrapper}>
             <CreateActivityForm
+                isAdmin={isAdmin}
                 title={form.title}
                 description={form.description}
                 categoryId={form.categoryId}

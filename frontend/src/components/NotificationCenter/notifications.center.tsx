@@ -315,6 +315,8 @@ const NotificationsCenter: React.FC = () => {
                     <div className={`${styles.avatar} ${notification.senderType === 'system' ? styles.alertIcon : ''}`}>
                         {notification.senderType === 'system' ? (
                             <i className="fa-solid fa-triangle-exclamation"></i>
+                        ) : notification.type === 'ORGANIZER' ? (
+                            <i className="fa-solid fa-people-group"></i>
                         ) : notification.type === 'ACTIVITY' ? (
                             <i className="fa-regular fa-bell"></i>
                         ) : (

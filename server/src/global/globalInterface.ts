@@ -100,6 +100,49 @@ export interface ActivityApprovalDashboardResponse {
   stats: ActivityApprovalStatsResponse;
 }
 
+export interface OrganizerApprovalStatsResponse {
+  pending: number;
+  approved: number;
+  needsEdit: number;
+  rejected: number;
+  overdue: number;
+}
+
+export interface OrganizerApprovalListItemResponse {
+  id: string;
+  code: string;
+  name: string;
+  image?: string;
+  email: string;
+  phone: string;
+  description: string;
+  createdBy: {
+    id?: string;
+    name?: string;
+    email?: string;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+  approvalStatus: string;
+  isPriority: boolean;
+  reviewNote?: string | null;
+  warningTag?: string | null;
+}
+
+export interface OrganizerApprovalDetailResponse extends OrganizerApprovalListItemResponse {
+  reviewedAt?: Date | null;
+  reviewedBy?: {
+    id?: string;
+    name?: string;
+    email?: string;
+  } | null;
+}
+
+export interface OrganizerApprovalDashboardResponse {
+  items: OrganizerApprovalListItemResponse[];
+  stats: OrganizerApprovalStatsResponse;
+}
+
 export interface CustomJwtPayload {
   sub: string;
   email: string;

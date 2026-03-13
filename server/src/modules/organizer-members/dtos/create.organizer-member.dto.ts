@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsBoolean, IsMongoId } from 'class-validator';
+import { IsNotEmpty, IsBoolean, IsMongoId, IsEnum, IsOptional } from 'class-validator';
+import { OrganizerMemberRole } from 'src/global/globalEnum';
 
 export class CreateOrganizerMemberDto {
     @IsMongoId()
@@ -12,4 +13,8 @@ export class CreateOrganizerMemberDto {
     @IsBoolean()
     @IsNotEmpty()
     isActive: boolean;
+
+    @IsOptional()
+    @IsEnum(OrganizerMemberRole)
+    role?: OrganizerMemberRole;
 }

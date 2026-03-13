@@ -8,6 +8,7 @@ import {
     faCircleInfo,
     faClock,
     faMicrochip,
+    faPeopleGroup,
     faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -59,6 +60,15 @@ const getNotificationMeta = (notification: NotificationItem | null) => {
             icon: faBell,
             accentClass: styles.activityTone,
             description: 'Được gửi từ chủ hoạt động hoặc người quản lý hoạt động.',
+        };
+    }
+
+    if (notification.type === 'ORGANIZER') {
+        return {
+            badge: 'Thông báo ban tổ chức',
+            icon: faPeopleGroup,
+            accentClass: styles.organizerTone,
+            description: 'Được gửi từ quy trình xét duyệt hoặc quản lý ban tổ chức.',
         };
     }
 

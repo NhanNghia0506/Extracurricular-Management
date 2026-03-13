@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { OrganizerMemberRepository } from "./organizer-member.repository";
 import { CreateOrganizerMemberDto } from "./dtos/create.organizer-member.dto";
 import { Types } from "mongoose";
+import { OrganizerMemberRole } from "src/global/globalEnum";
 
 @Injectable()
 export class OrganizerMemberService {
@@ -13,6 +14,7 @@ export class OrganizerMemberService {
         const organizerMember = {
             userId: new Types.ObjectId(organizerMemberData.userId),
             organizerId: new Types.ObjectId(organizerMemberData.organizerId),
+            role: organizerMemberData.role || OrganizerMemberRole.MANAGER,
             isActive: organizerMemberData.isActive,
         };
 

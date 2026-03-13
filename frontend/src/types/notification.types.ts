@@ -1,4 +1,4 @@
-export type NotificationType = 'OFFICE' | 'CLASS' | 'ALERT' | 'EVENT' | 'ACTIVITY' | 'SYSTEM';
+export type NotificationType = 'OFFICE' | 'CLASS' | 'ALERT' | 'EVENT' | 'ACTIVITY' | 'ORGANIZER' | 'SYSTEM';
 export type NotificationPriority = 'NORMAL' | 'HIGH' | 'URGENT';
 
 export interface NotificationItem {

@@ -3,6 +3,7 @@ import LocationMap from './LocationMap';
 import styles from './create.activity.module.scss';
 
 interface CreateActivityFormProps {
+    isAdmin: boolean;
     title: string;
     description: string;
     categoryId: string;
@@ -41,6 +42,7 @@ interface CreateActivityFormProps {
 }
 
 const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
+    isAdmin,
     title,
     description,
     categoryId,
@@ -82,7 +84,7 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
             {/* 1. Header Bar */}
             <div className={styles.topHeader}>
                 <button className="btn p-0"><i className="fa-solid fa-arrow-left"></i></button>
-                <h4>Gửi yêu cầu hoạt động</h4>
+                <h4>{isAdmin ? 'Tạo hoạt động mới' : 'Gửi yêu cầu hoạt động'}</h4>
             </div>
 
             {/* 2. Upload Cover Photo */}
@@ -222,7 +224,7 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
                 <div className={styles.mainActions}>
                     <button className={styles.btnPrimaryLarge} type="submit" disabled={submitting}>
                         <i className="fa-solid fa-paper-plane"></i>
-                        {submitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu'}
+                        {submitting ? (isAdmin ? 'Đang tạo hoạt động...' : 'Đang gửi yêu cầu...') : (isAdmin ? 'Tạo hoạt động' : 'Gửi yêu cầu')}
                     </button>
                 </div>
             </form>

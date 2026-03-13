@@ -678,7 +678,13 @@ export class ActivityService {
             return;
         }
 
-        if (![ACTIVITY_APPROVAL_STATUS.NEEDS_EDIT, ACTIVITY_APPROVAL_STATUS.REJECTED].includes(approvalStatus)) {
+        if (
+            ![
+                ACTIVITY_APPROVAL_STATUS.APPROVED,
+                ACTIVITY_APPROVAL_STATUS.NEEDS_EDIT,
+                ACTIVITY_APPROVAL_STATUS.REJECTED,
+            ].includes(approvalStatus)
+        ) {
             return;
         }
 
@@ -734,6 +740,16 @@ export class ActivityService {
                     ? `Hoạt động "${activityTitle}" đã được admin phản hồi và yêu cầu chỉnh sửa. Ghi chú: ${normalizedReviewNote}`
                     : `Hoạt động "${activityTitle}" đã được admin phản hồi và yêu cầu chỉnh sửa. Vui lòng mở chi tiết để xem thêm.`,
                 priority: NotificationPriority.HIGH,
+            };
+        }
+
+        if (approvalStatus === ACTIVITY_APPROVAL_STATUS.APPROVED) {
+            return {
+                title: 'Hoạt động đã được duyệt',
+                message: normalizedReviewNote
+                    ? `Hoạt động "${activityTitle}" đã được admin duyệt. Ghi chú: ${normalizedReviewNote}`
+                    : `Hoạt động "${activityTitle}" đã được admin duyệt và hiện đã sẵn sàng công khai.`,
+                priority: NotificationPriority.NORMAL,
             };
         }
 

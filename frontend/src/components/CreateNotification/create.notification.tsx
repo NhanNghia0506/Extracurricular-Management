@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faBell,
-    faCircleInfo,
     faPaperPlane,
     faTriangleExclamation,
     faUsers,
@@ -379,7 +378,7 @@ const CreateNotification: React.FC = () => {
                     <section className={styles.previewCard}>
                         <div className={styles.previewHeader}>
                             <FontAwesomeIcon icon={faBell} />
-                            <span>Xem trước notification</span>
+                            <span>Xem trước Thông báo</span>
                         </div>
                         <div className={styles.previewBody}>
                             <div className={styles.previewMeta}>
@@ -394,11 +393,6 @@ const CreateNotification: React.FC = () => {
                             <p>{message.trim() || 'Nội dung thông báo sẽ hiển thị ở đây để bạn kiểm tra trước khi gửi.'}</p>
                         </div>
                     </section>
-
-                    <div className={styles.infoBox}>
-                        <FontAwesomeIcon icon={faCircleInfo} />
-                        <span>Chỉ thành viên thuộc activity này mới là người nhận hợp lệ. Backend sẽ chặn mọi user không thuộc danh sách tham gia.</span>
-                    </div>
                 </aside>
             </div>
         </form>
