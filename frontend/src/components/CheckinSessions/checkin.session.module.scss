@@ -1,0 +1,372 @@
+$primary-blue: #2563eb;
+$success-green: #10b981;
+$border-color: #e2e8f0;
+$text-dark: #1e293b;
+
+.pageContainer {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: #f8fafc;
+    font-family: 'Inter', sans-serif;
+}
+
+// 1. Event Header
+.eventHeader {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid $border-color;
+
+    .headerInfo {
+        display: flex;
+        gap: 20px;
+
+        .eventThumb {
+            width: 80px;
+            height: 80px;
+            background: #334155;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            overflow: hidden;
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+        }
+
+        .tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+
+            span {
+                font-size: 10px;
+                font-weight: 800;
+                padding: 2px 8px;
+                border-radius: 4px;
+            }
+
+            .tagBlue {
+                background: #eff6ff;
+                color: $primary-blue;
+            }
+
+            .tagGray {
+                background: #f1f5f9;
+                color: #94a3b8;
+            }
+        }
+
+        h1 {
+            font-size: 24px;
+            margin: 0;
+            color: $text-dark;
+        }
+
+        .meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 8px;
+        }
+    }
+}
+
+.btnCreate {
+    background: $primary-blue;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        background: #1d4ed8;
+    }
+}
+
+// 2. Summary Cards
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 25px 0;
+
+    .summaryCard {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid $border-color;
+
+        label {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .val {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            .up {
+                font-size: 12px;
+                color: $success-green;
+                background: #ecfdf5;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+
+            small {
+                font-size: 14px;
+                color: #94a3b8;
+                font-weight: 400;
+            }
+        }
+    }
+
+    .statusActive {
+        margin-top: 15px;
+        color: $success-green;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: $success-green;
+            border-radius: 50%;
+        }
+    }
+}
+
+// 3. Session Cards
+.sessionSection {
+    .sectionHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+
+        h2 {
+            font-size: 18px;
+            color: $text-dark;
+        }
+
+        .filter {
+            font-size: 13px;
+            color: #64748b;
+
+            strong {
+                color: $primary-blue;
+                cursor: pointer;
+            }
+        }
+    }
+}
+
+.sessionCard {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid $border-color;
+    margin-bottom: 16px;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+        content: "";
+        width: 6px;
+        height: 100%;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    &.ongoing::before {
+        background: $success-green;
+    }
+
+    &.upcoming::before {
+        background: $primary-blue;
+    }
+
+    &.ended::before {
+        background: #94a3b8;
+    }
+
+    .sessionImg {
+        width: 160px;
+        background: #f1f5f9;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sessionMap {
+        width: 100%;
+        height: 100%;
+    }
+
+    .sessionContent {
+        flex: 1;
+        padding: 20px;
+
+        .sessionMeta {
+            margin-bottom: 8px;
+
+            span {
+                font-size: 10px;
+                font-weight: 800;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+
+            .badgeGreen {
+                background: #dcfce7;
+                color: $success-green;
+            }
+
+            .badgeBlue {
+                background: #dbeafe;
+                color: $primary-blue;
+            }
+
+            .badgeGray {
+                background: #e2e8f0;
+                color: #475569;
+            }
+
+            .timeLabel {
+                color: #94a3b8;
+                margin-left: 8px;
+            }
+        }
+
+        h3 {
+            font-size: 16px;
+            margin: 0 0 10px;
+            color: $text-dark;
+        }
+
+        .sessionDetails {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 15px;
+        }
+    }
+
+    .progressWrapper {
+        .progressLabel {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+
+            strong {
+                color: $success-green;
+            }
+        }
+
+        .progressBar {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            overflow: hidden;
+
+            div {
+                height: 100%;
+                background: $success-green;
+                border-radius: 10px;
+            }
+        }
+    }
+
+    .infoAlert {
+        background: #f8fafc;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .sessionActions {
+        padding: 20px;
+        border-left: 1px solid #f8fafc;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-end;
+        width: 220px;
+
+        .toolButtons {
+            display: flex;
+            gap: 10px;
+
+            button {
+                background: #f8fafc;
+                border: none;
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                color: #94a3b8;
+                cursor: pointer;
+
+                &:hover {
+                    color: $text-dark;
+                }
+            }
+        }
+
+        button:not(.toolButtons button) {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btnDashboard {
+            background: $primary-blue;
+            color: white;
+            border: none;
+        }
+
+        .btnOutline {
+            background: white;
+            border: 1px solid $border-color;
+            color: $primary-blue;
+        }
+    }
+}
+
+.emptyState {
+    background: white;
+    border: 1px dashed $border-color;
+    border-radius: 12px;
+    padding: 24px;
+    color: #64748b;
+    text-align: center;
+}

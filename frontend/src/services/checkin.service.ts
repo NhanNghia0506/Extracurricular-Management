@@ -15,6 +15,15 @@ export class CheckinService {
         const response = await apiService.get(`/checkins/session/${sessionId}`, { params });
         return response.data.data;
     }
+
+    async manualCheckin(checkinSessionId: string, userId: string) {
+        const response = await apiService.post('/checkins/manual', {
+            checkinSessionId,
+            userId,
+        });
+
+        return response.data;
+    }
 }
 
 const checkinService = new CheckinService();

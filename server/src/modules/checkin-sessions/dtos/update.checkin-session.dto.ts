@@ -1,5 +1,5 @@
-import { IsDate, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsDate, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import type { LocationData } from 'src/global/globalInterface';
 
 class LocationDataDto {
@@ -16,11 +16,7 @@ class LocationDataDto {
     longitude: number;
 }
 
-export class CreateCheckinSessionDto {
-    @IsMongoId()
-    @IsNotEmpty()
-    activityId: string;
-
+export class UpdateCheckinSessionDto {
     @IsString()
     @IsNotEmpty()
     @MaxLength(150)

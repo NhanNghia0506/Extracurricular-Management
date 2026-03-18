@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faSearch, faFilter, faFileExport, faPlus,
@@ -25,6 +25,7 @@ import {
 import { socketService } from '../../services/socket.service';
 import type { CheckinEvent, CheckinResponse } from '../../types/checkin.types';
 import type { ActivityDetailResponse } from '../../types/activity.types';
+import type { ParticipantItem } from '../../types/participan.types';
 import checkinSessionService from '../../services/checkin-session.service';
 import checkinService from '../../services/checkin.service';
 import activityService from '../../services/activity.service';
@@ -46,33 +47,40 @@ interface AttendanceDashboardProps {
 const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) => {
     const navigate = useNavigate();
     const [checkins, setCheckins] = useState<CheckinResponse[]>([]);
+    const [participants, setParticipants] = useState<ParticipantItem[]>([]);
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [checkinSession, setCheckinSession] = useState<any>(null);
     const [totalRegistered, setTotalRegistered] = useState(0);
     const [loading, setLoading] = useState(true);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [selectedParticipantId, setSelectedParticipantId] = useState('');
+    const [manualSubmitting, setManualSubmitting] = useState(false);
+    const [participantsLoading, setParticipantsLoading] = useState(false);
+    const [manualError, setManualError] = useState<string | null>(null);
+    const [manualSuccess, setManualSuccess] = useState<string | null>(null);
+
+    const fetchSuccessfulCheckins = useCallback(async () => {
+        if (!sessionId) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const response = await checkinService.getCheckinsBySessionId(sessionId, 'SUCCESS');
+            setCheckins(Array.isArray(response.data) ? response.data : []);
+        } catch (error) {
+            console.error('Không lấy được danh sách checkin:', error);
+            setCheckins([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [sessionId]);
 
     // Fetch danh sách checkin ban đầu khi load trang
     useEffect(() => {
-        if (!sessionId) return;
-
-        const fetchInitialCheckins = async () => {
-            try {
-                setLoading(true);
-                const response = await checkinService.getCheckinsBySessionId(sessionId, 'SUCCESS');
-                console.log('Initial checkins fetched:', response.data); // Kiểm tra dữ liệu trả về
-                // response = { total: number, data: CheckinResponse[] }
-                setCheckins(Array.isArray(response.data) ? response.data : []);
-            } catch (error) {
-                console.error('Không lấy được danh sách checkin:', error);
-                setCheckins([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchInitialCheckins();
-    }, [sessionId]);
+        void fetchSuccessfulCheckins();
+    }, [fetchSuccessfulCheckins]);
 
     // Realtime socket connection cho checkin mới
     useEffect(() => {
@@ -177,6 +185,30 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     }, [activity?.id]);
 
     useEffect(() => {
+        if (!activity?.id || !activity.isOwner) {
+            setParticipants([]);
+            return;
+        }
+
+        const fetchParticipants = async () => {
+            try {
+                setParticipantsLoading(true);
+                const response = await activityService.participantsByActivity(activity.id);
+                const payload = response.data?.data ?? response.data;
+                const list = Array.isArray(payload) ? payload : [];
+                setParticipants(list);
+            } catch (error) {
+                console.error('Không lấy được danh sách thành viên:', error);
+                setParticipants([]);
+            } finally {
+                setParticipantsLoading(false);
+            }
+        };
+
+        void fetchParticipants();
+    }, [activity?.id, activity?.isOwner]);
+
+    useEffect(() => {
         if (!checkinSession?.endTime) {
             setRemainingSeconds(0);
             return;
@@ -265,6 +297,20 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     const remainingHours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
     const remainingMinutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
     const remainingDisplaySeconds = String(remainingSeconds % 60).padStart(2, '0');
+    const checkedUserIdSet = new Set(
+        checkins.map((item) => String((item as any).userId || item.student.id)),
+    );
+
+    const eligibleParticipants = participants.filter((item) => {
+        if (!item.userId) {
+            return false;
+        }
+
+        const status = (item.status || '').toUpperCase();
+        const isApproved = !status || status === 'APPROVED';
+        const notCheckedIn = !checkedUserIdSet.has(String(item.userId));
+        return isApproved && notCheckedIn;
+    });
 
     const getSessionStatusLabel = () => {
         if (!checkinSession?.startTime || !checkinSession?.endTime) return 'CHƯA XÁC ĐỊNH';
@@ -284,6 +330,43 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         }
 
         navigate(`/live-checkin?checkinsession=${sessionId}`);
+    };
+
+    const openManualModal = () => {
+        setManualError(null);
+        setManualSuccess(null);
+        setSelectedParticipantId(eligibleParticipants[0]?.userId || '');
+        setIsManualModalOpen(true);
+    };
+
+    const closeManualModal = () => {
+        if (manualSubmitting) {
+            return;
+        }
+
+        setIsManualModalOpen(false);
+    };
+
+    const handleManualCheckin = async () => {
+        if (!sessionId || !selectedParticipantId) {
+            setManualError('Vui lòng chọn sinh viên cần điểm danh thủ công');
+            return;
+        }
+
+        try {
+            setManualSubmitting(true);
+            setManualError(null);
+            await checkinService.manualCheckin(sessionId, selectedParticipantId);
+
+            await fetchSuccessfulCheckins();
+            setManualSuccess('Điểm danh thủ công thành công');
+            setIsManualModalOpen(false);
+        } catch (error: any) {
+            const message = error?.response?.data?.message || 'Điểm danh thủ công thất bại';
+            setManualError(message);
+        } finally {
+            setManualSubmitting(false);
+        }
     };
 
     return (
@@ -327,9 +410,31 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                     </div>
                     <button className={styles.btnSecondary}><FontAwesomeIcon icon={faFilter} /> Bộ lọc</button>
                     <button className={styles.btnSecondary}><FontAwesomeIcon icon={faFileExport} /> Xuất CSV</button>
-                    <button className={styles.btnPrimary}><FontAwesomeIcon icon={faPlus} /> Nhập thủ công</button>
+                    {activity?.isOwner && (
+                        <button
+                            className={styles.btnPrimary}
+                            type="button"
+                            onClick={openManualModal}
+                            disabled={participantsLoading}
+                            title={participantsLoading ? 'Đang tải danh sách sinh viên...' : undefined}
+                        >
+                            <FontAwesomeIcon icon={faPlus} /> {participantsLoading ? 'Đang tải...' : 'Nhập thủ công'}
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {manualSuccess && (
+                <div className="alert alert-success" role="alert">
+                    {manualSuccess}
+                </div>
+            )}
+
+            {manualError && !isManualModalOpen && (
+                <div className="alert alert-danger" role="alert">
+                    {manualError}
+                </div>
+            )}
 
             {/* 3. Stat Cards Grid */}
             <div className={styles.statGrid}>
@@ -465,6 +570,64 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                     </div>
                 </main>
             </div>
+
+            {isManualModalOpen && (
+                <div className={styles.modalBackdrop} onClick={closeManualModal}>
+                    <div className={styles.manualModal} onClick={(event) => event.stopPropagation()}>
+                        <h3>Điểm danh thủ công</h3>
+                        <p>Chọn sinh viên tham gia nhưng không thể tự điểm danh.</p>
+
+                        {participantsLoading && (
+                            <div className="alert alert-info" role="alert">
+                                Đang tải danh sách sinh viên tham gia...
+                            </div>
+                        )}
+
+                        {!participantsLoading && eligibleParticipants.length === 0 && (
+                            <div className="alert alert-warning" role="alert">
+                                Hiện không còn sinh viên hợp lệ để điểm danh thủ công (đã điểm danh hết hoặc chưa được duyệt).
+                            </div>
+                        )}
+
+                        {manualError && (
+                            <div className="alert alert-danger" role="alert">
+                                {manualError}
+                            </div>
+                        )}
+
+                        <label htmlFor="manual-participant-select">Sinh viên</label>
+                        <select
+                            id="manual-participant-select"
+                            value={selectedParticipantId}
+                            onChange={(event) => setSelectedParticipantId(event.target.value)}
+                            disabled={manualSubmitting || participantsLoading || eligibleParticipants.length === 0}
+                        >
+                            {eligibleParticipants.length === 0 && (
+                                <option value="">Không có sinh viên phù hợp</option>
+                            )}
+                            {eligibleParticipants.map((participant) => (
+                                <option key={participant._id} value={participant.userId}>
+                                    {participant.studentName || 'Chưa có tên'} - {participant.studentCode || 'N/A'}
+                                </option>
+                            ))}
+                        </select>
+
+                        <div className={styles.modalActions}>
+                            <button type="button" className={styles.modalSecondaryBtn} onClick={closeManualModal} disabled={manualSubmitting}>
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.modalPrimaryBtn}
+                                onClick={handleManualCheckin}
+                                disabled={manualSubmitting || participantsLoading || !selectedParticipantId}
+                            >
+                                {manualSubmitting ? 'Đang xử lý...' : 'Xác nhận điểm danh'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

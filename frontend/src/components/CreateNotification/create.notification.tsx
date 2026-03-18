@@ -92,7 +92,7 @@ const CreateNotification: React.FC = () => {
 
                 setActivity(nextActivity);
                 setParticipants(normalizedParticipants);
-                setLinkUrl(`/detail/${activityId}`);
+                setLinkUrl(`/activity-detail?id=${activityId}`);
             } catch (error) {
                 setErrorMessage(getErrorMessage(error));
             } finally {
@@ -171,7 +171,7 @@ const CreateNotification: React.FC = () => {
             message: message.trim(),
             priority,
             type: 'ACTIVITY',
-            linkUrl: linkUrl.trim() || `/detail/${activityId}`,
+            linkUrl: linkUrl.trim() || `/activity-detail?id=${activityId}`,
             groupKey: `activity-notification:${activityId}`,
             meta: {
                 activityId,
@@ -190,7 +190,7 @@ const CreateNotification: React.FC = () => {
                 title: 'Gửi thông báo thành công',
                 message: `Đã gửi thông báo cho ${recipientCount} thành viên của hoạt động.`,
                 actionText: 'Về hoạt động',
-                onAction: () => navigate(`/detail/${activityId}`),
+                onAction: () => navigate(`/activity-detail?id=${activityId}`),
             });
 
             setTitle('');
@@ -214,7 +214,7 @@ const CreateNotification: React.FC = () => {
                     <p>Chủ hoạt động có thể gửi cho toàn bộ thành viên đã đăng ký hoặc chọn một vài thành viên cụ thể.</p>
                 </div>
                 {activity ? (
-                    <button type="button" className={styles.secondaryBtn} onClick={() => navigate(`/detail/${activityId}`)}>
+                    <button type="button" className={styles.secondaryBtn} onClick={() => navigate(`/activity-detail?id=${activityId}`)}>
                         Quay lại hoạt động
                     </button>
                 ) : null}
@@ -349,7 +349,7 @@ const CreateNotification: React.FC = () => {
                             </div>
                             <div className={styles.fieldGroup}>
                                 <label htmlFor="linkUrl">Link mở khi bấm thông báo</label>
-                                <input id="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} placeholder={`/detail/${activityId || ':activityId'}`} disabled={isSubmitting} />
+                                <input id="linkUrl" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} placeholder={`/activity-detail?id=${activityId || ':activityId'}`} disabled={isSubmitting} />
                             </div>
                         </div>
 

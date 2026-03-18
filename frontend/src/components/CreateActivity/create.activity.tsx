@@ -100,6 +100,7 @@ const CreateActivity: React.FC = () => {
         <div className={styles.createWrapper}>
             <CreateActivityForm
                 isAdmin={isAdmin}
+                isUpdate={false}
                 title={form.title}
                 description={form.description}
                 categoryId={form.categoryId}

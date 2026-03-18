@@ -250,7 +250,7 @@ const MyActivities: React.FC = () => {
                                 <span className={styles.statePill}>
                                     {participantStatus.label}
                                 </span>
-                                <Link to={`/detail/${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                                <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
                             </div>
                         </div>
                     );
@@ -292,7 +292,7 @@ const MyActivities: React.FC = () => {
 
                             <div className={styles.cardFooter}>
                                 <span className={styles.statePill}>Bạn tạo</span>
-                                <Link to={`/detail/${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                                <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
                             </div>
                         </div>
                     );

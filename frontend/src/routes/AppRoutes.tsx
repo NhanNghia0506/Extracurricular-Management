@@ -14,6 +14,7 @@ import ProtectedRoute from './ProtectedRoute';
 import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 import MyActivitiesPage from '../pages/MyActivitiesPage';
 import UpdateActivityPage from '../pages/UpdateActivityPage';
+import CheckinSessionsPage from '../pages/CheckinSessionsPage';
 import NotificationsCenterPage from '../pages/NotificationsCenter';
 import NotificationDetailPage from '../pages/NotificationDetailPage';
 import CreateNotificationPage from '../pages/CreateNotificationPage';
@@ -63,8 +64,9 @@ const AppRoutes: React.FC = () => {
 
             <Route element={<WithSidebarLayout />}>
                 <Route path="/attendance" element={<AttendancePage />} />
-                <Route path="/detail/:id" element={<ActivityDetailPage />} />
+                <Route path="/activity-detail" element={<ActivityDetailPage />} />
                 <Route path="/configure-attendance" element={<ConfigureAttendancePage />} />
+                <Route path="/checkin-sessions" element={<CheckinSessionsPage />} />
                 <Route path="/my-activities" element={<MyActivitiesPage />} />
                 <Route path="/organizations" element={<OrganizersPage />} />
                 <Route

@@ -57,8 +57,9 @@ export enum OrganizerMemberRole {
 }
 
 export enum CheckinStatus {
-    SUCCESS = 'SUCCESS',
-    FAILED = 'FAILED',
+    SUCCESS = 'SUCCESS',   // Điểm danh đúng giờ
+    FAILED = 'FAILED',     // Điểm danh thất bại (ngoài vùng)
+    LATE = 'LATE',         // Điểm danh muộn
 }
 
 export enum NotificationType {

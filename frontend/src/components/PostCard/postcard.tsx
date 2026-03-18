@@ -35,7 +35,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const displayText = isExpanded ? data.description : data.description.slice(0, 150);
 
     const handleCardClick = () => {
-        navigate(`/detail/${data.id}`);
+        navigate(`/activity-detail?id=${data.id}`);
     };
 
     const handleCommentClick = (e: React.MouseEvent) => {

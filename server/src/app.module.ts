@@ -14,6 +14,7 @@ import { DeviceModule } from './modules/devices/device.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { ConversationModule } from './modules/conversations/conversation.module';
 import { MessageModule } from './modules/messages/message.module';
+import { CommentModule } from './modules/comments/comment.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { EventsModule } from './events/events.module';
     NotificationModule,
     ConversationModule,
     MessageModule,
+    CommentModule,
     EventsModule,
   ],
   controllers: [],

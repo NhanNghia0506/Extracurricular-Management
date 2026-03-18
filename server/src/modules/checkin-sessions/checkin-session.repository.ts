@@ -24,4 +24,19 @@ export class CheckinSessionRepository {
             .sort({ createdAt: -1 })
             .exec();
     }
+
+    findAllByActivityId(activityId: string): Promise<CheckinSession[]> {
+        return this.checkinSessionModel
+            .find({ activityId: new Types.ObjectId(activityId) })
+            .sort({ startTime: 1, createdAt: 1 })
+            .exec();
+    }
+
+    updateById(id: string, payload: Partial<CheckinSession>): Promise<CheckinSession | null> {
+        return this.checkinSessionModel.findByIdAndUpdate(
+            new Types.ObjectId(id),
+            payload,
+            { new: true },
+        ).exec();
+    }
 }

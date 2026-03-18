@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,6 +12,7 @@ import { CheckinSession } from '@/types/checkin-session.types';
 import { formatTime } from '../../utils/date-time';
 import CreateConversation from '../CreateConversation/create.conversation';
 import authService from '../../services/auth.service';
+import CommentSection from '../Comments/comment.section';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -80,7 +81,8 @@ const getConversationState = async (
 
 const ActivityDetail: React.FC = () => {
     const deleteNoticePeriodInMs = 2 * 24 * 60 * 60 * 1000;
-    const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const id = searchParams.get('id') || '';
     const navigate = useNavigate();
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -220,9 +222,9 @@ const ActivityDetail: React.FC = () => {
         }
     };
 
-    const handleConfigureAttendance = () => {
+    const handleGoToCheckinSessions = () => {
         if (!id) return;
-        navigate(`/configure-attendance?activityId=${id}`);
+        navigate(`/checkin-sessions?activityId=${id}`);
     };
 
     const handleGoToUpdate = () => {
@@ -239,12 +241,29 @@ const ActivityDetail: React.FC = () => {
         navigate(`/attendance-dashboard?sessionId=${checkinSession._id}`);
     };
 
+    const handleGoToAttendance = () => {
+        if (!checkinSession?._id) {
+            alert('Hoạt động này chưa có phiên điểm danh.');
+            return;
+        }
+
+        navigate(`/attendance?checkinsession=${checkinSession._id}`);
+    };
+
     const handleGoToCreateNotification = () => {
         if (!id) {
             return;
         }
 
         navigate(`/create-notification?activityId=${id}`);
+    };
+
+    const handleGoToParticipants = () => {
+        if (!id) {
+            return;
+        }
+
+        navigate(`/participants/${id}`);
     };
 
     const handleDelete = async () => {
@@ -372,6 +391,8 @@ const ActivityDetail: React.FC = () => {
                             <p className="m-0">Điểm danh sẽ được theo dõi qua GPS. Vui lòng bật dịch vụ định vị trên ứng dụng UniActivity khi đến nơi.</p>
                         </div>
                     </section>
+
+                    <CommentSection activityId={id} />
                 </main>
 
                 {/* 3. Cột phải: Sidebar hành động */}
@@ -405,10 +426,10 @@ const ActivityDetail: React.FC = () => {
                                 {isApproved && (
                                     <button
                                         className={styles.registerBtn}
-                                        onClick={handleConfigureAttendance}
+                                        onClick={handleGoToCheckinSessions}
                                     >
-                                        <i className="fa-solid fa-gear"></i>
-                                        Cấu hình điểm danh
+                                        <i className="fa-solid fa-list-check"></i>
+                                        Danh sách phiên điểm danh
                                     </button>
                                 )}
                                 {isApproved && !hasConversation && (
@@ -444,6 +465,17 @@ const ActivityDetail: React.FC = () => {
                                         : registering ? 'Đang đăng ký...' : 'Đăng ký ngay'
                                     }
                                 </button>
+                                {activity.isRegistered && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={handleGoToAttendance}
+                                        disabled={!checkinSession?._id}
+                                        title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
+                                    >
+                                        <i className="fa-solid fa-fingerprint"></i>
+                                        Đi đến trang điểm danh
+                                    </button>
+                                )}
                             </>
                         )}
                         {(activity.isOwner || canAccessChat || activity.canDelete) && (
@@ -528,14 +560,24 @@ const ActivityDetail: React.FC = () => {
                             </a>
                         </div>
 
-                        <button
-                            className={styles.actionBtnOutline}
-                            onClick={handleGoToAttendanceDashboard}
-                            disabled={!checkinSession?._id}
-                            title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
-                        >
-                            <i className="fa-solid fa-chart-line"></i> Dashboard điểm danh
-                        </button>
+                        {activity.isOwner && (
+                            <button
+                                className={styles.actionBtnOutline}
+                                onClick={handleGoToAttendanceDashboard}
+                                disabled={!checkinSession?._id}
+                                title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
+                            >
+                                <i className="fa-solid fa-chart-line"></i> Dashboard điểm danh
+                            </button>
+                        )}
+                        {(activity.isOwner || currentUserRole === 'ADMIN') && (
+                            <button
+                                className={styles.actionBtnOutline}
+                                onClick={handleGoToParticipants}
+                            >
+                                <i className="fa-solid fa-user-group"></i> Danh sách sinh viên đăng ký
+                            </button>
+                        )}
                         <button className={styles.actionBtnOutline}>
                             <i className="fa-solid fa-share-nodes"></i> Chia sẻ sự kiện
                         </button>

@@ -4,6 +4,7 @@ import styles from './create.activity.module.scss';
 
 interface CreateActivityFormProps {
     isAdmin: boolean;
+    isUpdate?: boolean;
     title: string;
     description: string;
     categoryId: string;
@@ -43,6 +44,7 @@ interface CreateActivityFormProps {
 
 const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
     isAdmin,
+    isUpdate = false,
     title,
     description,
     categoryId,
@@ -79,12 +81,24 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
     onGetCurrentLocation,
     onMapClick
 }) => {
+    const headerTitle = isUpdate
+        ? 'Cập nhật hoạt động'
+        : (isAdmin ? 'Tạo hoạt động mới' : 'Gửi yêu cầu hoạt động');
+
+    const submitLabel = isUpdate
+        ? 'Cập nhật hoạt động'
+        : (isAdmin ? 'Tạo hoạt động' : 'Gửi yêu cầu');
+
+    const submittingLabel = isUpdate
+        ? 'Đang cập nhật hoạt động...'
+        : (isAdmin ? 'Đang tạo hoạt động...' : 'Đang gửi yêu cầu...');
+
     return (
         <>
             {/* 1. Header Bar */}
             <div className={styles.topHeader}>
                 <button className="btn p-0"><i className="fa-solid fa-arrow-left"></i></button>
-                <h4>{isAdmin ? 'Tạo hoạt động mới' : 'Gửi yêu cầu hoạt động'}</h4>
+                <h4>{headerTitle}</h4>
             </div>
 
             {/* 2. Upload Cover Photo */}
@@ -224,7 +238,7 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
                 <div className={styles.mainActions}>
                     <button className={styles.btnPrimaryLarge} type="submit" disabled={submitting}>
                         <i className="fa-solid fa-paper-plane"></i>
-                        {submitting ? (isAdmin ? 'Đang tạo hoạt động...' : 'Đang gửi yêu cầu...') : (isAdmin ? 'Tạo hoạt động' : 'Gửi yêu cầu')}
+                        {submitting ? submittingLabel : submitLabel}
                     </button>
                 </div>
             </form>

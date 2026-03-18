@@ -386,3 +386,76 @@ $border-color: #f1f5f9;
         }
     }
 }
+
+.modalBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+
+.manualModal {
+    width: min(520px, calc(100vw - 32px));
+    background: white;
+    border-radius: 12px;
+    border: 1px solid $border-color;
+    padding: 18px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+
+    h3 {
+        margin: 0 0 6px;
+        font-size: 20px;
+    }
+
+    p {
+        margin: 0 0 14px;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    select {
+        width: 100%;
+        border: 1px solid $border-color;
+        border-radius: 8px;
+        padding: 9px 10px;
+        margin-bottom: 14px;
+    }
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.modalSecondaryBtn,
+.modalPrimaryBtn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.modalSecondaryBtn {
+    background: white;
+    border: 1px solid $border-color;
+    color: #64748b;
+}
+
+.modalPrimaryBtn {
+    background: $primary-blue;
+    border: none;
+    color: white;
+}

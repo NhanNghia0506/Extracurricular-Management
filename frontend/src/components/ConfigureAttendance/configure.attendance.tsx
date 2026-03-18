@@ -7,7 +7,7 @@ import styles from './configure.attendance.module.scss';
 import activityService from 'services/activity.service';
 import { ActivityDetailResponse } from '@/types/activity.types';
 import checkinSessionService from 'services/checkin-session.service';
-import type { CreateCheckinSession } from '@/types/checkin-session.types';
+import type { CreateCheckinSession, UpdateCheckinSession } from '@/types/checkin-session.types';
 import { formatTime } from '../../utils/date-time';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -80,6 +80,7 @@ const formatDuration = (totalMinutes: number): string => {
 const ConfigureAttendance: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [activityName, setActivityName] = useState('');
+    const [sessionTitle, setSessionTitle] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [radius, setRadius] = useState(DEFAULT_RADIUS);
@@ -90,6 +91,7 @@ const ConfigureAttendance: React.FC = () => {
     const [activityDateBase, setActivityDateBase] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const activityId = searchParams.get('activityId') || searchParams.get('id');
+    const sessionId = searchParams.get('sessionId') || '';
     const hasCustomCenterRef = useRef(false);
 
     useEffect(() => {
@@ -105,6 +107,7 @@ const ConfigureAttendance: React.FC = () => {
                 const response = await activityService.getDetail(activityId);
                 const activityData: ActivityDetailResponse = response.data.data;
                 setActivityName(activityData.title || '');
+                setSessionTitle(`Phiên điểm danh - ${activityData.title || 'Hoạt động'}`);
                 setActivityLocationAddress(activityData.location?.address || '');
                 setActivityDateBase(activityData.startAt);
                 if (!hasCustomCenterRef.current && activityData.location?.latitude && activityData.location?.longitude) {
@@ -121,6 +124,50 @@ const ConfigureAttendance: React.FC = () => {
 
         fetchActivity();
     }, [activityId]);
+
+    useEffect(() => {
+        const fetchSession = async () => {
+            if (!sessionId) {
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await checkinSessionService.getById(sessionId);
+                const sessionData = response.data?.data;
+
+                if (!sessionData) {
+                    return;
+                }
+
+                setSessionTitle((prev) => sessionData.title || prev);
+                if (sessionData.location?.address) {
+                    setActivityLocationAddress(sessionData.location.address);
+                }
+                if (sessionData.location?.latitude && sessionData.location?.longitude) {
+                    hasCustomCenterRef.current = true;
+                    setCenter([sessionData.location.latitude, sessionData.location.longitude]);
+                }
+                if (sessionData.radiusMetters) {
+                    setRadius(sessionData.radiusMetters);
+                }
+                if (sessionData.startTime) {
+                    setStartAt(toLocalTimeValue(sessionData.startTime));
+                    setActivityDateBase(new Date(sessionData.startTime).toISOString());
+                }
+                if (sessionData.endTime) {
+                    setEndAt(toLocalTimeValue(sessionData.endTime));
+                }
+            } catch (err: any) {
+                setError(err?.response?.data?.message || err?.message || 'Không thể tải phiên điểm danh để chỉnh sửa');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void fetchSession();
+    }, [sessionId]);
 
     const primaryBlue = useMemo(() => {
         if (typeof window === 'undefined') return '#2563eb';
@@ -186,6 +233,11 @@ const ConfigureAttendance: React.FC = () => {
             return;
         }
 
+        if (!sessionTitle.trim()) {
+            setError('Vui lòng nhập tiêu đề phiên điểm danh');
+            return;
+        }
+
         const startTime = buildDateTime(activityDateBase, startAt);
         const endTime = buildDateTime(activityDateBase, endAt);
 
@@ -194,8 +246,8 @@ const ConfigureAttendance: React.FC = () => {
             return;
         }
 
-        const payload: CreateCheckinSession = {
-            activityId,
+        const payloadBase: UpdateCheckinSession = {
+            title: sessionTitle.trim(),
             location: {
                 address: activityLocationAddress || 'N/A',
                 latitude: center[0],
@@ -209,10 +261,23 @@ const ConfigureAttendance: React.FC = () => {
         try {
             setSubmitting(true);
             setError(null);
-            await checkinSessionService.create(payload);
-            alert('Tạo buổi điểm danh thành công');
+            if (sessionId) {
+                await checkinSessionService.update(sessionId, payloadBase);
+                alert('Cập nhật buổi điểm danh thành công');
+            } else {
+                const payload: CreateCheckinSession = {
+                    ...payloadBase,
+                    activityId,
+                };
+                await checkinSessionService.create(payload);
+                alert('Tạo buổi điểm danh thành công');
+            }
         } catch (err: any) {
-            setError(err?.response?.data?.message || err.message || 'Không thể tạo buổi điểm danh');
+            setError(
+                err?.response?.data?.message
+                || err.message
+                || (sessionId ? 'Không thể cập nhật buổi điểm danh' : 'Không thể tạo buổi điểm danh'),
+            );
         } finally {
             setSubmitting(false);
         }
@@ -222,7 +287,7 @@ const ConfigureAttendance: React.FC = () => {
         <div className={styles.pageContainer}>
             {/* Header */}
             <header className={styles.header}>
-                <h2>Cấu hình buổi điểm danh</h2>
+                <h2>{sessionId ? 'Chỉnh sửa buổi điểm danh' : 'Cấu hình buổi điểm danh'}</h2>
                 <h3>
                     {activityName || 'Chưa nhập tên hoạt động'}
                     <span className={styles.badge}>Hoạt động đang chọn</span>
@@ -240,6 +305,17 @@ const ConfigureAttendance: React.FC = () => {
                     <section className={styles.card}>
                         <div className={styles.cardTitle}>
                             <h5><i className="fa-solid fa-location-dot"></i> Cấu hình vùng điểm danh</h5>
+                        </div>
+
+                        <div className={styles.formRow}>
+                            <label>Tiêu đề phiên điểm danh</label>
+                            <input
+                                type="text"
+                                value={sessionTitle}
+                                onChange={(event) => setSessionTitle(event.target.value)}
+                                placeholder="Ví dụ: Phiên sáng, Check-in khai mạc, Buổi 1"
+                                maxLength={150}
+                            />
                         </div>
 
                         <div className={styles.mapMockup}>
@@ -350,7 +426,10 @@ const ConfigureAttendance: React.FC = () => {
                         </div>
 
                         <button className={styles.primaryBtn} onClick={handleCreateCheckinSession} disabled={submitting}>
-                            <i className="fa-solid fa-circle-check"></i> Tạo buổi điểm danh
+                            <i className="fa-solid fa-circle-check"></i>
+                            {submitting
+                                ? (sessionId ? 'Đang cập nhật...' : 'Đang tạo...')
+                                : (sessionId ? 'Cập nhật buổi điểm danh' : 'Tạo buổi điểm danh')}
                         </button>
                         <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Lưu nháp</button>
                     </div>

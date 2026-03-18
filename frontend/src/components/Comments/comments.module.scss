@@ -77,6 +77,21 @@ $primary-blue: #2563eb;
                 gap: 12px;
                 color: $text-muted;
                 cursor: pointer;
+
+                .submitBtn {
+                    border: none;
+                    background: $primary-blue;
+                    color: white;
+                    border-radius: 999px;
+                    padding: 0.3rem 0.8rem;
+                    font-size: 0.8rem;
+                    font-weight: 700;
+
+                    &:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
+                    }
+                }
             }
         }
 
@@ -153,6 +168,36 @@ $primary-blue: #2563eb;
                 cursor: default;
             }
         }
+
+        .inlineEditor {
+            margin-top: 0.5rem;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+
+            input {
+                flex: 1;
+                border: 1px solid #dbe3ef;
+                border-radius: 10px;
+                padding: 0.45rem 0.7rem;
+                font-size: 0.9rem;
+            }
+
+            .inlineActionBtn {
+                border: none;
+                background: $primary-blue;
+                color: white;
+                border-radius: 10px;
+                padding: 0.45rem 0.8rem;
+                font-size: 0.82rem;
+                font-weight: 700;
+
+                &:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+            }
+        }
     }
 }
 
@@ -167,6 +212,8 @@ $primary-blue: #2563eb;
 }
 
 .viewMore {
+    border: none;
+    background: transparent;
     color: $primary-blue;
     font-weight: 700;
     font-size: 0.9rem;
@@ -177,4 +224,22 @@ $primary-blue: #2563eb;
     &:hover {
         text-decoration: underline;
     }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+.statusText {
+    margin: 0 0 1rem;
+    color: $text-muted;
+    font-size: 0.9rem;
+}
+
+.errorText {
+    margin: 0 0 1rem;
+    color: #dc2626;
+    font-size: 0.9rem;
+    font-weight: 600;
 }

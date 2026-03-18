@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { CheckinService } from './checkin.service';
 import { CreateCheckinDto } from './dtos/create.checkin.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CheckinStatus } from 'src/global/globalEnum';
+import type { Request } from 'express';
+import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 
 @Controller('checkins')
 export class CheckinController {
@@ -10,8 +12,26 @@ export class CheckinController {
 
     @Post()
     @UseGuards(AuthGuard)
-    create(@Body() createCheckinDto: CreateCheckinDto) {
-        return this.checkinService.create(createCheckinDto);
+    create(@Body() createCheckinDto: CreateCheckinDto, @Req() req: Request) {
+        const actorUserId = req.user?.id;
+        const actorRole = req.user?.role;
+        if (!actorUserId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.checkinService.create(createCheckinDto, actorUserId, actorRole);
+    }
+
+    @Post('manual')
+    @UseGuards(AuthGuard)
+    createManual(@Body() manualCheckinDto: ManualCheckinDto, @Req() req: Request) {
+        const actorUserId = req.user?.id;
+        const actorRole = req.user?.role;
+        if (!actorUserId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.checkinService.createManual(manualCheckinDto, actorUserId, actorRole);
     }
 
     /**

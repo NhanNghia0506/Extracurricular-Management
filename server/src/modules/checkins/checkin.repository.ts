@@ -20,12 +20,24 @@ export class CheckinRepository {
     async findOneBySessionAndDevice(
         checkinSessionId: string,
         deviceId: string,
-        status: CheckinStatus,
+        status: CheckinStatus | CheckinStatus[],
     ) {
         return this.checkinModel.findOne({
             checkinSessionId: new Types.ObjectId(checkinSessionId),
             deviceId,
-            status,
+            status: Array.isArray(status) ? { $in: status } : status,
+        }).exec();
+    }
+
+    async findOneBySessionAndUser(
+        checkinSessionId: string,
+        userId: string,
+        status: CheckinStatus | CheckinStatus[],
+    ) {
+        return this.checkinModel.findOne({
+            checkinSessionId: new Types.ObjectId(checkinSessionId),
+            userId: new Types.ObjectId(userId),
+            status: Array.isArray(status) ? { $in: status } : status,
         }).exec();
     }
 

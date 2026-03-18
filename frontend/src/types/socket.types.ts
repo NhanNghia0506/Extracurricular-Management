@@ -1,4 +1,5 @@
 import type { NotificationItem } from './notification.types';
+import type { ActivityComment, DeleteActivityCommentResponse } from './comment.types';
 
 export interface MessageData {
     text: string;
@@ -44,6 +45,16 @@ export interface NotificationDeletedPayload extends NotificationReadPayload {
     senderType?: string;
 }
 
+export interface ActivityCommentsRoomPayload {
+    activityId: string;
+}
+
+export interface ActivityCommentCreatedPayload extends ActivityComment { }
+
+export interface ActivityCommentUpdatedPayload extends ActivityComment { }
+
+export interface ActivityCommentDeletedPayload extends DeleteActivityCommentResponse { }
+
 export interface WelcomeData {
     message: string;
     clientId: string;
@@ -61,6 +72,8 @@ export enum SocketEvent {
     SEND_MESSAGE = 'send-message',
     JOIN_CONVERSATION = 'join-conversation',
     LEAVE_CONVERSATION = 'leave-conversation',
+    JOIN_ACTIVITY_COMMENTS = 'join-activity-comments',
+    LEAVE_ACTIVITY_COMMENTS = 'leave-activity-comments',
     NOTIFICATIONS_SUBSCRIBE = 'notifications:subscribe',
 
     // Server to Client
@@ -68,6 +81,9 @@ export enum SocketEvent {
     CONVERSATION_MESSAGE_NEW = 'conversation:message:new',
     CONVERSATION_UPDATED = 'conversation:updated',
     CONVERSATION_ONLINE_COUNT = 'conversation:online-count',
+    ACTIVITY_COMMENT_CREATED = 'activity:comment:created',
+    ACTIVITY_COMMENT_UPDATED = 'activity:comment:updated',
+    ACTIVITY_COMMENT_DELETED = 'activity:comment:deleted',
     NOTIFICATION_NEW = 'notification:new',
     NOTIFICATION_READ = 'notification:read',
     NOTIFICATION_ALL_READ = 'notification:all-read',

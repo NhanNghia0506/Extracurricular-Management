@@ -1,17 +1,18 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CheckinRepository } from './checkin.repository';
 import { CreateCheckinDto } from './dtos/create.checkin.dto';
 import { Checkin } from './checkin.entity';
 import { CheckinSessionService } from '../checkin-sessions/checkin-session.service';
 import { calculateHaversineDistance, isLocationWithinRadius } from 'src/utils/haversine.util';
-import { CheckinStatus } from 'src/global/globalEnum';
+import { CheckinStatus, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { ParticipantStatus } from '../activity-participants/activity-participant.entity';
 import { CheckinGateway } from 'src/events/checkin.gateway';
 import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
 import { StudentProfile } from 'src/global/globalInterface';
+import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 
 @Injectable()
 export class CheckinService {
@@ -25,7 +26,7 @@ export class CheckinService {
     ) { }
 
     /**
-     * Kiểm tra xem thiết bị đã check-in thành công trong session này chưa
+     * Kiểm tra xem thiết bị đã check-in thành công (SUCCESS hoặc LATE) trong session này chưa
      */
     private async hasDeviceCheckedInSuccessfully(
         checkinSessionId: string,
@@ -35,16 +36,39 @@ export class CheckinService {
             const existingCheckin = await this.checkinRepository.findOneBySessionAndDevice(
                 checkinSessionId,
                 deviceId,
-                CheckinStatus.SUCCESS,
+                [CheckinStatus.SUCCESS, CheckinStatus.LATE],
             );
             return !!existingCheckin;
         } catch {
-            // Nếu có lỗi, trả về false
             return false;
         }
     }
 
-    async create(createCheckinDto: CreateCheckinDto) {
+    private async hasUserCheckedInSuccessfully(
+        checkinSessionId: string,
+        userId: string,
+    ): Promise<boolean> {
+        try {
+            const existingCheckin = await this.checkinRepository.findOneBySessionAndUser(
+                checkinSessionId,
+                userId,
+                [CheckinStatus.SUCCESS, CheckinStatus.LATE],
+            );
+            return !!existingCheckin;
+        } catch {
+            return false;
+        }
+    }
+
+    async create(
+        createCheckinDto: CreateCheckinDto,
+        actorUserId: string,
+        actorRole?: string,
+    ) {
+        if (actorRole !== UserRole.ADMIN && createCheckinDto.userId !== actorUserId) {
+            throw new ForbiddenException('Bạn không thể điểm danh thay người khác');
+        }
+
         const checkinSession = await this.checkinSessionService.findById(createCheckinDto.checkinSessionId);
         if (!checkinSession) {
             throw new NotFoundException('Không tìm thấy check-in session');
@@ -52,8 +76,12 @@ export class CheckinService {
 
         // Kiểm tra xem check-in session có đang hoạt động không
         const now = new Date();
-        if (now < checkinSession.startTime || now > checkinSession.endTime) {
-            throw new BadRequestException('Check-in session không đang hoạt động');
+        if (now < checkinSession.startTime) {
+            throw new BadRequestException('Check-in session chưa diễn ra');
+        }
+
+        if (now > checkinSession.endTime) {
+            throw new BadRequestException('Check-in session đã kết thúc');
         }
 
         // Kiểm tra xem thiết bị đã check-in thành công trong session này chưa
@@ -64,6 +92,14 @@ export class CheckinService {
 
         if (hasDeviceCheckedIn) {
             throw new BadRequestException('Thiết bị này đã check-in thành công cho session này rồi. Chỉ cho phép 1 check-in thành công/thiết bị/session');
+        }
+
+        const hasUserCheckedIn = await this.hasUserCheckedInSuccessfully(
+            createCheckinDto.checkinSessionId,
+            createCheckinDto.userId,
+        );
+        if (hasUserCheckedIn) {
+            throw new BadRequestException('Người dùng này đã điểm danh thành công cho session này rồi');
         }
 
         // Tính khoảng cách
@@ -108,13 +144,18 @@ export class CheckinService {
                 deviceId: createCheckinDto.deviceId,
             } as Checkin;
         } else {
+            // Xác định LATE nếu phiên có cấu hình lateAfter và thời điểm hiện tại vượt quá ngưỡng
+            const checkinStatus = (checkinSession.lateAfter && now > checkinSession.lateAfter)
+                ? CheckinStatus.LATE
+                : CheckinStatus.SUCCESS;
+
             checkin = {
                 checkinSessionId: new Types.ObjectId(createCheckinDto.checkinSessionId),
                 userId: new Types.ObjectId(createCheckinDto.userId),
                 latitude: createCheckinDto.latitude,
                 longitude: createCheckinDto.longitude,
                 distance,
-                status: CheckinStatus.SUCCESS,
+                status: checkinStatus,
                 deviceId: createCheckinDto.deviceId,
             } as Checkin;
         }
@@ -123,6 +164,74 @@ export class CheckinService {
 
         // Emit event khi checkin xong (non-blocking)
         void this.emitCheckinEventAsync(savedCheckin, createCheckinDto.userId);
+
+        return savedCheckin;
+    }
+
+    async createManual(
+        manualCheckinDto: ManualCheckinDto,
+        actorUserId: string,
+        actorRole?: string,
+    ) {
+        const checkinSession = await this.checkinSessionService.findById(manualCheckinDto.checkinSessionId);
+        if (!checkinSession) {
+            throw new NotFoundException('Không tìm thấy check-in session');
+        }
+
+        const now = new Date();
+        if (now < checkinSession.startTime) {
+            throw new BadRequestException('Check-in session chưa diễn ra');
+        }
+
+        if (now > checkinSession.endTime) {
+            throw new BadRequestException('Check-in session đã kết thúc');
+        }
+
+        const activity = await this.checkinSessionService.findActivityBySessionId(manualCheckinDto.checkinSessionId);
+        if (!activity) {
+            throw new NotFoundException('Không tìm thấy hoạt động của check-in session');
+        }
+
+        const isOwner = activity.createdBy?.toString() === actorUserId;
+        const isAdmin = actorRole === UserRole.ADMIN;
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenException('Chỉ chủ hoạt động hoặc admin mới có quyền điểm danh thủ công');
+        }
+
+        const participant = await this.activityParticipantService.findByActivityAndUserId(
+            checkinSession.activityId.toString(),
+            manualCheckinDto.userId,
+        );
+
+        if (!participant) {
+            throw new BadRequestException('Người dùng này chưa tham gia hoạt động');
+        }
+
+        if (participant.status && participant.status !== ParticipantStatus.APPROVED) {
+            throw new BadRequestException('Người dùng này chưa được phê duyệt tham gia hoạt động');
+        }
+
+        const hasUserCheckedIn = await this.hasUserCheckedInSuccessfully(
+            manualCheckinDto.checkinSessionId,
+            manualCheckinDto.userId,
+        );
+        if (hasUserCheckedIn) {
+            throw new BadRequestException('Người dùng này đã điểm danh thành công cho session này rồi');
+        }
+
+        const manualCheckin: Checkin = {
+            checkinSessionId: new Types.ObjectId(manualCheckinDto.checkinSessionId),
+            userId: new Types.ObjectId(manualCheckinDto.userId),
+            latitude: checkinSession.location.latitude,
+            longitude: checkinSession.location.longitude,
+            distance: 0,
+            status: CheckinStatus.SUCCESS,
+            deviceId: `manual:${actorUserId}:${manualCheckinDto.userId}`,
+        } as Checkin;
+
+        const savedCheckin = await this.checkinRepository.create(manualCheckin);
+
+        void this.emitCheckinEventAsync(savedCheckin, manualCheckinDto.userId);
 
         return savedCheckin;
     }

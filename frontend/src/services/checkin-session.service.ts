@@ -1,4 +1,4 @@
-import type { CreateCheckinSession } from '@/types/checkin-session.types';
+import type { CreateCheckinSession, UpdateCheckinSession } from '@/types/checkin-session.types';
 import apiService from './api.service';
 import authService from './auth.service';
 import activityService from './activity.service';
@@ -6,8 +6,10 @@ import type { ActivityDetailResponse } from '@/types/activity.types';
 
 const checkinSessionService = {
     create: (data: CreateCheckinSession) => apiService.post('/checkin-sessions', data),
+    update: (sessionId: string, data: UpdateCheckinSession) => apiService.patch(`/checkin-sessions/${sessionId}`, data),
     getById: (id: string) => apiService.get(`/checkin-sessions/${id}`),
     getByActivityId: (activityId: string) => apiService.get(`/checkin-sessions/activity/${activityId}`),
+    listByActivityId: (activityId: string) => apiService.get(`/checkin-sessions/activity/${activityId}/list`),
     getActivityBySessionId: async (sessionId: string): Promise<ActivityDetailResponse> => {
         const sessionResponse = await apiService.get(`/checkin-sessions/${sessionId}`);
         const sessionData = sessionResponse.data?.data;

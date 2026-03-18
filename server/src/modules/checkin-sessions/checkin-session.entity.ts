@@ -9,6 +9,9 @@ export class CheckinSession {
     @Prop({ required: true, type: Types.ObjectId, ref: 'Activity' })
     activityId: Types.ObjectId;
 
+    @Prop({ required: true, trim: true })
+    title: string;
+
     @Prop({
         required: true,
         type: {
@@ -27,6 +30,9 @@ export class CheckinSession {
 
     @Prop({ required: true })
     radiusMetters: number;
+
+    @Prop({ required: false, default: null, type: Date })
+    lateAfter?: Date;
 }
 
 export const CheckinSessionSchema = SchemaFactory.createForClass(CheckinSession);
