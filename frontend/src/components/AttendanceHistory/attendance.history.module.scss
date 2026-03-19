@@ -1,0 +1,353 @@
+$primary-blue: #2563eb;
+$bg-body: #f8fafc;
+$text-main: #1e293b;
+$text-muted: #64748b;
+
+.container {
+    padding: 40px;
+    background: $bg-body;
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 30px;
+
+    h1 {
+        font-size: 28px;
+        font-weight: 800;
+        color: $text-main;
+        margin: 0;
+    }
+
+    p {
+        color: $text-muted;
+        margin: 5px 0 0;
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        .dateRange {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+
+            input {
+                border: none;
+                color: $text-main;
+                font-size: 13px;
+                outline: none;
+                background: transparent;
+            }
+
+            span {
+                color: $text-muted;
+                font-size: 12px;
+                text-transform: lowercase;
+            }
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btnFilter {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: $text-main;
+
+            &:hover {
+                background: #f1f5f9;
+            }
+        }
+
+        .btnExport {
+            background: $primary-blue;
+            border: none;
+            color: white;
+
+            &:hover {
+                opacity: 0.9;
+            }
+        }
+    }
+}
+
+// Stats Cards
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.statCard {
+    background: white;
+    padding: 24px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+
+    .iconBox {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-size: 20px;
+
+        &.blue {
+            background: #eff6ff;
+            color: $primary-blue;
+        }
+
+        &.green {
+            background: #ecfdf5;
+            color: #10b981;
+        }
+
+        &.red {
+            background: #fff1f2;
+            color: #f43f5e;
+        }
+    }
+
+    .statContent {
+        label {
+            font-size: 12px;
+            font-weight: 700;
+            color: $text-muted;
+            letter-spacing: 0.5px;
+        }
+
+        .value {
+            font-size: 32px;
+            font-weight: 800;
+            color: $text-main;
+            margin-top: 5px;
+
+            small {
+                font-size: 14px;
+                font-weight: 500;
+                color: #94a3b8;
+            }
+        }
+    }
+}
+
+// Table Section
+.tableSection {
+    background: white;
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+
+    .tableHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+
+        h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: $text-main;
+        }
+
+        .paginationIcons button {
+            background: #f1f5f9;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-left: 8px;
+            cursor: pointer;
+            color: $text-muted;
+
+            &:hover {
+                background: #e2e8f0;
+                color: $text-main;
+            }
+
+            &:disabled {
+                cursor: not-allowed;
+                opacity: 0.45;
+            }
+        }
+    }
+}
+
+.metaInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    color: $text-muted;
+    font-size: 13px;
+}
+
+.statusText {
+    color: $text-muted;
+    margin: 10px 0;
+}
+
+.errorText {
+    color: #dc2626;
+    margin: 10px 0;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+        text-align: left;
+        padding: 15px;
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 700;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    td {
+        padding: 20px 15px;
+        border-bottom: 1px solid #f8fafc;
+        font-size: 14px;
+    }
+
+    .activityInfo {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+
+        .actIcon {
+            width: 40px;
+            height: 40px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+        }
+
+        strong {
+            display: block;
+            color: $text-main;
+        }
+
+        span {
+            font-size: 12px;
+            color: $text-muted;
+        }
+    }
+
+    .timeCell strong {
+        display: block;
+        color: $text-main;
+    }
+
+    .timeCell span {
+        font-size: 12px;
+        color: $text-muted;
+    }
+
+    .locationCell {
+        color: $text-muted;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        display: inline-flex;
+        white-space: nowrap;
+
+        &.statusGreen {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        &.statusYellow {
+            background: #fef9c3;
+            color: #a16207;
+        }
+
+        &.statusRed {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+    }
+
+    .pointsActive {
+        color: #10b981;
+        font-weight: 700;
+    }
+
+    .statusCell,
+    .pointsCell {
+        white-space: nowrap;
+    }
+
+    .emptyCell {
+        text-align: center;
+        color: $text-muted;
+        padding: 24px 15px;
+    }
+}
+
+.viewAllBtn {
+    width: 100%;
+    background: none;
+    border: none;
+    color: $primary-blue;
+    font-weight: 600;
+    padding: 20px;
+    cursor: pointer;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 10px;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+@media (max-width: 1024px) {
+    .container {
+        padding: 20px;
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .metaInfo {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}

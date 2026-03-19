@@ -83,7 +83,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
 
                 <div className={styles.actions}>
-                    <span>Like</span>
                     <span onClick={() => {
                         setShowReplyEditor((prev) => !prev);
                         setShowEditEditor(false);

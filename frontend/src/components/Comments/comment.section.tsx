@@ -121,7 +121,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ activityId }) => {
                         key={comment.id}
                         data={comment}
                         getRelativeTime={getRelativeTime}
-                        onReply={createComment}
+                        onReply={(parentCommentId, content) => createComment(content, parentCommentId)}
                         onEdit={updateComment}
                         onDelete={deleteComment}
                         submitting={submitting}

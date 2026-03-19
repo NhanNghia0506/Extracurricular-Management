@@ -3,7 +3,7 @@ export interface CheckinEvent {
         _id: string;
         checkinSessionId: string;
         userId: string;
-        status: 'SUCCESS' | 'FAILED';
+        status: 'SUCCESS' | 'LATE' | 'FAILED';
         latitude: number;
         longitude: number;
         distance: number;
@@ -32,7 +32,7 @@ export interface CheckinResponse {
     latitude: number;
     longitude: number;
     distance: number;
-    status: 'SUCCESS' | 'FAILED';
+    status: 'SUCCESS' | 'LATE' | 'FAILED';
     failReason?: string | null;
     createdAt: string; // ISO date string
     student: {
@@ -65,7 +65,7 @@ export interface CheckinData {
     _id: string;
     checkinSessionId: string;
     userId: string;
-    status: 'SUCCESS' | 'FAILED';
+    status: 'SUCCESS' | 'LATE' | 'FAILED';
     latitude: number;
     longitude: number;
     distance: number;

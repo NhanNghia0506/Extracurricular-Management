@@ -5,6 +5,7 @@ import { AuthGuard } from 'src/guards/auth.guard';
 import { CheckinStatus } from 'src/global/globalEnum';
 import type { Request } from 'express';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
+import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
 
 @Controller('checkins')
 export class CheckinController {
@@ -45,5 +46,19 @@ export class CheckinController {
         @Query('status') status?: CheckinStatus,
     ) {
         return await this.checkinService.getCheckinsBySessionId(sessionId, status);
+    }
+
+    @Get('my-history')
+    @UseGuards(AuthGuard)
+    async getMyHistory(
+        @Req() req: Request,
+        @Query() query: MyAttendanceHistoryQueryDto,
+    ) {
+        const userId = req.user?.id;
+        if (!userId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.checkinService.getMyAttendanceHistory(userId, query);
     }
 }

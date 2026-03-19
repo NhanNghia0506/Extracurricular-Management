@@ -210,6 +210,16 @@ export class CommentService {
             throw new BadRequestException('currentUserId phải là MongoDB ObjectId hợp lệ');
         }
 
+        const content = createCommentDto.content?.trim();
+        if (!content) {
+            throw new BadRequestException('Nội dung bình luận không được để trống');
+        }
+
+        const parentCommentId = createCommentDto.parentCommentId?.trim();
+        if (parentCommentId && !Types.ObjectId.isValid(parentCommentId)) {
+            throw new BadRequestException('parentCommentId phải là MongoDB ObjectId hợp lệ');
+        }
+
         const activity = await this.ensureValidActivity(activityId);
         let authorAvatar: string | undefined;
 
@@ -220,8 +230,8 @@ export class CommentService {
             authorAvatar = undefined;
         }
 
-        if (createCommentDto.parentCommentId) {
-            const parentComment = await this.commentRepository.findById(createCommentDto.parentCommentId);
+        if (parentCommentId) {
+            const parentComment = await this.commentRepository.findById(parentCommentId);
             if (!parentComment) {
                 throw new NotFoundException('Không tìm thấy bình luận cha');
             }
@@ -236,8 +246,8 @@ export class CommentService {
             authorId: currentUserId,
             authorName: currentUserName,
             authorAvatar,
-            content: createCommentDto.content.trim(),
-            parentCommentId: createCommentDto.parentCommentId,
+            content,
+            parentCommentId,
         });
 
         const response = this.toCommentResponse(

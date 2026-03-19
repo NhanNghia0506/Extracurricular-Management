@@ -13,6 +13,46 @@ import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
 import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
+import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
+
+export interface MyAttendanceHistorySummary {
+    totalParticipatedActivities: number;
+    cumulativeTrainingScore: number;
+    attendanceRate: number;
+    totalSessions: number;
+    successCount: number;
+    lateCount: number;
+    failedCount: number;
+}
+
+export interface MyAttendanceHistoryItem {
+    checkinId: string;
+    activityId: string;
+    activityTitle: string;
+    organizerName?: string;
+    activityStartAt?: Date;
+    activityEndAt?: Date;
+    sessionId: string;
+    sessionTitle: string;
+    checkinTime: Date;
+    locationAddress: string;
+    status: CheckinStatus;
+    trainingScore: number;
+    awardedPoints: number;
+}
+
+export interface MyAttendanceHistoryResponse {
+    summary: MyAttendanceHistorySummary;
+    items: MyAttendanceHistoryItem[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+    };
+}
 
 @Injectable()
 export class CheckinService {
@@ -24,6 +64,60 @@ export class CheckinService {
         private readonly studentService: StudentService,
         private readonly userService: UserService,
     ) { }
+
+    private parsePaginationNumber(rawValue: string | undefined, defaultValue: number, fieldName: string): number {
+        if (!rawValue) {
+            return defaultValue;
+        }
+
+        const parsed = Number(rawValue);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+            throw new BadRequestException(`${fieldName} phải là số nguyên dương`);
+        }
+
+        return parsed;
+    }
+
+    private parseDate(rawValue: string | undefined, fieldName: string, endOfDay: boolean = false): Date | undefined {
+        if (!rawValue) {
+            return undefined;
+        }
+
+        const parsed = new Date(rawValue);
+        if (Number.isNaN(parsed.getTime())) {
+            throw new BadRequestException(`${fieldName} không hợp lệ`);
+        }
+
+        if (endOfDay) {
+            parsed.setHours(23, 59, 59, 999);
+        }
+
+        return parsed;
+    }
+
+    private parseStatuses(rawStatuses: string | undefined): CheckinStatus[] | undefined {
+        if (!rawStatuses) {
+            return undefined;
+        }
+
+        const statuses = rawStatuses
+            .split(',')
+            .map((value) => value.trim().toUpperCase())
+            .filter(Boolean) as CheckinStatus[];
+
+        if (statuses.length === 0) {
+            return undefined;
+        }
+
+        const validStatuses = new Set(Object.values(CheckinStatus));
+        const invalidStatus = statuses.find((status) => !validStatuses.has(status));
+
+        if (invalidStatus) {
+            throw new BadRequestException(`status không hợp lệ: ${invalidStatus}`);
+        }
+
+        return Array.from(new Set(statuses));
+    }
 
     /**
      * Kiểm tra xem thiết bị đã check-in thành công (SUCCESS hoặc LATE) trong session này chưa
@@ -342,6 +436,68 @@ export class CheckinService {
         return {
             total: checkinList.length,
             data: checkinList,
+        };
+    }
+
+    async getMyAttendanceHistory(
+        userId: string,
+        query: MyAttendanceHistoryQueryDto,
+    ): Promise<MyAttendanceHistoryResponse> {
+        if (!Types.ObjectId.isValid(userId)) {
+            throw new BadRequestException('userId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const page = this.parsePaginationNumber(query.page, 1, 'page');
+        const limit = Math.min(this.parsePaginationNumber(query.limit, 10, 'limit'), 100);
+        const startDate = this.parseDate(query.startDate, 'startDate');
+        const endDate = this.parseDate(query.endDate, 'endDate', true);
+        const statuses = this.parseStatuses(query.status);
+
+        if (startDate && endDate && startDate > endDate) {
+            throw new BadRequestException('startDate không được lớn hơn endDate');
+        }
+
+        const { items, total, summary } = await this.checkinRepository.findMyAttendanceHistory({
+            userId,
+            statuses,
+            startDate,
+            endDate,
+            page,
+            limit,
+        });
+
+        const attendanceRate = summary.totalSessions > 0
+            ? Number((((summary.successCount + summary.lateCount) / summary.totalSessions) * 100).toFixed(2))
+            : 0;
+
+        const mappedItems: MyAttendanceHistoryItem[] = items.map((item) => ({
+            ...item,
+            awardedPoints: [CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(item.status)
+                ? item.trainingScore
+                : 0,
+        }));
+
+        const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+
+        return {
+            summary: {
+                totalParticipatedActivities: summary.totalParticipatedActivities,
+                cumulativeTrainingScore: summary.cumulativeTrainingScore,
+                attendanceRate,
+                totalSessions: summary.totalSessions,
+                successCount: summary.successCount,
+                lateCount: summary.lateCount,
+                failedCount: summary.failedCount,
+            },
+            items: mappedItems,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            },
         };
     }
 

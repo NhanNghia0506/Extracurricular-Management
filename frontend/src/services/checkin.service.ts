@@ -1,5 +1,9 @@
 import apiService from './api.service';
 import { CheckinResponse } from '../types/checkin.types';
+import {
+    AttendanceHistoryQueryParams,
+    AttendanceHistoryResponse,
+} from '../types/attendance-history.types';
 
 export class CheckinService {
     /**
@@ -9,10 +13,26 @@ export class CheckinService {
      */
     async getCheckinsBySessionId(
         sessionId: string,
-        status?: 'SUCCESS' | 'FAILED'
+        status?: 'SUCCESS' | 'LATE' | 'FAILED'
     ): Promise<{ total: number; data: CheckinResponse[] }> {
         const params = status ? { status } : {};
         const response = await apiService.get(`/checkins/session/${sessionId}`, { params });
+        return response.data.data;
+    }
+
+    async getMyAttendanceHistory(
+        params: AttendanceHistoryQueryParams,
+    ): Promise<AttendanceHistoryResponse> {
+        const response = await apiService.get('/checkins/my-history', {
+            params: {
+                startDate: params.startDate,
+                endDate: params.endDate,
+                page: params.page,
+                limit: params.limit,
+                status: params.status?.join(','),
+            },
+        });
+
         return response.data.data;
     }
 
