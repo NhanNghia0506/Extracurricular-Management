@@ -14,6 +14,7 @@ import ProtectedRoute from './ProtectedRoute';
 import ConfigureAttendancePage from '../pages/ConfigureAttendancePage';
 import MyActivitiesPage from '../pages/MyActivitiesPage';
 import MyAttendancePage from '../pages/MyAttendancePage';
+import MyCertificatesPage from '../pages/MyCertificatesPage';
 import UpdateActivityPage from '../pages/UpdateActivityPage';
 import CheckinSessionsPage from '../pages/CheckinSessionsPage';
 import NotificationsCenterPage from '../pages/NotificationsCenter';
@@ -70,6 +71,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="/checkin-sessions" element={<CheckinSessionsPage />} />
                 <Route path="/my-activities" element={<MyActivitiesPage />} />
                 <Route path="/my-attendance" element={<MyAttendancePage />} />
+                <Route path="/my-certificates" element={<MyCertificatesPage />} />
                 <Route path="/organizations" element={<OrganizersPage />} />
                 <Route
                     path="/create-organizer"

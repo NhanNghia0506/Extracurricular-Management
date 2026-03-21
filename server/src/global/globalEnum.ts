@@ -82,3 +82,8 @@ export enum ConversationRole {
     MEMBER = 'member',
     ADMIN = 'admin',
 }
+
+export enum CertificateStatus {
+    ISSUED = 'ISSUED',
+    REVOKED = 'REVOKED',
+}

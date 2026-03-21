@@ -16,8 +16,8 @@ const MAIN_MENU: MenuItem[] = [
     { id: 'explore', icon: 'fa-regular fa-compass', label: 'Khám phá' },
     { id: 'my-activities', icon: 'fa-regular fa-calendar-check', label: 'Hoạt động của tôi' },
     { id: 'my-attendance', icon: 'fa-solid fa-clipboard-check', label: 'Lịch sử điểm danh' },
+    { id: 'my-certificates', icon: 'fa-solid fa-certificate', label: 'Chứng nhận' },
     { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Tổ chức' }, // Hoặc fa-user-group
-    { id: 'achievements', icon: 'fa-solid fa-medal', label: 'Thành tích' },
     { id: 'create-activity', icon: 'fa-solid fa-plus', label: 'Tạo hoạt động mới' },
 ];
 
@@ -31,8 +31,8 @@ const ROUTE_MAP: { [key: string]: string } = {
     'explore': '/',
     'my-activities': '/my-activities',
     'my-attendance': '/my-attendance',
+    'my-certificates': '/my-certificates',
     'organizations': '/organizations',
-    'achievements': '/achievements',
     'create-activity': '/create-activity',
     'settings': '/settings',
 };

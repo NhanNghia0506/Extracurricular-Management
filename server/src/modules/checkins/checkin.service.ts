@@ -11,6 +11,7 @@ import { ParticipantStatus } from '../activity-participants/activity-participant
 import { CheckinGateway } from 'src/events/checkin.gateway';
 import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
+import { CertificateService } from '../certificates/certificate.service';
 import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
@@ -63,6 +64,7 @@ export class CheckinService {
         private readonly checkinGateway: CheckinGateway,
         private readonly studentService: StudentService,
         private readonly userService: UserService,
+        private readonly certificateService: CertificateService,
     ) { }
 
     private parsePaginationNumber(rawValue: string | undefined, defaultValue: number, fieldName: string): number {
@@ -258,6 +260,12 @@ export class CheckinService {
 
         // Emit event khi checkin xong (non-blocking)
         void this.emitCheckinEventAsync(savedCheckin, createCheckinDto.userId);
+        if ([CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(savedCheckin.status)) {
+            void this.certificateService.issueForCheckinSessionIfEligible(
+                savedCheckin.checkinSessionId.toString(),
+                createCheckinDto.userId,
+            );
+        }
 
         return savedCheckin;
     }
@@ -326,6 +334,12 @@ export class CheckinService {
         const savedCheckin = await this.checkinRepository.create(manualCheckin);
 
         void this.emitCheckinEventAsync(savedCheckin, manualCheckinDto.userId);
+        if ([CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(savedCheckin.status)) {
+            void this.certificateService.issueForCheckinSessionIfEligible(
+                savedCheckin.checkinSessionId.toString(),
+                manualCheckinDto.userId,
+            );
+        }
 
         return savedCheckin;
     }

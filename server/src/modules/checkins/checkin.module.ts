@@ -9,6 +9,7 @@ import { ActivityParticipantModule } from '../activity-participants/activity-par
 import { UserModule } from '../users/user.module';
 import { StudentModule } from '../students/student.module';
 import { CheckinGateway } from '../../events/checkin.gateway';
+import { CertificateModule } from '../certificates/certificate.module';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { CheckinGateway } from '../../events/checkin.gateway';
         StudentModule,
         CheckinSessionModule,
         ActivityParticipantModule,
+        CertificateModule,
     ],
     controllers: [CheckinController],
     providers: [CheckinService, CheckinRepository, CheckinGateway],
