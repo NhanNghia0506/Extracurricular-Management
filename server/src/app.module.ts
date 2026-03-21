@@ -15,6 +15,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
 import { ConversationModule } from './modules/conversations/conversation.module';
 import { MessageModule } from './modules/messages/message.module';
 import { CommentModule } from './modules/comments/comment.module';
+import { ActivityFeedbackModule } from './modules/activity-feedback/activity-feedback.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { EventsModule } from './events/events.module';
     ConversationModule,
     MessageModule,
     CommentModule,
+    ActivityFeedbackModule,
     EventsModule,
   ],
   controllers: [],
