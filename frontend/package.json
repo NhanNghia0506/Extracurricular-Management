@@ -19,6 +19,7 @@
     "@types/react-dom": "^19.2.3",
     "axios": "^1.13.2",
     "bootstrap": "^5.3.8",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "leaflet-css": "^0.1.0",
     "react": "^19.2.3",

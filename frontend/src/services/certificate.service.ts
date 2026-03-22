@@ -1,4 +1,4 @@
-import { MyCertificatesResponse, CertificateItem } from '../types/certificate.types';
+import { MyCertificatesResponse, CertificateItem, CertificateVerifyResponse } from '../types/certificate.types';
 import { SuccessResponse } from '../types/response.types';
 import apiService from './api.service';
 
@@ -9,6 +9,10 @@ const certificateService = {
         apiService.get<SuccessResponse<CertificateItem>>(`/certificates/${certificateId}`),
     downloadById: (certificateId: string) =>
         apiService.get(`/certificates/${certificateId}/download`, { responseType: 'blob' }),
+    verifyByCode: (certificateCode: string, proof?: string) =>
+        apiService.get<SuccessResponse<CertificateVerifyResponse>>(`/certificates/verify/${certificateCode}`, {
+            params: proof ? { proof } : undefined,
+        }),
 };
 
 export default certificateService;

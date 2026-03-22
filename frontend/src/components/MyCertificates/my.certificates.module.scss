@@ -1,89 +1,327 @@
-.wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+$primary-blue: #2563eb;
+$text-dark: #1e293b;
+$text-muted: #64748b;
+$bg-light: #f8fafc;
+$border-color: #f1f5f9;
+
+.container {
+    padding: 40px;
+    background: white;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+.mutedText {
+    color: $text-muted;
+    font-size: 13px;
 }
 
-.title {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0;
-}
-
-.subtitle {
-    margin: 4px 0 0;
-    color: #475569;
-}
-
-.card {
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid #e2e8f0;
+.infoBox,
+.errorBox {
+    border: 1px solid $border-color;
+    border-radius: 12px;
     padding: 16px;
+    margin-bottom: 16px;
+    background: #f8fafc;
+    color: $text-dark;
+}
+
+.errorBox {
+    border-color: #fecaca;
+    background: #fff1f2;
+    color: #b91c1c;
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 12px;
 }
 
-.meta {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.name {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.detail {
-    margin: 0;
-    color: #334155;
-    font-size: 14px;
-}
-
-.status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    background: #dcfce7;
-    color: #166534;
-}
-
-.action {
-    border: none;
-    background: #1d4ed8;
-    color: #fff;
-    padding: 10px 14px;
+.retryBtn {
+    border: 1px solid #fecaca;
+    background: white;
+    color: #b91c1c;
     border-radius: 8px;
+    padding: 8px 12px;
     cursor: pointer;
     font-weight: 600;
 }
 
-.action:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.header {
+    margin-bottom: 40px;
+
+    h1 {
+        font-size: 32px;
+        font-weight: 400;
+        color: $text-dark;
+        margin: 0;
+    }
+
+    p {
+        color: $text-muted;
+        max-width: 800px;
+        line-height: 1.6;
+        margin-top: 10px;
+    }
 }
 
-.state {
-    padding: 16px;
-    border-radius: 10px;
+// Stats Cards
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 40px;
+
+    .statCard {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid $border-color;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+
+        &.blueBorder {
+            border-left: 4px solid $primary-blue;
+        }
+
+        label {
+            font-size: 13px;
+            color: $text-muted;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .val {
+            font-size: 32px;
+            font-weight: 800;
+            color: $text-dark;
+
+            .subText {
+                font-size: 14px;
+                color: #10b981;
+                font-weight: 600;
+                margin-left: 10px;
+            }
+        }
+
+        .recentItem {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+
+            .recentIcon {
+                width: 40px;
+                height: 40px;
+                background: #eff6ff;
+                color: $primary-blue;
+                border-radius: 8px;
+                display: grid;
+                place-items: center;
+            }
+
+            strong {
+                display: block;
+                font-size: 14px;
+                color: $text-dark;
+            }
+
+            small {
+                color: $text-muted;
+                font-size: 12px;
+            }
+        }
+
+        .progressTrack {
+            width: 100%;
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+
+            .progressBar {
+                height: 100%;
+                background: $primary-blue;
+                border-radius: 10px;
+            }
+        }
+    }
+}
+
+// Filter Bar
+.filterBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    padding: 12px;
+    border-radius: 12px;
+
+    .searchBox {
+        background: white;
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        width: 350px;
+
+        svg {
+            color: #94a3b8;
+            margin-right: 10px;
+        }
+
+        input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+        }
+    }
+
+    .dropdowns {
+        display: flex;
+        gap: 10px;
+
+        .dropBtn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            color: $text-dark;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filterIconBtn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            width: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: $text-dark;
+        }
+    }
+}
+
+// Certificate Row
+.certRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid $border-color;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+
+    &:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+        border-color: $primary-blue;
+    }
+
+    .certMain {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex: 1;
+
+        .certIcon {
+            width: 48px;
+            height: 48px;
+            background: #f8fafc;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: $primary-blue;
+            font-size: 18px;
+        }
+
+        .certInfo {
+            h3 {
+                font-size: 16px;
+                margin: 0 0 6px;
+                color: $text-dark;
+            }
+
+            .certMeta {
+                display: flex;
+                gap: 20px;
+                font-size: 13px;
+                color: $text-muted;
+            }
+        }
+    }
+
+    .certStats {
+        display: flex;
+        gap: 40px;
+        padding: 0 40px;
+
+        small {
+            display: block;
+            font-size: 10px;
+            font-weight: 800;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .scoreTag {
+            color: #22c55e;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .statusTag {
+            color: #15803d;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .statusRevoked {
+            color: #b91c1c;
+        }
+    }
+
+    .certActions {
+        display: flex;
+        gap: 12px;
+
+        .btnView {
+            background: transparent;
+            border: none;
+            color: $primary-blue;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btnDownload {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            color: $text-dark;
+            cursor: pointer;
+
+            &:hover {
+                background: #e2e8f0;
+            }
+        }
+    }
 }

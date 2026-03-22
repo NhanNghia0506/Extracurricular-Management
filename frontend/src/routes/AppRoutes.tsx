@@ -28,6 +28,7 @@ import ChatPage from '../pages/ChatPage/ChatPage';
 import LiveCheckinPage from '../pages/LiveCheckinPage';
 import ActivityApprovalPage from '../pages/ActivityApprovalPage';
 import OrganizerApprovalPage from '../pages/OrganizerApprovalPage';
+import VerifyCertificatePage from '../pages/VerifyCertificatePage';
 import authService from '../services/auth.service';
 
 const AppRoutes: React.FC = () => {
@@ -113,6 +114,7 @@ const AppRoutes: React.FC = () => {
                         </ProtectedRoute>
                     }
                 />
+                <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
             </Route>
 
             <Route element={<ChatLayout />}>

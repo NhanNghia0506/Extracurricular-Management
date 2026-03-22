@@ -1,16 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFFont, PDFDocument, PDFPage, StandardFonts, rgb } from 'pdf-lib';
-import { randomUUID } from 'crypto';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { promises as fs } from 'fs';
 import { Model, Types } from 'mongoose';
 import * as path from 'path';
 import QRCode from 'qrcode';
 import { CheckinStatus } from 'src/global/globalEnum';
+import { CertificateVerifyResponse } from 'src/global/globalInterface';
 import { Activity } from '../activities/activity.entity';
 import { CheckinSession } from '../checkin-sessions/checkin-session.entity';
 import { Checkin } from '../checkins/checkin.entity';
+import { Certificate } from './certificate.entity';
 import { User } from '../users/user.entity';
 import { CertificateRepository } from './certificate.repository';
 
@@ -22,6 +24,8 @@ export interface IssueResult {
 
 @Injectable()
 export class CertificateService {
+    private readonly logger = new Logger(CertificateService.name);
+
     constructor(
         private readonly certificateRepository: CertificateRepository,
         @InjectModel(Checkin.name) private readonly checkinModel: Model<Checkin>,
@@ -115,12 +119,69 @@ export class CertificateService {
         return process.env.PUBLIC_API_BASE_URL || `http://localhost:${process.env.PORT ?? 3001}`;
     }
 
-    private getCertificatesDirectory(): string {
-        return path.resolve(process.cwd(), '..', 'uploads', 'certificates');
-    }
-
     private buildCertificateCode(): string {
         return `CERT-${Date.now().toString(36).toUpperCase()}-${randomUUID().split('-')[0].toUpperCase()}`;
+    }
+
+    private getCertificateProofSecret(): string {
+        const secret = process.env.CERTIFICATE_VERIFY_SECRET || process.env.JWT_SECRET;
+        if (!secret) {
+            this.logger.warn('Thiếu CERTIFICATE_VERIFY_SECRET/JWT_SECRET, dùng fallback secret yếu cho môi trường local');
+            return 'dev-insecure-certificate-secret';
+        }
+
+        return secret;
+    }
+
+    private buildProofPayload(certificate: Pick<Certificate, 'certificateCode' | 'issuedAt' | 'userId' | 'activityId'>): string {
+        return [
+            certificate.certificateCode,
+            new Date(certificate.issuedAt).toISOString(),
+            certificate.userId.toString(),
+            certificate.activityId.toString(),
+        ].join('|');
+    }
+
+    private buildCertificateProofToken(certificate: Pick<Certificate, 'certificateCode' | 'issuedAt' | 'userId' | 'activityId'>): string {
+        return createHmac('sha256', this.getCertificateProofSecret())
+            .update(this.buildProofPayload(certificate))
+            .digest('hex');
+    }
+
+    private hashProofToken(token: string): string {
+        return createHash('sha256').update(token).digest('hex');
+    }
+
+    private async resolveOrganizerInfo(activityId: Types.ObjectId): Promise<{ name: string; image: string }> {
+        const activity = await this.activityModel
+            .findById(activityId)
+            .populate('organizerId', 'name image')
+            .lean()
+            .exec();
+
+        const organizer = activity?.organizerId as { name?: string; image?: string } | Types.ObjectId | undefined;
+        if (organizer && typeof organizer === 'object' && 'name' in organizer) {
+            return {
+                name: organizer.name || '',
+                image: organizer.image || '',
+            };
+        }
+
+        return {
+            name: '',
+            image: '',
+        };
+    }
+
+    private isSameToken(left: string, right: string): boolean {
+        const leftBuffer = Buffer.from(left);
+        const rightBuffer = Buffer.from(right);
+
+        if (leftBuffer.length !== rightBuffer.length) {
+            return false;
+        }
+
+        return timingSafeEqual(leftBuffer, rightBuffer);
     }
 
     private async generateCertificatePdf(params: {
@@ -317,39 +378,31 @@ export class CertificateService {
         const attendanceRate = 100;
         const issuedAt = new Date();
         const certificateCode = this.buildCertificateCode();
-        const verifyUrl = `${this.getApiBaseUrl()}/certificates/verify/${certificateCode}`;
-        const fileName = `${certificateCode}.pdf`;
-        const fileUrl = `/uploads/certificates/${fileName}`;
-
-        const user = await this.userModel.findById(new Types.ObjectId(userId)).select('name email').lean().exec();
-
-        const pdfBytes = await this.generateCertificatePdf({
-            recipientName: user?.name || 'User',
-            activityTitle: activity.title,
-            issuedAt,
+        const proofToken = this.buildCertificateProofToken({
             certificateCode,
-            verifyUrl,
+            issuedAt,
+            userId: new Types.ObjectId(userId),
+            activityId: new Types.ObjectId(activityId),
         });
 
-        const certificatesDir = this.getCertificatesDirectory();
-        await fs.mkdir(certificatesDir, { recursive: true });
-        await fs.writeFile(path.join(certificatesDir, fileName), pdfBytes);
+        const user = await this.userModel.findById(new Types.ObjectId(userId)).select('name email').lean().exec();
+        const organizerInfo = await this.resolveOrganizerInfo(new Types.ObjectId(activityId));
 
         const created = await this.certificateRepository.create({
             userId: new Types.ObjectId(userId),
             activityId: new Types.ObjectId(activityId),
             certificateCode,
-            fileName,
-            fileUrl,
-            verifyUrl,
             issuedAt,
             totalSessions,
             attendedSessions,
             attendanceRate,
+            proofHash: this.hashProofToken(proofToken),
             meta: {
                 userName: user?.name || 'User',
                 userEmail: user?.email || '',
                 activityTitle: activity.title,
+                organizerName: organizerInfo.name || 'Ban tổ chức',
+                organizerImage: organizerInfo.image || '',
             },
         });
 
@@ -396,32 +449,105 @@ export class CertificateService {
         return certificate;
     }
 
-    async getCertificateDownload(userId: string, certificateId: string) {
+    async getCertificateDownloadPdf(userId: string, certificateId: string): Promise<{ pdfBytes: Uint8Array; fileName: string; certificate: any }> {
         const certificate = await this.getMyCertificateDetail(userId, certificateId);
-        const absolutePath = path.join(this.getCertificatesDirectory(), certificate.fileName);
+
+        const activity = await this.activityModel.findById(certificate.activityId).lean().exec();
+        if (!activity) {
+            throw new NotFoundException('Hoạt động không tồn tại');
+        }
+
+        const proofToken = this.buildCertificateProofToken(certificate);
+        const verifyUrl = `${this.getApiBaseUrl()}/certificates/verify/${certificate.certificateCode}?proof=${proofToken}`;
+        const userName = (certificate.meta?.userName as string) || 'User';
+        const activityTitle = (certificate.meta?.activityTitle as string) || activity.title || 'Hoạt động';
+
+        const pdfBytes = await this.generateCertificatePdf({
+            recipientName: userName,
+            activityTitle,
+            issuedAt: certificate.issuedAt,
+            certificateCode: certificate.certificateCode,
+            verifyUrl,
+        });
+
+        const fileName = `CHUNG_CHI_${certificate.certificateCode}.pdf`;
 
         return {
+            pdfBytes,
+            fileName,
             certificate,
-            absolutePath,
         };
     }
 
-    async verifyCertificate(certificateCode: string) {
+    async verifyCertificate(certificateCode: string, proof?: string): Promise<CertificateVerifyResponse> {
         const certificate = await this.certificateRepository.findByCode(certificateCode);
         if (!certificate) {
-            throw new NotFoundException('Chứng nhận không tồn tại');
+            return {
+                valid: false,
+                verificationStatus: 'NOT_FOUND',
+            };
         }
 
         if (String(certificate.status) !== 'ISSUED') {
-            throw new BadRequestException('Chứng nhận không hợp lệ');
+            return {
+                valid: false,
+                verificationStatus: 'REVOKED_OR_INVALID',
+                certificateCode: certificate.certificateCode,
+                issuedAt: certificate.issuedAt,
+                status: String(certificate.status),
+            };
         }
 
+        const expectedToken = this.buildCertificateProofToken(certificate);
+        const expectedProofHash = this.hashProofToken(expectedToken);
+        const hasStoredProof = Boolean(certificate.proofHash);
+
+        if (hasStoredProof && certificate.proofHash !== expectedProofHash) {
+            this.logger.warn(`Phat hien mismatch proofHash noi bo cho chung nhan ${certificate.certificateCode}`);
+            return {
+                valid: false,
+                verificationStatus: 'PROOF_MISMATCH',
+                certificateCode: certificate.certificateCode,
+                issuedAt: certificate.issuedAt,
+                status: String(certificate.status),
+            };
+        }
+
+        if (hasStoredProof && !proof) {
+            return {
+                valid: false,
+                verificationStatus: 'PROOF_REQUIRED',
+                certificateCode: certificate.certificateCode,
+                issuedAt: certificate.issuedAt,
+                status: String(certificate.status),
+            };
+        }
+
+        if (proof && !this.isSameToken(proof, expectedToken)) {
+            this.logger.warn(`Phat hien token verify khong hop le cho chung nhan ${certificate.certificateCode}`);
+            return {
+                valid: false,
+                verificationStatus: 'PROOF_MISMATCH',
+                certificateCode: certificate.certificateCode,
+                issuedAt: certificate.issuedAt,
+                status: String(certificate.status),
+            };
+        }
+
+        const organizerInfo = await this.resolveOrganizerInfo(certificate.activityId);
+
         return {
+            valid: true,
+            verificationStatus: hasStoredProof ? 'VALID' : 'LEGACY_VALID',
             certificateCode: certificate.certificateCode,
             issuedAt: certificate.issuedAt,
             status: String(certificate.status),
             attendanceRate: certificate.attendanceRate,
-            meta: certificate.meta,
+            meta: {
+                ...(certificate.meta || {}),
+                organizerName: organizerInfo.name || (certificate.meta?.organizerName as string) || 'Ban tổ chức',
+                organizerImage: organizerInfo.image || (certificate.meta?.organizerImage as string) || '',
+            },
         };
     }
 }

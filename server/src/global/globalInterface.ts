@@ -159,3 +159,13 @@ export interface StudentProfile {
   class: string;
   faculty: string;
 }
+
+export interface CertificateVerifyResponse {
+  valid: boolean;
+  verificationStatus: 'VALID' | 'LEGACY_VALID' | 'NOT_FOUND' | 'REVOKED_OR_INVALID' | 'PROOF_REQUIRED' | 'PROOF_MISMATCH';
+  certificateCode?: string;
+  issuedAt?: Date;
+  status?: string;
+  attendanceRate?: number;
+  meta?: Record<string, unknown>;
+}

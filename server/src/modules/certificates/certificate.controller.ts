@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Post, Query, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ResponseMessage } from 'src/decorators/response-message.decorator';
+import { CertificateVerifyResponse } from 'src/global/globalInterface';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { CertificateService } from './certificate.service';
 
@@ -10,8 +11,11 @@ export class CertificateController {
 
     @Get('verify/:certificateCode')
     @ResponseMessage('Xác minh chứng nhận thành công')
-    verify(@Param('certificateCode') certificateCode: string) {
-        return this.certificateService.verifyCertificate(certificateCode);
+    verify(
+        @Param('certificateCode') certificateCode: string,
+        @Query('proof') proof?: string,
+    ): Promise<CertificateVerifyResponse> {
+        return this.certificateService.verifyCertificate(certificateCode, proof);
     }
 
     @Get('my-certificates')
@@ -74,7 +78,9 @@ export class CertificateController {
             throw new UnauthorizedException('User not authenticated');
         }
 
-        const { absolutePath, certificate } = await this.certificateService.getCertificateDownload(userId, certificateId);
-        return res.download(absolutePath, certificate.fileName);
+        const { pdfBytes, fileName } = await this.certificateService.getCertificateDownloadPdf(userId, certificateId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        return res.send(Buffer.from(pdfBytes));
     }
 }

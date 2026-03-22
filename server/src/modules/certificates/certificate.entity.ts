@@ -16,15 +16,6 @@ export class Certificate {
     certificateCode: string;
 
     @Prop({ required: true })
-    fileName: string;
-
-    @Prop({ required: true })
-    fileUrl: string;
-
-    @Prop({ required: true })
-    verifyUrl: string;
-
-    @Prop({ required: true })
     issuedAt: Date;
 
     @Prop({ required: true })
@@ -38,6 +29,10 @@ export class Certificate {
 
     @Prop({ required: true, enum: Object.values(CertificateStatus), default: CertificateStatus.ISSUED })
     status: CertificateStatus;
+
+    // Hash của token xác thực do server tạo khi cấp chứng nhận.
+    @Prop({ type: String, default: null, index: true })
+    proofHash: string | null;
 
     @Prop({ type: Object })
     meta?: Record<string, unknown>;

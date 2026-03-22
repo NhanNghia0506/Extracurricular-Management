@@ -31,3 +31,21 @@ export interface MyCertificatesResponse {
     items: CertificateItem[];
     pagination: MyCertificatesPagination;
 }
+
+export type CertificateVerificationStatus =
+    | 'VALID'
+    | 'LEGACY_VALID'
+    | 'NOT_FOUND'
+    | 'REVOKED_OR_INVALID'
+    | 'PROOF_REQUIRED'
+    | 'PROOF_MISMATCH';
+
+export interface CertificateVerifyResponse {
+    valid: boolean;
+    verificationStatus: CertificateVerificationStatus;
+    certificateCode?: string;
+    issuedAt?: string;
+    status?: CertificateStatus;
+    attendanceRate?: number;
+    meta?: Record<string, unknown>;
+}
