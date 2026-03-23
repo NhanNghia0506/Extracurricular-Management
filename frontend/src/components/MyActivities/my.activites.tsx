@@ -38,7 +38,11 @@ interface StatusPresentation {
     color: string;
 }
 
-const MyActivities: React.FC = () => {
+interface MyActivitiesProps {
+    searchTerm?: string;
+}
+
+const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
     const [activities, setActivities] = useState<MyActivityItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -156,13 +160,29 @@ const MyActivities: React.FC = () => {
 
     const getActivityId = (activity: MyActivityItem) => activity.activityId || activity._id || '';
 
-    const filteredByStatus = useMemo(() => {
-        if (activeStatusFilter === 'ALL') {
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
+    const filteredByKeyword = useMemo(() => {
+        if (!normalizedSearchTerm) {
             return activities;
         }
 
-        return activities.filter((activity) => getActivityStatusKey(activity) === activeStatusFilter);
-    }, [activities, activeStatusFilter, getActivityStatusKey]);
+        return activities.filter((activity) => [
+            activity.title,
+            activity.description,
+            activity.location?.address,
+        ]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(normalizedSearchTerm)));
+    }, [activities, normalizedSearchTerm]);
+
+    const filteredByStatus = useMemo(() => {
+        if (activeStatusFilter === 'ALL') {
+            return filteredByKeyword;
+        }
+
+        return filteredByKeyword.filter((activity) => getActivityStatusKey(activity) === activeStatusFilter);
+    }, [filteredByKeyword, activeStatusFilter, getActivityStatusKey]);
 
     const filterCounts = useMemo(() => {
         const counts = activities.reduce<Record<StatusFilterKey, number>>((accumulator, activity) => {
@@ -226,12 +246,17 @@ const MyActivities: React.FC = () => {
                     <div>{error}</div>
                 )}
                 {!loading && !error && participatedActivities.length === 0 && (
-                    <div>Không có hoạt động tham gia nào phù hợp với trạng thái đang chọn.</div>
+                    <div>
+                        {normalizedSearchTerm
+                            ? `Không có hoạt động tham gia nào phù hợp với từ khóa "${searchTerm.trim()}".`
+                            : 'Không có hoạt động tham gia nào phù hợp với trạng thái đang chọn.'}
+                    </div>
                 )}
                 {!loading && !error && participatedActivities.map((act) => {
                     const statusPresentation = getStatusPresentation(act);
                     const participantStatus = mapParticipantStatus(act.participantStatus);
                     const activityId = getActivityId(act);
+                    const canOpenFeedback = getActivityStatusKey(act) !== 'COMPLETED';
                     return (
                         <div key={activityId} className={styles.activityCard}>
                             <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
@@ -250,7 +275,12 @@ const MyActivities: React.FC = () => {
                                 <span className={styles.statePill}>
                                     {participantStatus.label}
                                 </span>
-                                <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                                <div className="d-flex align-items-center gap-2">
+                                    {canOpenFeedback && (
+                                        <Link to={`/activity-detail?id=${activityId}#feedback`} className={styles.actionLink}>Đánh giá</Link>
+                                    )}
+                                    <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
+                                </div>
                             </div>
                         </div>
                     );
@@ -271,7 +301,11 @@ const MyActivities: React.FC = () => {
                     <div>{error}</div>
                 )}
                 {!loading && !error && createdActivities.length === 0 && (
-                    <div>Không có hoạt động bạn tạo nào phù hợp với trạng thái đang chọn.</div>
+                    <div>
+                        {normalizedSearchTerm
+                            ? `Không có hoạt động bạn tạo nào phù hợp với từ khóa "${searchTerm.trim()}".`
+                            : 'Không có hoạt động bạn tạo nào phù hợp với trạng thái đang chọn.'}
+                    </div>
                 )}
                 {!loading && !error && createdActivities.map((act) => {
                     const statusPresentation = getStatusPresentation(act);

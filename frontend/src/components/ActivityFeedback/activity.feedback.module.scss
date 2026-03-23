@@ -1,0 +1,247 @@
+.feedbackContainer {
+    margin-top: 1.5rem;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 2fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.summaryBox {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.avgRating {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.totalText {
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.distributionBox {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.distRow {
+    display: grid;
+    grid-template-columns: 28px 1fr 32px;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+}
+
+.distBar {
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.distBarFill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+}
+
+.form {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #334155;
+}
+
+.starRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+
+.starBtn {
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.active {
+    color: #f59e0b;
+}
+
+.starHint {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    min-height: 110px;
+    resize: vertical;
+    padding: 0.75rem;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+.textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.formFooter {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.charCount {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.formActions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btnPrimary {
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 600;
+    padding: 0.55rem 0.95rem;
+}
+
+.btnSecondary {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #334155;
+    font-weight: 600;
+    padding: 0.55rem 0.95rem;
+}
+
+.btnPrimary:disabled,
+.btnSecondary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.item {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.8rem;
+}
+
+.itemHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+}
+
+.itemUser {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.itemTime {
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.itemComment {
+    color: #334155;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.statusText {
+    color: #64748b;
+    margin: 0;
+}
+
+.errorText {
+    color: #dc2626;
+    margin: 0;
+}
+
+.ctaWrap {
+    margin-top: 0.75rem;
+}
+
+.loadMoreBtn {
+    margin-top: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #334155;
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .formFooter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .formActions {
+        justify-content: flex-end;
+    }
+}

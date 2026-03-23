@@ -15,12 +15,20 @@ import { NOTIFICATION_UNREAD_COUNT_EVENT } from '../../../utils/notification-rea
 
 interface HeaderProps {
     onSearch?: (value: string) => void;
+    searchValue?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onSearch }) => {
+const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
     const navigate = useNavigate();
     const [user, setUser] = useState<{ name: string; email: string; avatar?: string | null } | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [localSearchValue, setLocalSearchValue] = useState(searchValue || '');
+
+    useEffect(() => {
+        if (typeof searchValue === 'string') {
+            setLocalSearchValue(searchValue);
+        }
+    }, [searchValue]);
 
     useEffect(() => {
         let isMounted = true;
@@ -96,7 +104,12 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
                             type="text"
                             className={styles.searchInput}
                             placeholder="Search activities, clubs, or events..."
-                            onChange={(e) => onSearch && onSearch(e.target.value)}
+                            value={typeof searchValue === 'string' ? searchValue : localSearchValue}
+                            onChange={(e) => {
+                                const nextValue = e.target.value;
+                                setLocalSearchValue(nextValue);
+                                onSearch && onSearch(nextValue);
+                            }}
                         />
                     </div>
 

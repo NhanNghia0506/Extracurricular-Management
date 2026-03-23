@@ -4,7 +4,11 @@ import activityService from '../../../services/activity.service';
 import { ActivityListItem } from '../../../types/activity.types';
 import { ApiResponse } from '../../../types/response.types';
 
-const Feed: React.FC = () => {
+interface FeedProps {
+    searchTerm?: string;
+}
+
+const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
     const [activities, setActivities] = useState<ActivityListItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -36,8 +40,31 @@ const Feed: React.FC = () => {
         []
     );
 
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
+    const filteredActivities = useMemo(() => {
+        if (!normalizedSearchTerm) {
+            return activities;
+        }
+
+        return activities.filter((activity) => {
+            const organizerName = typeof activity.organizerId === 'string'
+                ? activity.organizerId
+                : activity.organizerId?.name || '';
+
+            return [
+                activity.title,
+                activity.description,
+                activity.location?.address,
+                organizerName,
+            ]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(normalizedSearchTerm));
+        });
+    }, [activities, normalizedSearchTerm]);
+
     const posts: PostData[] = useMemo(() => {
-        return activities.map((activity, index) => {
+        return filteredActivities.map((activity, index) => {
             const organizerName = typeof activity.organizerId === 'string'
                 ? 'Unknown Organizer'
                 : activity.organizerId?.name || 'Unknown Organizer';
@@ -65,7 +92,7 @@ const Feed: React.FC = () => {
                 isMine: Boolean(activity.isMine),
             };
         });
-    }, [activities, baseUrl]);
+    }, [filteredActivities, baseUrl]);
 
     return (
         <div className="container-fluid p-0" style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -88,7 +115,9 @@ const Feed: React.FC = () => {
 
             {!loading && posts.length === 0 && !error && (
                 <div className="text-center py-4 text-muted">
-                    Chưa có hoạt động nào.
+                    {normalizedSearchTerm
+                        ? `Không tìm thấy hoạt động phù hợp với "${searchTerm.trim()}".`
+                        : 'Chưa có hoạt động nào.'}
                 </div>
             )}
         </div>

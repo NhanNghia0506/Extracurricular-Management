@@ -13,6 +13,7 @@ import { formatTime } from '../../utils/date-time';
 import CreateConversation from '../CreateConversation/create.conversation';
 import authService from '../../services/auth.service';
 import CommentSection from '../Comments/comment.section';
+import ActivityFeedbackSection from '../ActivityFeedback/activity.feedback.section';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -393,6 +394,12 @@ const ActivityDetail: React.FC = () => {
                     </section>
 
                     <CommentSection activityId={id} />
+                    <ActivityFeedbackSection
+                        activityId={id}
+                        activityStatus={activity.status}
+                        activityEndAt={activity.endAt}
+                        isRegistered={activity.isRegistered}
+                    />
                 </main>
 
                 {/* 3. Cột phải: Sidebar hành động */}
