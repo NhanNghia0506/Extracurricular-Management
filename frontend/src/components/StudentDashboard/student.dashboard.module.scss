@@ -1,0 +1,456 @@
+$primary-blue: #0056d2; // Màu xanh chính trong hình
+$bg-light: #f4f7fe;
+$text-gray: #6b7280;
+$success-green: #4ade80;
+
+.dashboardContainer {
+    background-color: $bg-light;
+    min-height: 100vh;
+    padding: 40px;
+    // font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+    // Header
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 40px;
+
+        .profileSection {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+
+            .avatarWrapper {
+                position: relative;
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                background: #fff;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: 2px dashed #ccc;
+
+                img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    border-radius: 50%;
+                }
+
+                .emptyAvatarText {
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #9ca3af;
+                }
+
+                .plusIcon {
+                    position: absolute;
+                    right: -5px;
+                    bottom: -5px;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    border: 3px solid #fff;
+                    padding: 0;
+                    background: $primary-blue;
+                    color: #fff;
+                    font-size: 18px;
+                    line-height: 1;
+                    display: inline-flex;
+                    justify-content: center;
+                    align-items: center;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0, 86, 210, 0.35);
+                    z-index: 10;
+                    transition: transform 0.2s ease;
+
+                    &:hover:not(:disabled) {
+                        transform: scale(1.1);
+                    }
+
+                    &:disabled {
+                        opacity: 0.7;
+                        cursor: not-allowed;
+                    }
+                }
+
+                .hiddenFileInput {
+                    display: none;
+                }
+            }
+
+            .nameInfo {
+                .statusTag {
+                    background-color: #d1fae5;
+                    color: #059669;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                }
+
+                h1 {
+                    font-size: 48px;
+                    margin: 8px 0;
+                    color: #1f2937;
+                    font-weight: 800;
+                }
+
+                .meta {
+                    display: flex;
+                    gap: 20px;
+                    color: $text-gray;
+                    font-size: 14px;
+
+                    i {
+                        color: $primary-blue;
+                        margin-right: 5px;
+                    }
+                }
+            }
+        }
+
+        .headerActions {
+            display: flex;
+            gap: 12px;
+
+            .btnEdit {
+                background: #f3f4f6;
+                color: #374151;
+                padding: 10px 20px;
+                border-radius: 8px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+            }
+        }
+    }
+
+    .editProfileCard {
+        margin-bottom: 24px;
+
+        h3 {
+            margin: 0 0 16px;
+            font-size: 18px;
+            color: #1f2937;
+        }
+
+        .editGrid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .formItem {
+            label {
+                display: block;
+                font-size: 12px;
+                color: #6b7280;
+                margin-bottom: 6px;
+                font-weight: 600;
+            }
+
+            input {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 10px;
+                font-size: 14px;
+                outline: none;
+
+                &:focus {
+                    border-color: $primary-blue;
+                    box-shadow: 0 0 0 3px rgba(0, 86, 210, 0.12);
+                }
+            }
+        }
+
+        .formActions {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+
+            .btnSave {
+                background: $primary-blue;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }
+        }
+    }
+
+    // Layout Grid
+    .contentGrid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 24px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+    }
+
+    // Personal Info Section
+    .personalInfo {
+        h2 {
+            font-size: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+
+            &::before {
+                content: "";
+                width: 4px;
+                height: 20px;
+                background: $primary-blue;
+                margin-right: 12px;
+                border-radius: 2px;
+            }
+        }
+
+        .infoGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+
+            .item {
+                label {
+                    display: block;
+                    font-size: 11px;
+                    color: #9ca3af;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 4px;
+                }
+
+                span {
+                    font-weight: 600;
+                    font-size: 15px;
+                    color: #374151;
+                }
+            }
+        }
+    }
+
+    // Training Summary (Màu xanh đậm)
+    .trainingSummary {
+        background: $primary-blue;
+        color: white;
+
+        h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        p {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 24px;
+        }
+
+        .gpaArea {
+            margin-bottom: 24px;
+
+            .gpaLabel {
+                font-size: 12px;
+                opacity: 0.8;
+            }
+
+            .gpaValue {
+                font-size: 52px;
+                font-weight: bold;
+                line-height: 1;
+            }
+        }
+
+        .stats {
+            display: flex;
+            gap: 12px;
+
+            .statBox {
+                background: rgba(255, 255, 255, 0.15);
+                padding: 16px;
+                border-radius: 12px;
+                flex: 1;
+
+                span {
+                    display: block;
+                    font-size: 10px;
+                    opacity: 0.7;
+                    margin-bottom: 4px;
+                }
+
+                strong {
+                    font-size: 18px;
+                }
+            }
+        }
+
+        .viewFullBtn {
+            width: 100%;
+            margin-top: 24px;
+            background: white;
+            color: $primary-blue;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    }
+
+    // Recent Activity (Phần dưới)
+    .recentActivity {
+        margin-top: 24px;
+
+        p {
+            margin: 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .activityItem {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+
+            .icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                &.success {
+                    background: #ecfdf5;
+                    color: $success-green;
+                }
+
+                &.blue {
+                    background: #eff6ff;
+                    color: $primary-blue;
+                }
+
+                &.warning {
+                    background: #fffbeb;
+                    color: #d97706;
+                }
+
+                &.danger {
+                    background: #fef2f2;
+                    color: #dc2626;
+                }
+            }
+
+            .details {
+                strong {
+                    display: block;
+                    font-size: 14px;
+                }
+
+                small {
+                    color: #9ca3af;
+                    font-size: 12px;
+                }
+            }
+        }
+    }
+
+    .errorText {
+        margin: 0 0 16px;
+        color: #b91c1c;
+        font-size: 14px;
+    }
+
+    @media (max-width: 992px) {
+        .editProfileCard {
+            .editGrid {
+                grid-template-columns: 1fr;
+            }
+        }
+    }
+
+    // Avatar Confirmation Dialog
+    .confirmDialogOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .confirmDialog {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        text-align: center;
+
+        h3 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            color: #1f2937;
+        }
+
+        p {
+            margin: 0 0 24px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+    }
+
+    .confirmDialogActions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+
+        .btnCancel {
+            background: #f3f4f6;
+            color: #374151;
+
+            &:hover:not(:disabled) {
+                background: #e5e7eb;
+            }
+        }
+
+        .btnConfirm {
+            background: $primary-blue;
+            color: white;
+            border-color: $primary-blue;
+
+            &:hover:not(:disabled) {
+                filter: brightness(0.95);
+            }
+        }
+    }
+}

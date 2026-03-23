@@ -58,6 +58,7 @@ class StudentService {
             name: user.name,
             email: user.email,
             avatar: user.avatar,
+            phone: user.phone,
             class: academicData.className,
             faculty: academicData.facultyName,
         } as StudentProfile;

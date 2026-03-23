@@ -119,12 +119,19 @@ const Header: React.FC<HeaderProps> = ({ onSearch }) => {
                                     {displayName && (
                                         <span className={styles.profileName}>{displayName}</span>
                                     )}
-                                    <UserAvatar
-                                        src={avatarUrl}
-                                        name={displayName}
-                                        alt="User Profile"
-                                        className={styles.avatar}
-                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.avatarButton}
+                                        onClick={() => navigate('/student-dashboard')}
+                                        aria-label="Mở trang hồ sơ sinh viên"
+                                    >
+                                        <UserAvatar
+                                            src={avatarUrl}
+                                            name={displayName}
+                                            alt="User Profile"
+                                            className={styles.avatar}
+                                        />
+                                    </button>
                                 </div>
                             </>
                         ) : (

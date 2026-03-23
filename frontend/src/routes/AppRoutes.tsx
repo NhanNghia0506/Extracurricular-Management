@@ -30,6 +30,7 @@ import ActivityApprovalPage from '../pages/ActivityApprovalPage';
 import OrganizerApprovalPage from '../pages/OrganizerApprovalPage';
 import VerifyCertificatePage from '../pages/VerifyCertificatePage';
 import authService from '../services/auth.service';
+import StudentDashboardPage from '../pages/StudentDashboardPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -82,6 +83,7 @@ const AppRoutes: React.FC = () => {
                         </ProtectedRoute>
                     }
                 />
+                <Route path="/student-dashboard" element={<StudentDashboardPage />} />
             </Route>
 
             <Route element={<NoSidebarLayout />}>

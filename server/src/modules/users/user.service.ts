@@ -9,6 +9,7 @@ import StudentService from "../students/student.service";
 import TeacherService from "../teachers/teacher.service";
 import { DeviceService } from "../devices/device.service";
 import { createFingerPrintHash } from "src/utils/createFingerPrintHash";
+import { UpdateProfileDto } from "./dtos/update-profile.dto";
 @Injectable()
 class UserService {
     constructor(
@@ -145,6 +146,63 @@ class UserService {
             name: user.name,
             email: user.email,
             avatar: user.avatar || null,
+            phone: user.phone || '',
+        };
+    }
+
+    async updateProfile(userId: string, payload: UpdateProfileDto) {
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy người dùng');
+        }
+
+        const updatePayload: Record<string, string> = {};
+        if (typeof payload.name === 'string') {
+            updatePayload.name = payload.name.trim();
+        }
+
+        if (typeof payload.avatar === 'string') {
+            updatePayload.avatar = payload.avatar.trim();
+        }
+
+        if (typeof payload.phone === 'string') {
+            updatePayload.phone = payload.phone.trim();
+        }
+
+        const updatedUser = await this.userRepository.updateById(userId, updatePayload);
+        if (!updatedUser) {
+            throw new NotFoundException('Không tìm thấy người dùng');
+        }
+
+        return {
+            id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            avatar: updatedUser.avatar || null,
+            phone: updatedUser.phone || '',
+        };
+    }
+
+    async updateAvatar(userId: string, avatarPath: string) {
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+            throw new NotFoundException('Không tìm thấy người dùng');
+        }
+
+        const updatedUser = await this.userRepository.updateById(userId, {
+            avatar: avatarPath,
+        });
+
+        if (!updatedUser) {
+            throw new NotFoundException('Không tìm thấy người dùng');
+        }
+
+        return {
+            id: updatedUser._id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            avatar: updatedUser.avatar || null,
+            phone: updatedUser.phone || '',
         };
     }
 }

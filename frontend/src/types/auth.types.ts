@@ -45,4 +45,11 @@ export interface UserProfile {
     email: string;
     name: string;
     avatar?: string | null;
+    phone?: string;
+}
+
+export interface UpdateProfileRequest {
+    name?: string;
+    avatar?: string;
+    phone?: string;
 }

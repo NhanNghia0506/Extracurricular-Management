@@ -20,4 +20,8 @@ export class UserRepository {
     async create(user: Partial<User>) {
         return this.userModel.create(user);
     }
+
+    async updateById(id: string, payload: Partial<User>) {
+        return this.userModel.findByIdAndUpdate(id, payload, { new: true });
+    }
 }

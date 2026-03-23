@@ -37,15 +37,19 @@ export const resolveAvatarSrc = (avatar?: string | null): string | undefined => 
     }
 
     const normalized = avatar.trim();
+    const apiBaseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
 
     if (/^(https?:|data:|blob:)/i.test(normalized)) {
         return normalized;
     }
 
     if (normalized.startsWith('/')) {
-        return normalized;
+        return `${apiBaseUrl}${normalized}`;
     }
 
-    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-    return `${apiBaseUrl.replace(/\/$/, '')}/uploads/${normalized}`;
+    if (normalized.startsWith('uploads/')) {
+        return `${apiBaseUrl}/${normalized}`;
+    }
+
+    return `${apiBaseUrl}/uploads/${normalized}`;
 };

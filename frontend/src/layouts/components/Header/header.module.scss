@@ -135,6 +135,15 @@
     text-overflow: ellipsis;
 }
 
+.avatarButton {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .avatar {
     width: 36px;
     height: 36px;

@@ -156,6 +156,7 @@ export interface StudentProfile {
   name: string;
   email: string;
   avatar: string;
+  phone?: string;
   class: string;
   faculty: string;
 }

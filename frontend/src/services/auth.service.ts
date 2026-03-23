@@ -1,6 +1,6 @@
 import apiService from './api.service';
 import { ApiResponse } from '../types/response.types';
-import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserProfile } from '../types/auth.types';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UpdateProfileRequest, UserProfile } from '../types/auth.types';
 import { getFingerPrintData } from '../utils/fingerprint';
 
 class AuthService {
@@ -38,6 +38,19 @@ class AuthService {
         const response = await apiService.get<ApiResponse<UserProfile>>('/user/me');
         return response.data;
     }
+
+    async updateProfile(payload: UpdateProfileRequest): Promise<ApiResponse<UserProfile>> {
+        const response = await apiService.patch<ApiResponse<UserProfile>>('/user/me', payload);
+        return response.data;
+    }
+
+    async uploadAvatar(file: File): Promise<ApiResponse<UserProfile>> {
+        const formData = new FormData();
+        formData.append('image', file);
+        const response = await apiService.patch<ApiResponse<UserProfile>>('/user/me/avatar', formData);
+        return response.data;
+    }
+
     logout(): void {
         localStorage.removeItem(this.AUTH_TOKEN_KEY);
         localStorage.removeItem(this.USER_INFO_KEY);
