@@ -13,6 +13,10 @@ export class UserRepository {
         return this.userModel.findOne({ email });
     }
 
+    async findBasicByEmail(email: string) {
+        return this.userModel.findOne({ email }).select('_id name email role status').exec();
+    }
+
     async findById(id: string) {
         return this.userModel.findById(id);
     }

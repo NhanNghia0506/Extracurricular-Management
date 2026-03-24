@@ -485,6 +485,15 @@ const ActivityDetail: React.FC = () => {
                                 )}
                             </>
                         )}
+                        {(activity.isOwner || currentUserRole === 'ADMIN') && (
+                            <button
+                                className={styles.registerBtn}
+                                onClick={handleGoToParticipants}
+                            >
+                                <i className="fa-solid fa-user-group"></i>
+                                Danh sách sinh viên đăng ký
+                            </button>
+                        )}
                         {(activity.isOwner || canAccessChat || activity.canDelete) && (
                             <div className={styles.iconActionRow}>
                                 {activity.isOwner && (
@@ -575,14 +584,6 @@ const ActivityDetail: React.FC = () => {
                                 title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
                             >
                                 <i className="fa-solid fa-chart-line"></i> Dashboard điểm danh
-                            </button>
-                        )}
-                        {(activity.isOwner || currentUserRole === 'ADMIN') && (
-                            <button
-                                className={styles.actionBtnOutline}
-                                onClick={handleGoToParticipants}
-                            >
-                                <i className="fa-solid fa-user-group"></i> Danh sách sinh viên đăng ký
                             </button>
                         )}
                         <button className={styles.actionBtnOutline}>

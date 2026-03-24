@@ -205,6 +205,11 @@ class UserService {
             phone: updatedUser.phone || '',
         };
     }
+
+    async findBasicByEmail(email: string) {
+        const normalizedEmail = email.trim().toLowerCase();
+        return this.userRepository.findBasicByEmail(normalizedEmail);
+    }
 }
 
 export default UserService; 

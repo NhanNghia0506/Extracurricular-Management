@@ -185,9 +185,13 @@ const Organizers: React.FC = () => {
                                 <button className={styles.btnView} type="button" onClick={() => navigate('/create-activity')}>
                                     Tạo hoạt động
                                 </button>
-                                <a className={styles.btnContact} href={`mailto:${org.email}`}>
-                                    Liên hệ
-                                </a>
+                                <button
+                                    className={styles.btnContact}
+                                    type="button"
+                                    onClick={() => navigate(`/members-management?organizerId=${org.id}`)}
+                                >
+                                    Thành viên
+                                </button>
                             </div>
                         </div>
                     ))}

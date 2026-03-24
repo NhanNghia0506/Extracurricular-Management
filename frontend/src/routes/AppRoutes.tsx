@@ -31,6 +31,7 @@ import OrganizerApprovalPage from '../pages/OrganizerApprovalPage';
 import VerifyCertificatePage from '../pages/VerifyCertificatePage';
 import authService from '../services/auth.service';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
+import MembersManagementPage from '../pages/MembersManagementPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -117,6 +118,7 @@ const AppRoutes: React.FC = () => {
                     }
                 />
                 <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
+                <Route path="/members-management" element={<MembersManagementPage />} />
             </Route>
 
             <Route element={<ChatLayout />}>
