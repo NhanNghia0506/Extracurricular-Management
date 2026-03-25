@@ -33,6 +33,7 @@ import authService from '../services/auth.service';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
 import MembersManagementPage from '../pages/MembersManagementPage';
 import OrganizerDetailPage from '../pages/OrganizerDetailPage';
+import ActivityCategoryManagement from '../pages/ActivityCategoryManagementPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -116,6 +117,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <OrganizerApprovalPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/activity-categories"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ActivityCategoryManagement />
                         </ProtectedRoute>
                     }
                 />
