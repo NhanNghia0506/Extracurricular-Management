@@ -6,6 +6,8 @@ import { CheckinStatus } from 'src/global/globalEnum';
 import type { Request } from 'express';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
+import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.dto';
+import { AdminGuard } from 'src/guards/admin.guard';
 
 @Controller('checkins')
 export class CheckinController {
@@ -60,5 +62,11 @@ export class CheckinController {
         }
 
         return this.checkinService.getMyAttendanceHistory(userId, query);
+    }
+
+    @Get('admin/training-score-report')
+    @UseGuards(AuthGuard, AdminGuard)
+    async getTrainingScoreReport(@Query() query: TrainingScoreReportQueryDto) {
+        return this.checkinService.getTrainingScoreReport(query);
     }
 }

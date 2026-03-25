@@ -34,6 +34,7 @@ import StudentDashboardPage from '../pages/StudentDashboardPage';
 import MembersManagementPage from '../pages/MembersManagementPage';
 import OrganizerDetailPage from '../pages/OrganizerDetailPage';
 import ActivityCategoryManagement from '../pages/ActivityCategoryManagementPage';
+import TrainingScoreReportPage from '../pages/TrainingScoreReportPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -125,6 +126,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <ActivityCategoryManagement />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/training-score-report"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <TrainingScoreReportPage />
                         </ProtectedRoute>
                     }
                 />

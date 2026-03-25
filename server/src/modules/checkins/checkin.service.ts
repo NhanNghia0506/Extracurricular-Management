@@ -15,6 +15,13 @@ import { CertificateService } from '../certificates/certificate.service';
 import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
+import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.dto';
+import {
+    TrainingScoreClassItem,
+    TrainingScoreFacultyItem,
+    TrainingScoreReportView,
+    TrainingScoreStudentItem,
+} from './checkin.repository';
 
 export interface MyAttendanceHistorySummary {
     totalParticipatedActivities: number;
@@ -45,6 +52,25 @@ export interface MyAttendanceHistoryItem {
 export interface MyAttendanceHistoryResponse {
     summary: MyAttendanceHistorySummary;
     items: MyAttendanceHistoryItem[];
+    pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+    };
+}
+
+export interface TrainingScoreReportResponse {
+    view: TrainingScoreReportView;
+    summary: {
+        totalTrainingScore: number;
+        totalCompletedActivities: number;
+        totalStudents: number;
+        averageTrainingScore: number;
+    };
+    items: Array<TrainingScoreStudentItem | TrainingScoreClassItem | TrainingScoreFacultyItem>;
     pagination: {
         page: number;
         limit: number;
@@ -504,6 +530,52 @@ export class CheckinService {
                 failedCount: summary.failedCount,
             },
             items: mappedItems,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            },
+        };
+    }
+
+    async getTrainingScoreReport(query: TrainingScoreReportQueryDto): Promise<TrainingScoreReportResponse> {
+        const page = this.parsePaginationNumber(query.page, 1, 'page');
+        const limit = Math.min(this.parsePaginationNumber(query.limit, 20, 'limit'), 1000);
+        const fromDate = this.parseDate(query.fromDate, 'fromDate');
+        const toDate = this.parseDate(query.toDate, 'toDate', true);
+        const view: TrainingScoreReportView = query.view || 'student';
+
+        if (fromDate && toDate && fromDate > toDate) {
+            throw new BadRequestException('fromDate không được lớn hơn toDate');
+        }
+
+        if (query.facultyId && !Types.ObjectId.isValid(query.facultyId)) {
+            throw new BadRequestException('facultyId không hợp lệ');
+        }
+
+        if (query.classId && !Types.ObjectId.isValid(query.classId)) {
+            throw new BadRequestException('classId không hợp lệ');
+        }
+
+        const { items, total, summary } = await this.checkinRepository.findTrainingScoreReport({
+            view,
+            fromDate,
+            toDate,
+            facultyId: query.facultyId,
+            classId: query.classId,
+            page,
+            limit,
+        });
+
+        const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+
+        return {
+            view,
+            summary,
+            items,
             pagination: {
                 page,
                 limit,
