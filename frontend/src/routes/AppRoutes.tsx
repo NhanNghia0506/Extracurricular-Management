@@ -32,6 +32,7 @@ import VerifyCertificatePage from '../pages/VerifyCertificatePage';
 import authService from '../services/auth.service';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
 import MembersManagementPage from '../pages/MembersManagementPage';
+import OrganizerDetailPage from '../pages/OrganizerDetailPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -76,6 +77,7 @@ const AppRoutes: React.FC = () => {
                 <Route path="/my-attendance" element={<MyAttendancePage />} />
                 <Route path="/my-certificates" element={<MyCertificatesPage />} />
                 <Route path="/organizations" element={<OrganizersPage />} />
+                <Route path="/organizer-detail" element={<OrganizerDetailPage />} />
                 <Route
                     path="/create-organizer"
                     element={

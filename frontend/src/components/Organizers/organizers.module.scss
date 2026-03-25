@@ -157,11 +157,17 @@ $bg-light: #f8fafc;
     border-radius: 16px;
     padding: 24px;
     border: 1px solid $border-color;
+    cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 
     &:hover {
         transform: translateY(-4px);
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    &:focus-visible {
+        outline: 2px solid #93c5fd;
+        outline-offset: 3px;
     }
 
     .cardHeader {
@@ -235,6 +241,7 @@ $bg-light: #f8fafc;
         height: 63px; // Giới hạn 3 dòng để các card đều nhau
         overflow: hidden;
         display: -webkit-box;
+        line-clamp: 3;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
     }
@@ -259,12 +266,22 @@ $bg-light: #f8fafc;
             background: $primary-blue;
             color: white;
             border: none;
+
+            &:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
         }
 
         .btnContact {
             background: #f1f5f9;
             color: $text-muted;
             border: none;
+
+            &:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+            }
         }
     }
 }

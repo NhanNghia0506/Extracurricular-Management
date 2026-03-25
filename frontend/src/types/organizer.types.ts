@@ -13,6 +13,29 @@ export interface Organizer {
     updatedAt?: string;
 }
 
+export interface OrganizerOverviewStats {
+    activityCount: number;
+    totalParticipants: number;
+    averageAttendanceRate: number;
+}
+
+export interface OrganizerOverviewActivity {
+    id: string;
+    title: string;
+    image?: string;
+    startAt: string;
+    endAt?: string | null;
+    status: string;
+    participantCount: number;
+    attendanceRate: number;
+}
+
+export interface OrganizerOverviewResponse {
+    organizer: Organizer;
+    stats: OrganizerOverviewStats;
+    recentActivities: OrganizerOverviewActivity[];
+}
+
 export interface OrganizerApprovalStatsResponse {
     pending: number;
     approved: number;

@@ -1,9 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { OrganizerApprovalRecord, OrganizerRepository, OrganizerUserReference } from "./organizer.repository";
 import { CreateOrganizerDto } from "./dtos/create.organizer.dto";
-import { Types } from "mongoose";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
 import { OrganizerMemberService } from "../organizer-members/organizer-member.service";
-import { NotificationPriority, NotificationType, OrganizerApprovalStatus, OrganizerMemberRole, UserRole } from "src/global/globalEnum";
+import { ActivityApprovalStatus, CheckinStatus, NotificationPriority, NotificationType, OrganizerApprovalStatus, OrganizerMemberRole, UserRole } from "src/global/globalEnum";
 import {
     OrganizerApprovalDashboardResponse,
     OrganizerApprovalDetailResponse,
@@ -13,6 +14,13 @@ import {
 import { NotificationService } from "../notifications/notification.service";
 import { OrganizerApprovalQueryDto } from "./dtos/organizer-approval-query.dto";
 import { UpdateOrganizerApprovalDto } from "./dtos/update-organizer-approval.dto";
+import { UpdateOrganizerDto } from "./dtos/update.organizer.dto";
+import { Organizer } from "./organizer.entity";
+import { Activity, ActivityDocument } from "../activities/activity.entity";
+import { ActivityParticipant, ParticipantStatus } from "../activity-participants/activity-participant.entity";
+import { CheckinSession } from "../checkin-sessions/checkin-session.entity";
+import { Checkin } from "../checkins/checkin.entity";
+import { UploadService } from "src/interceptors/upload.service";
 
 type OrganizerApprovalValue = OrganizerApprovalStatus;
 
@@ -31,6 +39,17 @@ export class OrganizerService {
         private readonly organizerRepository: OrganizerRepository,
         private readonly organizerMemberService: OrganizerMemberService,
         private readonly notificationService: NotificationService,
+        private readonly uploadService: UploadService,
+        @InjectModel(Organizer.name)
+        private readonly organizerModel: Model<Organizer>,
+        @InjectModel(Activity.name)
+        private readonly activityModel: Model<ActivityDocument>,
+        @InjectModel(ActivityParticipant.name)
+        private readonly activityParticipantModel: Model<ActivityParticipant>,
+        @InjectModel(CheckinSession.name)
+        private readonly checkinSessionModel: Model<CheckinSession>,
+        @InjectModel(Checkin.name)
+        private readonly checkinModel: Model<Checkin>,
     ) { }
 
     async create(createdBy: string, organizerData: CreateOrganizerDto) {
@@ -68,8 +87,250 @@ export class OrganizerService {
         return this.organizerRepository.findById(id);
     }
 
-    update(id: string, organizerData: Partial<CreateOrganizerDto>) {
-        return this.organizerRepository.update(id, organizerData);
+    async getOrganizerOverview(id: string) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('ID phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const organizerId = new Types.ObjectId(id);
+        const organizer = await this.organizerModel.findById(organizerId).lean();
+
+        if (!organizer) {
+            throw new NotFoundException('Không tìm thấy ban tổ chức với ID đã cho');
+        }
+
+        const approvedActivities = await this.activityModel
+            .find(
+                {
+                    organizerId,
+                    approvalStatus: ActivityApprovalStatus.APPROVED,
+                },
+                {
+                    _id: 1,
+                    title: 1,
+                    image: 1,
+                    startAt: 1,
+                    endAt: 1,
+                    status: 1,
+                    createdAt: 1,
+                },
+            )
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const activityIds = approvedActivities.map((item) => item._id as Types.ObjectId);
+
+        if (activityIds.length === 0) {
+            return {
+                organizer: {
+                    id: organizer._id.toString(),
+                    name: organizer.name,
+                    email: organizer.email,
+                    phone: organizer.phone,
+                    description: organizer.description || '',
+                    image: organizer.image || '',
+                    createdAt: organizer.createdAt || null,
+                },
+                stats: {
+                    activityCount: 0,
+                    totalParticipants: 0,
+                    averageAttendanceRate: 0,
+                },
+                recentActivities: [],
+            };
+        }
+
+        const participantSummaryRaw = await this.activityParticipantModel.aggregate<{
+            _id: Types.ObjectId;
+            registered: number;
+        }>([
+            {
+                $match: {
+                    activityId: { $in: activityIds },
+                    $or: [
+                        { status: { $exists: false } },
+                        { status: null },
+                        { status: ParticipantStatus.APPROVED },
+                    ],
+                },
+            },
+            {
+                $group: {
+                    _id: '$activityId',
+                    registered: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const attendanceSummaryRaw = await this.checkinSessionModel.aggregate<{
+            _id: Types.ObjectId;
+            attended: number;
+        }>([
+            {
+                $match: {
+                    activityId: { $in: activityIds },
+                },
+            },
+            {
+                $lookup: {
+                    from: this.checkinModel.collection.name,
+                    localField: '_id',
+                    foreignField: 'checkinSessionId',
+                    as: 'checkins',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$checkins',
+                    preserveNullAndEmptyArrays: false,
+                },
+            },
+            {
+                $match: {
+                    'checkins.status': {
+                        $in: [CheckinStatus.SUCCESS, CheckinStatus.LATE],
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        activityId: '$activityId',
+                        userId: '$checkins.userId',
+                    },
+                },
+            },
+            {
+                $group: {
+                    _id: '$_id.activityId',
+                    attended: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const participantSummary = new Map(
+            participantSummaryRaw.map((item) => [item._id.toString(), item.registered]),
+        );
+        const attendanceSummary = new Map(
+            attendanceSummaryRaw.map((item) => [item._id.toString(), item.attended]),
+        );
+
+        const totalParticipants = participantSummaryRaw.reduce((sum, item) => sum + item.registered, 0);
+
+        let totalRate = 0;
+        let rateSamples = 0;
+
+        for (const activity of approvedActivities) {
+            const key = activity._id.toString();
+            const registered = participantSummary.get(key) ?? 0;
+            if (registered <= 0) {
+                continue;
+            }
+
+            const attended = attendanceSummary.get(key) ?? 0;
+            totalRate += (attended / registered) * 100;
+            rateSamples += 1;
+        }
+
+        const averageAttendanceRate = rateSamples > 0
+            ? Number((totalRate / rateSamples).toFixed(1))
+            : 0;
+
+        return {
+            organizer: {
+                id: organizer._id.toString(),
+                name: organizer.name,
+                email: organizer.email,
+                phone: organizer.phone,
+                description: organizer.description || '',
+                image: organizer.image || '',
+                createdAt: organizer.createdAt || null,
+            },
+            stats: {
+                activityCount: approvedActivities.length,
+                totalParticipants,
+                averageAttendanceRate,
+            },
+            recentActivities: approvedActivities.slice(0, 6).map((activity) => ({
+                id: activity._id.toString(),
+                title: activity.title,
+                image: activity.image || '',
+                startAt: activity.startAt,
+                endAt: activity.endAt || null,
+                status: activity.status,
+                participantCount: participantSummary.get(activity._id.toString()) ?? 0,
+                attendanceRate: (() => {
+                    const registered = participantSummary.get(activity._id.toString()) ?? 0;
+                    if (registered <= 0) {
+                        return 0;
+                    }
+                    const attended = attendanceSummary.get(activity._id.toString()) ?? 0;
+                    return Number(((attended / registered) * 100).toFixed(1));
+                })(),
+            })),
+        };
+    }
+
+    async updateOrganizerByManager(id: string, actorUserId: string, organizerData: UpdateOrganizerDto) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('ID phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const currentOrganizer = await this.organizerRepository.findById(id);
+        if (!currentOrganizer) {
+            throw new NotFoundException('Không tìm thấy ban tổ chức với ID đã cho');
+        }
+
+        const actorMember = await this.organizerMemberService.findByUserIdAndOrganizerId(actorUserId, id);
+        if (!actorMember || !actorMember.isActive) {
+            throw new ForbiddenException('Bạn không thuộc tổ chức này');
+        }
+
+        if (actorMember.role !== OrganizerMemberRole.MANAGER) {
+            throw new ForbiddenException('Chỉ manager của tổ chức mới có quyền cập nhật thông tin ban tổ chức');
+        }
+
+        const payload: Partial<Organizer> = {};
+
+        if (typeof organizerData.name === 'string') {
+            payload.name = organizerData.name.trim();
+        }
+
+        if (typeof organizerData.email === 'string') {
+            payload.email = organizerData.email.trim();
+        }
+
+        if (typeof organizerData.phone === 'string') {
+            payload.phone = organizerData.phone.trim();
+        }
+
+        if (typeof organizerData.description === 'string') {
+            payload.description = organizerData.description.trim();
+        }
+
+        if (typeof organizerData.image === 'string' && organizerData.image.trim()) {
+            payload.image = organizerData.image.trim();
+        }
+
+        const updatedOrganizer = await this.organizerRepository.update(id, payload);
+        if (!updatedOrganizer) {
+            throw new NotFoundException('Lỗi khi cập nhật ban tổ chức');
+        }
+
+        if (
+            payload.image &&
+            typeof currentOrganizer.image === 'string' &&
+            currentOrganizer.image &&
+            currentOrganizer.image !== payload.image
+        ) {
+            try {
+                this.uploadService.deleteFile(currentOrganizer.image);
+            } catch {
+                // Do not fail update flow when old image cleanup fails.
+            }
+        }
+
+        return updatedOrganizer;
     }
 
     delete(id: string) {

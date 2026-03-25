@@ -7,6 +7,7 @@ import { UploadService } from "src/interceptors/upload.service";
 import type { Request as ExpressRequest } from 'express';
 import { OrganizerApprovalQueryDto } from "./dtos/organizer-approval-query.dto";
 import { UpdateOrganizerApprovalDto } from "./dtos/update-organizer-approval.dto";
+import { UpdateOrganizerDto } from "./dtos/update.organizer.dto";
 
 @Controller("organizers")
 export class OrganizerController {
@@ -72,14 +73,43 @@ export class OrganizerController {
         return this.organizerService.reviewOrganizer(id, req.user!.id!, req.user?.role, reviewDto);
     }
 
-    @Get(":id")
-    findById(@Param("id") id: string) {
+    @Get(':id/overview')
+    getOverview(@Param('id') id: string) {
+        return this.organizerService.getOrganizerOverview(id);
+    }
+
+    @Get(':id')
+    findById(@Param('id') id: string) {
         return this.organizerService.findById(id);
     }
 
     @Put(":id")
-    update(@Param("id") id: string, @Body() updateOrganizerDto: Partial<CreateOrganizerDto>) {
-        return this.organizerService.update(id, updateOrganizerDto);
+    @UseGuards(AuthGuard)
+    @UseInterceptors(createUploadImageInterceptor())
+    async update(
+        @Param("id") id: string,
+        @Body() updateOrganizerDto: UpdateOrganizerDto,
+        @Req() req: ExpressRequest,
+        @UploadedFile() file: Express.Multer.File | undefined,
+    ) {
+        const uploadedFilename = file?.filename;
+
+        try {
+            if (uploadedFilename) {
+                updateOrganizerDto.image = uploadedFilename;
+            }
+
+            return await this.organizerService.updateOrganizerByManager(
+                id,
+                req.user!.id!,
+                updateOrganizerDto,
+            );
+        } catch (error) {
+            if (uploadedFilename) {
+                this.uploadService.deleteFile(uploadedFilename);
+            }
+            throw error;
+        }
     }
 
     @Delete(":id")

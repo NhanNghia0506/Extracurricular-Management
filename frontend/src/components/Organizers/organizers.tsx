@@ -50,6 +50,7 @@ const Organizers: React.FC = () => {
     const isAdmin = currentUser?.role === 'ADMIN';
     const [searchTerm, setSearchTerm] = useState('');
     const [organizers, setOrganizers] = useState<Array<ReturnType<typeof normalizeOrganizer>>>([]);
+    const [myOrganizerIds, setMyOrganizerIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -78,6 +79,30 @@ const Organizers: React.FC = () => {
 
         void fetchOrganizers();
     }, []);
+
+    useEffect(() => {
+        const fetchMyOrganizations = async () => {
+            if (!currentUser?.id) {
+                setMyOrganizerIds([]);
+                return;
+            }
+
+            try {
+                const response = await organizerService.myOrganizations(currentUser.id);
+                const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+                const ids = rows
+                    .map((item: any) => String(item?.organizerId?._id || item?.organizerId || ''))
+                    .filter((id: string) => Boolean(id));
+
+                setMyOrganizerIds(ids);
+            } catch (error) {
+                console.error('Không thể tải danh sách tổ chức của người dùng:', error);
+                setMyOrganizerIds([]);
+            }
+        };
+
+        void fetchMyOrganizations();
+    }, [currentUser?.id]);
 
     const filteredOrganizers = useMemo(() => {
         const normalizedKeyword = searchTerm.trim().toLowerCase();
@@ -147,54 +172,90 @@ const Organizers: React.FC = () => {
                 <div className={styles.statePanel}>Không tìm thấy ban tổ chức phù hợp.</div>
             ) : (
                 <div className={styles.directoryGrid}>
-                    {filteredOrganizers.map((org) => (
-                        <div key={org.id} className={styles.organizerCard}>
-                            <div className={styles.cardHeader}>
-                                <div className={styles.logoBadge}>
-                                    {org.image ? (
-                                        <img src={org.image} alt={org.name} className={styles.logoImage} />
-                                    ) : (
-                                        <FontAwesomeIcon icon={faBuildingUser} />
-                                    )}
+                    {filteredOrganizers.map((org) => {
+                        const canManageMembers = myOrganizerIds.includes(org.id);
+
+                        return (
+                            <div
+                                key={org.id}
+                                className={styles.organizerCard}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => navigate(`/organizer-detail?id=${org.id}`)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        navigate(`/organizer-detail?id=${org.id}`);
+                                    }
+                                }}
+                            >
+                                <div className={styles.cardHeader}>
+                                    <div className={styles.logoBadge}>
+                                        {org.image ? (
+                                            <img src={org.image} alt={org.name} className={styles.logoImage} />
+                                        ) : (
+                                            <FontAwesomeIcon icon={faBuildingUser} />
+                                        )}
+                                    </div>
+                                    <div className={styles.badgeInfo}>
+                                        <span className={styles.typeTag}>{getApprovalLabel(org.approvalStatus)}</span>
+                                        <h3>{org.name}</h3>
+                                        <span className={styles.facultyName}>Ban tổ chức trong hệ thống</span>
+                                    </div>
                                 </div>
-                                <div className={styles.badgeInfo}>
-                                    <span className={styles.typeTag}>{getApprovalLabel(org.approvalStatus)}</span>
-                                    <h3>{org.name}</h3>
-                                    <span className={styles.facultyName}>Ban tổ chức trong hệ thống</span>
+
+                                <div className={styles.contactInfo}>
+                                    <div className={styles.infoRow}>
+                                        <FontAwesomeIcon icon={faEnvelope} /> <span>{org.email}</span>
+                                    </div>
+                                    <div className={styles.infoRow}>
+                                        <FontAwesomeIcon icon={faPhoneAlt} /> <span>{org.phone}</span>
+                                    </div>
+                                </div>
+
+                                <p className={styles.description}>
+                                    {org.description || (org.approvalStatus === 'APPROVED'
+                                        ? 'Ban tổ chức đã được phê duyệt và sẵn sàng quản lý các hoạt động trong hệ thống.'
+                                        : org.approvalStatus === 'REJECTED'
+                                            ? 'Ban tổ chức này đã bị từ chối trong đợt xét duyệt gần nhất.'
+                                            : 'Ban tổ chức đang chờ quản trị viên phê duyệt trước khi sử dụng đầy đủ tính năng.')}
+                                </p>
+
+                                <div className={styles.cardActions}>
+                                    <button
+                                        className={styles.btnView}
+                                        type="button"
+                                        disabled={!canManageMembers}
+                                        title={!canManageMembers ? 'Bạn không thuộc ban tổ chức này' : undefined}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            if (!canManageMembers) {
+                                                return;
+                                            }
+                                            navigate('/create-activity');
+                                        }}
+                                    >
+                                        Tạo hoạt động
+                                    </button>
+                                    <button
+                                        className={styles.btnContact}
+                                        type="button"
+                                        disabled={!canManageMembers}
+                                        title={!canManageMembers ? 'Bạn không thuộc ban tổ chức này' : undefined}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            if (!canManageMembers) {
+                                                return;
+                                            }
+                                            navigate(`/members-management?organizerId=${org.id}`);
+                                        }}
+                                    >
+                                        Thành viên
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className={styles.contactInfo}>
-                                <div className={styles.infoRow}>
-                                    <FontAwesomeIcon icon={faEnvelope} /> <span>{org.email}</span>
-                                </div>
-                                <div className={styles.infoRow}>
-                                    <FontAwesomeIcon icon={faPhoneAlt} /> <span>{org.phone}</span>
-                                </div>
-                            </div>
-
-                            <p className={styles.description}>
-                                {org.description || (org.approvalStatus === 'APPROVED'
-                                    ? 'Ban tổ chức đã được phê duyệt và sẵn sàng quản lý các hoạt động trong hệ thống.'
-                                    : org.approvalStatus === 'REJECTED'
-                                        ? 'Ban tổ chức này đã bị từ chối trong đợt xét duyệt gần nhất.'
-                                        : 'Ban tổ chức đang chờ quản trị viên phê duyệt trước khi sử dụng đầy đủ tính năng.')}
-                            </p>
-
-                            <div className={styles.cardActions}>
-                                <button className={styles.btnView} type="button" onClick={() => navigate('/create-activity')}>
-                                    Tạo hoạt động
-                                </button>
-                                <button
-                                    className={styles.btnContact}
-                                    type="button"
-                                    onClick={() => navigate(`/members-management?organizerId=${org.id}`)}
-                                >
-                                    Thành viên
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

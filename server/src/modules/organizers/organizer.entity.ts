@@ -58,6 +58,9 @@ export class Organizer {
 
     @Prop({ required: true, default: 1 })
     status: number;
+
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 export const OrganizerSchema = SchemaFactory.createForClass(Organizer);
