@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from "@nestjs/common";
 import { ActivityParticipantRepository } from "./activity-participant.repository";
 import { CreateActivityParticipantDto } from "./dtos/create.activity-participant.dto";
-import { ActivityParticipant } from "./activity-participant.entity";
+import { ActivityParticipant, ParticipantStatus } from "./activity-participant.entity";
 import { Types } from "mongoose";
 import { ActivityService } from "../activities/activity.service";
 import { ActivityApprovalStatus } from "src/global/globalEnum";
@@ -35,11 +35,7 @@ export class ActivityParticipantService {
         const activityParticipant = {
             activityId: new Types.ObjectId(activityParticipantData.activityId),
             userId: new Types.ObjectId(userId),
-            status: activityParticipantData.status,
-            approvedBy: activityParticipantData.approvedBy
-                ? new Types.ObjectId(activityParticipantData.approvedBy)
-                : null,
-            approvedAt: activityParticipantData.approvedAt || null,
+            status: ParticipantStatus.REGISTERED,
             registeredAt: activityParticipantData.registeredAt || new Date(),
         } as ActivityParticipant;
 
@@ -58,6 +54,10 @@ export class ActivityParticipantService {
     // Lấy danh sách thành viên tham gia một hoạt động
     findByActivityId(activityId: string): Promise<ActivityParticipant[]> {
         return this.activityParticipantRepository.findByActivityId(activityId);
+    }
+
+    findApprovedByActivityId(activityId: string): Promise<ActivityParticipant[]> {
+        return this.activityParticipantRepository.findApprovedByActivityId(activityId);
     }
 
     findByActivityAndUserId(activityId: string, userId: string): Promise<ActivityParticipant | null> {

@@ -147,11 +147,7 @@ export class OrganizerService {
             {
                 $match: {
                     activityId: { $in: activityIds },
-                    $or: [
-                        { status: { $exists: false } },
-                        { status: null },
-                        { status: ParticipantStatus.APPROVED },
-                    ],
+                    status: { $ne: ParticipantStatus.CANCELLED },
                 },
             },
             {

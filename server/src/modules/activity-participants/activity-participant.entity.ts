@@ -4,6 +4,7 @@ import { Document, Types } from "mongoose";
 export type ActivityParticipantDocument = ActivityParticipant & Document;
 
 export enum ParticipantStatus {
+    REGISTERED = 'REGISTERED',
     PENDING = 'PENDING',
     APPROVED = 'APPROVED',
     REJECTED = 'REJECTED',
@@ -20,29 +21,17 @@ export class ActivityParticipant {
 
     @Prop({
         required: false,
-        enum: Object.values(ParticipantStatus)
+        enum: Object.values(ParticipantStatus),
+        default: ParticipantStatus.REGISTERED,
     })
     status?: ParticipantStatus;
 
     @Prop({
         required: false,
-        type: Types.ObjectId,
-        ref: 'User',
+        type: Date,
         default: null
     })
-    approvedBy?: Types.ObjectId;
-
-    @Prop({
-        required: false,
-        default: null
-    })
-    approvedAt?: Date;
-
-    @Prop({
-        required: false,
-        default: null
-    })
-    registeredAt: Date;
+    registeredAt?: Date | null;
 }
 
 export const ActivityParticipantSchema = SchemaFactory.createForClass(ActivityParticipant);

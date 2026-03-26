@@ -21,14 +21,14 @@ export class Notification {
     @Prop({ required: true })
     message: string;
 
-    @Prop({ 
+    @Prop({
         required: true,
         enum: Object.values(NotificationType),
         default: NotificationType.SYSTEM,
     })
     type: NotificationType;
 
-    @Prop({ 
+    @Prop({
         enum: Object.values(NotificationPriority),
         default: NotificationPriority.NORMAL,
     })
@@ -56,3 +56,4 @@ export const NotificationSchema = SchemaFactory.createForClass(Notification);
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, isRead: 1 });
 NotificationSchema.index({ userId: 1, type: 1 });
+NotificationSchema.index({ userId: 1, groupKey: 1 });

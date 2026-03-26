@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Activity } from "./activity.entity";
 import { Model, Types } from "mongoose";
-import { ActivityApprovalStatus } from "src/global/globalEnum";
+import { ActivityApprovalStatus, ActivityStatus } from "src/global/globalEnum";
 
 export interface ActivityNamedReference {
     _id?: Types.ObjectId;
@@ -60,7 +60,22 @@ export class ActivityRepository {
             .exec();
     }
 
-        findAllForApproval(approvalStatus?: ActivityApprovalStatus): Promise<ActivityApprovalRecord[]> {
+    findActivitiesStartingBetween(start: Date, end: Date): Promise<Array<Activity & { _id: Types.ObjectId }>> {
+        return this.activityModel
+            .find({
+                approvalStatus: ActivityApprovalStatus.APPROVED,
+                status: { $nin: [ActivityStatus.CANCELLED, ActivityStatus.COMPLETED] },
+                startAt: {
+                    $gte: start,
+                    $lte: end,
+                },
+            })
+            .select('_id title startAt')
+            .lean<Array<Activity & { _id: Types.ObjectId }>>()
+            .exec();
+    }
+
+    findAllForApproval(approvalStatus?: ActivityApprovalStatus): Promise<ActivityApprovalRecord[]> {
         const filter = approvalStatus ? { approvalStatus } : {};
         return this.activityModel
             .find(filter)
@@ -73,7 +88,7 @@ export class ActivityRepository {
             .exec();
     }
 
-        findApprovalById(id: string): Promise<ActivityApprovalRecord | null> {
+    findApprovalById(id: string): Promise<ActivityApprovalRecord | null> {
         return this.activityModel
             .findById(id)
             .populate('organizerId', 'name')

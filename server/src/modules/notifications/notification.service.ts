@@ -55,6 +55,40 @@ export class NotificationService {
         return notification;
     }
 
+    async createIfNotExistsByGroupKey(createNotificationDto: CreateNotificationDto) {
+        const groupKey = createNotificationDto.groupKey?.trim();
+
+        if (!groupKey) {
+            const notification = await this.create(createNotificationDto);
+            return {
+                notification,
+                created: true,
+            };
+        }
+
+        const existingNotification = await this.notificationRepository.findByUserIdAndGroupKey(
+            createNotificationDto.userId,
+            groupKey,
+        );
+
+        if (existingNotification) {
+            return {
+                notification: existingNotification,
+                created: false,
+            };
+        }
+
+        const notification = await this.create({
+            ...createNotificationDto,
+            groupKey,
+        });
+
+        return {
+            notification,
+            created: true,
+        };
+    }
+
     async getNotifications(userId: string, query: GetNotificationsQueryDto) {
         const notifications = await this.notificationRepository.findByUserId(userId, {
             limit: query.limit,
@@ -77,7 +111,7 @@ export class NotificationService {
 
     async getNotificationById(id: string, userId: string) {
         const notification = await this.notificationRepository.findById(id);
-        
+
         if (!notification) {
             throw new NotFoundException('Notification not found');
         }
@@ -92,7 +126,7 @@ export class NotificationService {
 
     async markAsRead(id: string, userId: string) {
         const notification = await this.getNotificationById(id, userId);
-        
+
         if (notification.isRead) {
             return notification;
         }

@@ -52,7 +52,6 @@ export enum OrganizerApprovalStatus {
 
 export enum OrganizerMemberRole {
     MANAGER = 'MANAGER',
-    ADMIN = 'ADMIN',
     MEMBER = 'MEMBER'
 }
 

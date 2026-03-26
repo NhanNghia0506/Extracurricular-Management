@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
 import { UserModule } from './modules/users/user.module';
 import { StudentModule } from './modules/students/student.module';
 import { AcademicModule } from './modules/academic/academic.module';
@@ -17,11 +18,13 @@ import { MessageModule } from './modules/messages/message.module';
 import { CommentModule } from './modules/comments/comment.module';
 import { ActivityFeedbackModule } from './modules/activity-feedback/activity-feedback.module';
 import { CertificateModule } from './modules/certificates/certificate.module';
+import { ActivityReminderModule } from './modules/activity-reminders/activity-reminder.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot('mongodb://localhost:27017/extracurricular_management_db'),
+    ScheduleModule.forRoot(),
     UserModule,
     StudentModule,
     AcademicModule,
@@ -39,6 +42,7 @@ import { EventsModule } from './events/events.module';
     CommentModule,
     ActivityFeedbackModule,
     CertificateModule,
+    ActivityReminderModule,
     EventsModule,
   ],
   controllers: [],

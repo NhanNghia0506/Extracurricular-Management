@@ -145,16 +145,18 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
 
     const mapParticipantStatus = (status?: string) => {
         switch (status) {
+            case 'REGISTERED':
+                return { label: 'Đã đăng ký' };
             case 'APPROVED':
-                return { label: 'Đã duyệt' };
+                return { label: 'Đã đăng ký' };
             case 'PENDING':
-                return { label: 'Đang chờ duyệt' };
+                return { label: 'Đã đăng ký' };
             case 'REJECTED':
-                return { label: 'Từ chối' };
+                return { label: 'Đã đăng ký' };
             case 'CANCELLED':
                 return { label: 'Đã hủy' };
             default:
-                return { label: status || 'Chưa rõ' };
+                return { label: 'Đã đăng ký' };
         }
     };
 

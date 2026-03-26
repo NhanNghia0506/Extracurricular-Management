@@ -7,7 +7,6 @@ import { CheckinSessionService } from '../checkin-sessions/checkin-session.servi
 import { calculateHaversineDistance, isLocationWithinRadius } from 'src/utils/haversine.util';
 import { CheckinStatus, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
-import { ParticipantStatus } from '../activity-participants/activity-participant.entity';
 import { CheckinGateway } from 'src/events/checkin.gateway';
 import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
@@ -241,10 +240,6 @@ export class CheckinService {
             throw new BadRequestException('Bạn chưa tham gia hoạt động này');
         }
 
-        if (participant.status && participant.status !== ParticipantStatus.APPROVED) {
-            throw new BadRequestException('Bạn chưa được phê duyệt tham gia hoạt động này');
-        }
-
         let checkin: Checkin;
 
         // Kiểm tra vị trí người dùng có trong vòng tròn chưa
@@ -333,10 +328,6 @@ export class CheckinService {
 
         if (!participant) {
             throw new BadRequestException('Người dùng này chưa tham gia hoạt động');
-        }
-
-        if (participant.status && participant.status !== ParticipantStatus.APPROVED) {
-            throw new BadRequestException('Người dùng này chưa được phê duyệt tham gia hoạt động');
         }
 
         const hasUserCheckedIn = await this.hasUserCheckedInSuccessfully(

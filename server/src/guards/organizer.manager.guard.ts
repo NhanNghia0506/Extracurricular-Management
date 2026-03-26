@@ -35,7 +35,7 @@ export class OrganizerManagerGuard implements CanActivate {
             throw new ForbiddenException('You are not a member of this organization');
         }
 
-        if (![OrganizerMemberRole.MANAGER, OrganizerMemberRole.ADMIN].includes(member.role)) {
+        if (member.role !== OrganizerMemberRole.MANAGER) {
             throw new ForbiddenException('Only managers can perform this action');
         }
         return true;

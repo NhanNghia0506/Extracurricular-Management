@@ -14,6 +14,13 @@ export class NotificationRepository {
         return this.notificationModel.create(notification);
     }
 
+    async findByUserIdAndGroupKey(userId: string, groupKey: string) {
+        return this.notificationModel.findOne({
+            userId: new Types.ObjectId(userId),
+            groupKey,
+        }).exec();
+    }
+
     async findById(id: string) {
         return this.notificationModel.findById(id);
     }
@@ -29,11 +36,11 @@ export class NotificationRepository {
         }
     ) {
         const query: Record<string, any> = { userId: new Types.ObjectId(userId) };
-        
+
         if (options?.isRead !== undefined) {
             query.isRead = options.isRead;
         }
-        
+
         if (options?.type) {
             query.type = options.type;
         }

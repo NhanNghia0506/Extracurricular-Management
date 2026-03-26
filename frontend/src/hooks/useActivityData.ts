@@ -20,10 +20,16 @@ export const useActivityData = () => {
                 const response = await organizerService.myOrganizations(userInfo.id);
 
                 if (response.data?.success && response.data?.data) {
-                    const organizerList = response.data.data.map((item: any) => ({
-                        id: item.organizerId?._id || item.organizerId,
-                        name: item.organizerId?.name || 'Unknown'
-                    }));
+                    const organizerList = response.data.data
+                        .filter((item: any) => item?.role === 'MANAGER')
+                        .map((item: any) => ({
+                            id: item.organizerId?._id || item.organizerId,
+                            name: (item.organizerId?.name || '').trim()
+                        }))
+                        .filter((item: { id: string; name: string }) => {
+                            const normalizedName = item.name.toLowerCase();
+                            return Boolean(item.id) && Boolean(item.name) && normalizedName !== 'unknown';
+                        });
                     setOrganizers(organizerList);
                 }
             } catch (error) {

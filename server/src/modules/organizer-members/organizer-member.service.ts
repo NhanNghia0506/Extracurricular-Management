@@ -42,7 +42,7 @@ export class OrganizerMemberService {
             throw new ForbiddenException('Bạn không thuộc tổ chức này');
         }
 
-        if (![OrganizerMemberRole.ADMIN, OrganizerMemberRole.MANAGER].includes(actorMember.role)) {
+        if (actorMember.role !== OrganizerMemberRole.MANAGER) {
             throw new ForbiddenException('Bạn không có quyền quản lý thành viên của tổ chức');
         }
     }

@@ -307,9 +307,9 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         }
 
         const status = (item.status || '').toUpperCase();
-        const isApproved = !status || status === 'APPROVED';
+        const isEligible = !status || status !== 'CANCELLED';
         const notCheckedIn = !checkedUserIdSet.has(String(item.userId));
-        return isApproved && notCheckedIn;
+        return isEligible && notCheckedIn;
     });
 
     const getSessionStatusLabel = () => {
@@ -585,7 +585,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
 
                         {!participantsLoading && eligibleParticipants.length === 0 && (
                             <div className="alert alert-warning" role="alert">
-                                Hiện không còn sinh viên hợp lệ để điểm danh thủ công (đã điểm danh hết hoặc chưa được duyệt).
+                                Hiện không còn sinh viên hợp lệ để điểm danh thủ công (đã điểm danh hết hoặc đã hủy tham gia).
                             </div>
                         )}
 

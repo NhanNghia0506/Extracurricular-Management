@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { ActivityParticipant } from "./activity-participant.entity";
+import { ActivityParticipant, ParticipantStatus } from "./activity-participant.entity";
 import { Model, Types } from "mongoose";
 
 @Injectable()
@@ -77,6 +77,14 @@ export class ActivityParticipantRepository {
     findByActivityId(activityId: string) {
         const objectId = new Types.ObjectId(activityId);
         return this.activityParticipantModel.find({ activityId: objectId }).exec();
+    }
+
+    findApprovedByActivityId(activityId: string) {
+        const objectId = new Types.ObjectId(activityId);
+        return this.activityParticipantModel.find({
+            activityId: objectId,
+            status: { $ne: ParticipantStatus.CANCELLED },
+        }).exec();
     }
 
     findByActivityAndUserId(activityId: string, userId: string) {

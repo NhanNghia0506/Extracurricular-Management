@@ -94,8 +94,8 @@ const ActivityParticipants: React.FC = () => {
     }, [participants]);
 
     const totalRegistered = participants.length;
-    const confirmedCount = participants.filter((p) => p.status === 'APPROVED').length;
-    const pendingCount = participants.filter((p) => p.status === 'PENDING').length;
+    const activeCount = participants.filter((p) => (p.status || 'REGISTERED') !== 'CANCELLED').length;
+    const cancelledCount = participants.filter((p) => p.status === 'CANCELLED').length;
 
     const normalizeUserId = (value: unknown): string => {
         if (!value) return '';
@@ -116,16 +116,18 @@ const ActivityParticipants: React.FC = () => {
 
     const mapStatus = (status?: ParticipantStatus) => {
         switch (status) {
+            case 'REGISTERED':
+                return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'APPROVED':
-                return { label: 'Đã duyệt', className: 'confirmed' };
+                return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'PENDING':
-                return { label: 'Chờ duyệt', className: 'pending' };
+                return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'REJECTED':
-                return { label: 'Từ chối', className: 'pending' };
+                return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'CANCELLED':
                 return { label: 'Đã hủy', className: 'pending' };
             default:
-                return { label: status || 'Không rõ', className: 'pending' };
+                return { label: 'Đã đăng ký', className: 'confirmed' };
         }
     };
 
@@ -150,16 +152,18 @@ const ActivityParticipants: React.FC = () => {
 
     const getRegistrationStatusLabel = (status?: ParticipantStatus) => {
         switch (status) {
+            case 'REGISTERED':
+                return 'Đã đăng ký';
             case 'APPROVED':
-                return 'Đã duyệt';
+                return 'Đã đăng ký';
             case 'PENDING':
-                return 'Chờ duyệt';
+                return 'Đã đăng ký';
             case 'REJECTED':
-                return 'Từ chối';
+                return 'Đã đăng ký';
             case 'CANCELLED':
                 return 'Đã hủy';
             default:
-                return status || 'Không rõ';
+                return 'Đã đăng ký';
         }
     };
 
@@ -357,18 +361,18 @@ const ActivityParticipants: React.FC = () => {
                 </div>
 
                 <div className={styles.statCard}>
-                    <label>Đã duyệt</label>
+                    <label>Đang tham gia</label>
                     <div className={styles.valueContainer}>
-                        <span className={styles.number}>{confirmedCount}</span>
+                        <span className={styles.number}>{activeCount}</span>
                         <span className={`${styles.trend} ${styles.up}`}><i className="fa-solid fa-arrow-trend-up"></i> +0%</span>
                     </div>
                     <div className={styles.iconBadge} style={{ backgroundColor: '#ecfdf5', color: '#10b981' }}><i className="fa-solid fa-check"></i></div>
                 </div>
 
                 <div className={styles.statCard}>
-                    <label>Chờ duyệt</label>
+                    <label>Đã hủy tham gia</label>
                     <div className={styles.valueContainer}>
-                        <span className={styles.number}>{pendingCount}</span>
+                        <span className={styles.number}>{cancelledCount}</span>
                         <span className={`${styles.trend} ${styles.down}`}><i className="fa-solid fa-arrow-trend-down"></i> 0%</span>
                     </div>
                     <div className={styles.iconBadge} style={{ backgroundColor: '#fffbeb', color: '#f59e0b' }}><i className="fa-solid fa-ellipsis"></i></div>
