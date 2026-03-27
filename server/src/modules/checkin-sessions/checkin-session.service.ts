@@ -1,17 +1,23 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { ActivityService } from '../activities/activity.service';
 import { CreateCheckinSessionDto } from './dtos/create.checkin-session.dto';
 import { CheckinSessionRepository } from './checkin-session.repository';
 import { CheckinSession } from './checkin-session.entity';
 import { UpdateCheckinSessionDto } from './dtos/update.checkin-session.dto';
-import { UserRole } from 'src/global/globalEnum';
+import { NotificationPriority, NotificationType, UserRole } from 'src/global/globalEnum';
+import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class CheckinSessionService {
+    private readonly logger = new Logger(CheckinSessionService.name);
+
     constructor(
         private readonly checkinSessionRepository: CheckinSessionRepository,
         private readonly activityService: ActivityService,
+        private readonly activityParticipantService: ActivityParticipantService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async create(createCheckinSessionDto: CreateCheckinSessionDto) {
@@ -55,7 +61,46 @@ export class CheckinSessionService {
             ...(createCheckinSessionDto.lateAfter !== undefined && { lateAfter: createCheckinSessionDto.lateAfter }),
         };
 
-        return this.checkinSessionRepository.create(checkinSession);
+        const createdSession = await this.checkinSessionRepository.create(checkinSession);
+
+        // Notification errors must not block successful session creation.
+        try {
+            const participants = await this.activityParticipantService.findApprovedByActivityId(
+                createCheckinSessionDto.activityId,
+            );
+            const targetUserIds = Array.from(
+                new Set(
+                    participants
+                        .map((participant) => participant.userId?.toString())
+                        .filter((userId): userId is string => Boolean(userId)),
+                ),
+            );
+
+            if (targetUserIds.length > 0) {
+                await this.notificationService.createBulkNotifications(targetUserIds, {
+                    senderName: 'Hệ thống',
+                    senderType: 'system',
+                    title: 'Điểm danh đã mở',
+                    message: `Phiên điểm danh "${createdSession.title}" của hoạt động "${activity.title}" đã mở.`,
+                    type: NotificationType.ACTIVITY,
+                    priority: NotificationPriority.HIGH,
+                    linkUrl: `/activity-detail?id=${createCheckinSessionDto.activityId}`,
+                    groupKey: `checkin-opened:${createdSession._id.toString()}`,
+                    meta: {
+                        activityId: createCheckinSessionDto.activityId,
+                        checkinSessionId: createdSession._id.toString(),
+                        checkinSessionTitle: createdSession.title,
+                        startTime: createdSession.startTime,
+                        endTime: createdSession.endTime,
+                    },
+                });
+            }
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Không thể gửi thông báo mở điểm danh cho session ${createdSession._id.toString()}: ${reason}`);
+        }
+
+        return createdSession;
     }
 
     async update(
