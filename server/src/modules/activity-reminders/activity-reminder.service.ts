@@ -17,37 +17,43 @@ export class ActivityReminderService {
         private readonly notificationService: NotificationService,
     ) { }
 
-    @Cron('*/5 * * * *')
+    @Cron('*/1 * * * *')
     async sendOneHourReminders(): Promise<void> {
         const now = new Date();
-        const windowStart = new Date(now.getTime() + ActivityReminderService.REMINDER_OFFSET_MS);
-        const windowEnd = new Date(windowStart.getTime() + ActivityReminderService.WINDOW_MS);
-
+        const windowMs = ActivityReminderService.WINDOW_MS;
+        const reminderOffsetMs = ActivityReminderService.REMINDER_OFFSET_MS;
         let createdCount = 0;
         let skippedCount = 0;
         let recipientCount = 0;
 
         try {
-            const activities = await this.activityRepository.findActivitiesStartingBetween(windowStart, windowEnd);
+            // Lấy mọi activity sắp diễn ra (startAt > now, chưa bị hủy/hoàn thành)
+            const activities = await this.activityRepository.findUpcomingActivities(now);
 
             if (activities.length === 0) {
-                this.logger.debug('Activity reminder cron: no activities in reminder window.');
+                this.logger.debug('Activity reminder cron: no upcoming activities.');
                 return;
             }
 
             for (const activity of activities) {
                 try {
                     const activityId = activity._id.toString();
-                    const participants = await this.activityParticipantService.findApprovedByActivityId(activityId);
-                    const userIds = Array.from(
-                        new Set(participants.map((participant) => participant.userId?.toString()).filter(Boolean) as string[]),
-                    );
+                    const startAt = new Date(activity.startAt);
+                    const diffMs = startAt.getTime() - now.getTime();
+                    // Chỉ gửi nếu còn đúng 1h ±2.5 phút
+                    if (Math.abs(diffMs - reminderOffsetMs) > windowMs / 2) {
+                        continue;
+                    }
 
+                    const participants = await this.activityParticipantService.findByActivityId(activityId);
+                    const userIds = Array.from(
+                        new Set(participants.map((participant) => participant.userId?.toString()).filter(Boolean)),
+                    );
                     if (userIds.length === 0) {
                         continue;
                     }
 
-                    const startAtText = new Date(activity.startAt).toLocaleString('vi-VN', {
+                    const startAtText = startAt.toLocaleString('vi-VN', {
                         hour: '2-digit',
                         minute: '2-digit',
                         day: '2-digit',
@@ -58,7 +64,6 @@ export class ActivityReminderService {
                     for (const userId of userIds) {
                         recipientCount += 1;
                         const groupKey = `activity-reminder:1h:${activityId}:${userId}`;
-
                         const { created } = await this.notificationService.createIfNotExistsByGroupKey({
                             userId,
                             senderName: 'Hệ thống',
@@ -75,7 +80,6 @@ export class ActivityReminderService {
                                 activityStartAt: activity.startAt,
                             },
                         });
-
                         if (created) {
                             createdCount += 1;
                         } else {

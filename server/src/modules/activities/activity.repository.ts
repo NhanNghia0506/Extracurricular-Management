@@ -42,6 +42,17 @@ export class ActivityRepository {
             .exec();
     }
 
+    findUpcomingActivities(now: Date): Promise<Array<Activity & { _id: Types.ObjectId }>> {
+        return this.activityModel
+            .find({
+                status: { $nin: ['CANCELLED', 'COMPLETED'] },
+                startAt: { $gt: now },
+            })
+            .select('_id title startAt')
+            .lean<Array<Activity & { _id: Types.ObjectId }>>()
+            .exec();
+    }
+
     findById(id: string) {
         return this.activityModel
             .findById(id)
