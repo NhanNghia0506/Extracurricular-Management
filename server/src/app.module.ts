@@ -20,6 +20,7 @@ import { ActivityFeedbackModule } from './modules/activity-feedback/activity-fee
 import { CertificateModule } from './modules/certificates/certificate.module';
 import { ActivityReminderModule } from './modules/activity-reminders/activity-reminder.module';
 import { EventsModule } from './events/events.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { EventsModule } from './events/events.module';
     CertificateModule,
     ActivityReminderModule,
     EventsModule,
+    MailModule,
   ],
   controllers: [],
   providers: [],

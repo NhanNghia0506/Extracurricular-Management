@@ -21,6 +21,7 @@ import {
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { UploadService } from '../../interceptors/upload.service';
 import { NotificationService } from '../notifications/notification.service';
+import { MailService } from '../mail/mail.service';
 
 type ActivityApprovalValue = Activity['approvalStatus'];
 
@@ -50,6 +51,7 @@ export class ActivityService {
         private readonly activityParticipantService: ActivityParticipantService,
         private readonly uploadService: UploadService,
         private readonly notificationService: NotificationService,
+        private readonly mailService: MailService,
     ) { }
 
     /**
@@ -245,6 +247,8 @@ export class ActivityService {
             targetUserIds = selectedUserIds;
         }
 
+
+        // Gửi thông báo
         await this.notificationService.createBulkNotifications(targetUserIds, {
             senderName: payload.senderName?.trim() || activity.title,
             senderType: payload.senderType?.trim() || 'activity-owner',

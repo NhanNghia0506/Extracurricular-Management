@@ -10,6 +10,7 @@ import { OrganizerMemberModule } from '../organizer-members/organizer-member.mod
 import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
 import { UserModule } from '../users/user.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { NotificationModule } from '../notifications/notification.module';
         NotificationModule,
         forwardRef(() => ActivityParticipantModule),
         OrganizerMemberModule,
+        MailModule,
     ],
     controllers: [ActivityController],
     providers: [ActivityService, ActivityRepository, UploadService, OptionalAuthGuard],

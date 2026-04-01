@@ -45,10 +45,11 @@ export class ActivityRepository {
     findUpcomingActivities(now: Date): Promise<Array<Activity & { _id: Types.ObjectId }>> {
         return this.activityModel
             .find({
+                approvalStatus: ActivityApprovalStatus.APPROVED,
                 status: { $nin: ['CANCELLED', 'COMPLETED'] },
                 startAt: { $gt: now },
             })
-            .select('_id title startAt')
+            .select('_id title startAt organizerId')
             .lean<Array<Activity & { _id: Types.ObjectId }>>()
             .exec();
     }

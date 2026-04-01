@@ -4,6 +4,9 @@ import { ActivityRepository } from '../activities/activity.repository';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationPriority, NotificationType } from 'src/global/globalEnum';
+import { MailService } from '../mail/mail.service';
+import { OrganizerService } from '../organizers/organizer.service';
+import UserService from '../users/user.service';
 
 @Injectable()
 export class ActivityReminderService {
@@ -15,6 +18,9 @@ export class ActivityReminderService {
         private readonly activityRepository: ActivityRepository,
         private readonly activityParticipantService: ActivityParticipantService,
         private readonly notificationService: NotificationService,
+        private readonly organizerService: OrganizerService,
+        private readonly userService: UserService,
+        private readonly mailService: MailService,
     ) { }
 
     @Cron('*/1 * * * *')
@@ -61,29 +67,53 @@ export class ActivityReminderService {
                         year: 'numeric',
                     });
 
+                    const organizerId = activity.organizerId?.toString();
+                    const organizer = organizerId ? await this.organizerService.findById(organizerId) : null;
+                    const senderName = organizer?.name?.trim() || 'Hệ thống';
+                    // Gmail SMTP often rejects custom from-addresses that differ from the authenticated account.
+                    const from = `${senderName} <trangiannhannghia@gmail.com>`;
+
                     for (const userId of userIds) {
-                        recipientCount += 1;
-                        const groupKey = `activity-reminder:1h:${activityId}:${userId}`;
-                        const { created } = await this.notificationService.createIfNotExistsByGroupKey({
-                            userId,
-                            senderName: 'Hệ thống',
-                            senderType: 'system',
-                            title: 'Hoạt động sắp bắt đầu trong 1 giờ',
-                            message: `Hoạt động "${activity.title}" sẽ bắt đầu lúc ${startAtText}.`,
-                            type: NotificationType.ACTIVITY,
-                            priority: NotificationPriority.NORMAL,
-                            linkUrl: `/activity-detail?id=${activityId}`,
-                            groupKey,
-                            meta: {
-                                activityId,
-                                reminderType: 'ONE_HOUR_BEFORE_START',
-                                activityStartAt: activity.startAt,
-                            },
-                        });
-                        if (created) {
-                            createdCount += 1;
-                        } else {
-                            skippedCount += 1;
+                        try {
+                            const user = await this.userService.getProfile(userId);
+                            recipientCount += 1;
+                            const groupKey = `activity-reminder:1h:${activityId}:${userId}`;
+                            const { created } = await this.notificationService.createIfNotExistsByGroupKey({
+                                userId,
+                                senderName: 'Hệ thống',
+                                senderType: 'system',
+                                title: 'Hoạt động sắp bắt đầu trong 1 giờ',
+                                message: `Hoạt động "${activity.title}" sẽ bắt đầu lúc ${startAtText}.`,
+                                type: NotificationType.ACTIVITY,
+                                priority: NotificationPriority.NORMAL,
+                                linkUrl: `/activity-detail?id=${activityId}`,
+                                groupKey,
+                                meta: {
+                                    activityId,
+                                    reminderType: 'ONE_HOUR_BEFORE_START',
+                                    activityStartAt: activity.startAt,
+                                },
+                            });
+
+                            if (created) {
+                                createdCount += 1;
+                                await this.mailService.sendMail({
+                                    from,
+                                    to: user.email,
+                                    subject: 'Hoạt động sắp bắt đầu trong 1 giờ',
+                                    text: `Hoạt động "${activity.title}" sẽ bắt đầu lúc ${startAtText}.`,
+                                });
+                            } else {
+                                skippedCount += 1;
+                                this.logger.debug(
+                                    `Skip reminder email because groupKey already exists: activity=${activityId}, user=${userId}`,
+                                );
+                            }
+                        } catch (userError) {
+                            const userMessage = userError instanceof Error ? userError.message : String(userError);
+                            this.logger.error(
+                                `Activity reminder failed for activity ${activityId}, user ${userId}: ${userMessage}`,
+                            );
                         }
                     }
                 } catch (activityError) {
