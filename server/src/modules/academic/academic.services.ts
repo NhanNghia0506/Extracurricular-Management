@@ -44,6 +44,10 @@ export class AcademicService {
         return this.academicRepository.findClassesByFacultyId(facultyId);
     }
 
+    findAllClasses() {
+        return this.academicRepository.findAllClasses();
+    }
+
     /**
      * Lấy thông tin chi tiết của một khoa (Faculty) theo ID
      * @param facultyId - ID của khoa

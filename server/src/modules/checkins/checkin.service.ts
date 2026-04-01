@@ -15,12 +15,53 @@ import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
 import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.dto';
+import { StudentStatsQueryDto } from './dtos/student-stats.query.dto';
+import { StudentStatsFilterOptionsQueryDto } from './dtos/student-stats-filter-options.query.dto';
 import {
     TrainingScoreClassItem,
     TrainingScoreFacultyItem,
     TrainingScoreReportView,
     TrainingScoreStudentItem,
 } from './checkin.repository';
+import { AcademicService } from '../academic/academic.services';
+
+interface StudentStatsRecord {
+    studentId: string;
+    name: string;
+    studentCode: string;
+    className: string;
+    activityTitle: string;
+    trainingScore: number;
+    firstCheckinAt: Date;
+}
+
+interface StudentStatsFilter {
+    startDate: Date;
+    endDate: Date;
+    facultyId?: string;
+    classId?: string;
+}
+
+interface CheckinRepositoryStudentStatsAdapter {
+    findStudentStatsRecords(filter: StudentStatsFilter): Promise<StudentStatsRecord[]>;
+}
+
+interface AcademicFacultyRow {
+    _id: string | Types.ObjectId;
+    name?: string;
+}
+
+interface AcademicClassRow {
+    _id: string | Types.ObjectId;
+    name?: string;
+    facultyId?: string | Types.ObjectId;
+}
+
+interface AcademicServiceFilterOptionsAdapter {
+    findAllFaculties(): Promise<AcademicFacultyRow[]>;
+    findClassesByFacultyId(facultyId: string): Promise<AcademicClassRow[]>;
+    findAllClasses(): Promise<AcademicClassRow[]>;
+}
 
 export interface MyAttendanceHistorySummary {
     totalParticipatedActivities: number;
@@ -80,6 +121,44 @@ export interface TrainingScoreReportResponse {
     };
 }
 
+export interface StudentStatsResponse {
+    kpi: {
+        totalStudents: number;
+        averageScore: number;
+        mostActiveActivity: string;
+    };
+    participationTrend: {
+        labels: string[];
+        data: number[];
+    };
+    scoreDistribution: {
+        excellent: number;
+        good: number;
+        fair: number;
+        average: number;
+    };
+    leaderboard: Array<{
+        rank: number;
+        name: string;
+        studentCode: string;
+        className: string;
+        activityCount: number;
+        trainingScore: number;
+    }>;
+}
+
+export interface StudentStatsFilterOptionsResponse {
+    faculties: Array<{
+        value: string;
+        label: string;
+    }>;
+    classes: Array<{
+        value: string;
+        label: string;
+        facultyId: string;
+    }>;
+}
+
 @Injectable()
 export class CheckinService {
     constructor(
@@ -90,6 +169,7 @@ export class CheckinService {
         private readonly studentService: StudentService,
         private readonly userService: UserService,
         private readonly certificateService: CertificateService,
+        private readonly academicService: AcademicService,
     ) { }
 
     private parsePaginationNumber(rawValue: string | undefined, defaultValue: number, fieldName: string): number {
@@ -120,6 +200,78 @@ export class CheckinService {
         }
 
         return parsed;
+    }
+
+    private parseMonth(rawValue: string | undefined): number {
+        const now = new Date();
+        if (!rawValue) {
+            return now.getMonth() + 1;
+        }
+
+        const parsed = Number(rawValue);
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > 12) {
+            throw new BadRequestException('month phải nằm trong khoảng 1..12');
+        }
+        return parsed;
+    }
+
+    private parseYear(rawValue: string | undefined): number {
+        const now = new Date();
+        if (!rawValue) {
+            return now.getFullYear();
+        }
+
+        const parsed = Number(rawValue);
+        if (!Number.isInteger(parsed) || parsed < 2000 || parsed > 3000) {
+            throw new BadRequestException('year không hợp lệ');
+        }
+        return parsed;
+    }
+
+    private buildTrend(records: StudentStatsRecord[]) {
+        const labels = ['Đ1', 'Đ2', 'Đ3', 'Đ4', 'Đ5', 'Đ6', 'Đ7', 'Đ8'];
+        if (records.length === 0) {
+            return {
+                labels,
+                data: labels.map(() => 0),
+            };
+        }
+
+        const sortedTimes = records
+            .map((record) => new Date(record.firstCheckinAt).getTime())
+            .filter((value) => Number.isFinite(value))
+            .sort((a, b) => a - b);
+
+        if (sortedTimes.length === 0) {
+            return {
+                labels,
+                data: labels.map(() => 0),
+            };
+        }
+
+        const min = sortedTimes[0];
+        const max = sortedTimes[sortedTimes.length - 1];
+        const step = Math.max(1, Math.ceil((max - min + 1) / 8));
+        const bins = labels.map(() => 0);
+
+        for (const record of records) {
+            const time = new Date(record.firstCheckinAt).getTime();
+            if (!Number.isFinite(time)) {
+                continue;
+            }
+            const index = Math.min(7, Math.floor((time - min) / step));
+            bins[index] += 1;
+        }
+
+        const peak = Math.max(...bins, 0);
+        const data = peak === 0
+            ? bins
+            : bins.map((value) => Number(((value / peak) * 100).toFixed(2)));
+
+        return {
+            labels,
+            data,
+        };
     }
 
     private parseStatuses(rawStatuses: string | undefined): CheckinStatus[] | undefined {
@@ -575,6 +727,146 @@ export class CheckinService {
                 hasNextPage: page < totalPages,
                 hasPrevPage: page > 1,
             },
+        };
+    }
+
+    async getStudentStats(query: StudentStatsQueryDto): Promise<StudentStatsResponse> {
+        const month = this.parseMonth(query.month);
+        const year = this.parseYear(query.year);
+        const facultyId = query.faculty && query.faculty !== 'all' ? query.faculty : undefined;
+        const classId = query.className && query.className !== 'all' ? query.className : undefined;
+
+        const startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+        const studentStatsRepository = this.checkinRepository as unknown as CheckinRepositoryStudentStatsAdapter;
+        const records = await studentStatsRepository.findStudentStatsRecords({
+            startDate,
+            endDate,
+            facultyId,
+            classId,
+        });
+
+        const studentMap = new Map<string, {
+            name: string;
+            studentCode: string;
+            className: string;
+            activityCount: number;
+            trainingScore: number;
+        }>();
+
+        const activityMap = new Map<string, number>();
+
+        for (const record of records) {
+            const current = studentMap.get(record.studentId) || {
+                name: record.name,
+                studentCode: record.studentCode,
+                className: record.className,
+                activityCount: 0,
+                trainingScore: 0,
+            };
+
+            current.activityCount += 1;
+            current.trainingScore += Number(record.trainingScore || 0);
+            studentMap.set(record.studentId, current);
+
+            activityMap.set(
+                record.activityTitle,
+                (activityMap.get(record.activityTitle) || 0) + 1,
+            );
+        }
+
+        const students = Array.from(studentMap.values());
+        const totalStudents = students.length;
+        const totalScore = students.reduce((sum, item) => sum + item.trainingScore, 0);
+        const averageScore = totalStudents > 0
+            ? Number((totalScore / totalStudents).toFixed(2))
+            : 0;
+
+        let mostActiveActivity = 'Chưa có dữ liệu';
+        let mostActiveCount = 0;
+        for (const [title, count] of activityMap.entries()) {
+            if (count > mostActiveCount) {
+                mostActiveActivity = title;
+                mostActiveCount = count;
+            }
+        }
+
+        const excellent = students.filter((item) => item.trainingScore >= 90).length;
+        const good = students.filter((item) => item.trainingScore >= 80 && item.trainingScore < 90).length;
+        const fair = students.filter((item) => item.trainingScore >= 70 && item.trainingScore < 80).length;
+        const average = students.filter((item) => item.trainingScore < 70).length;
+
+        const toPercent = (value: number) => totalStudents > 0
+            ? Number(((value / totalStudents) * 100).toFixed(2))
+            : 0;
+
+        const leaderboard = students
+            .sort((a, b) => {
+                if (b.trainingScore !== a.trainingScore) {
+                    return b.trainingScore - a.trainingScore;
+                }
+                if (b.activityCount !== a.activityCount) {
+                    return b.activityCount - a.activityCount;
+                }
+                return a.name.localeCompare(b.name, 'vi');
+            })
+            .slice(0, 10)
+            .map((item, index) => ({
+                rank: index + 1,
+                name: item.name,
+                studentCode: item.studentCode,
+                className: item.className,
+                activityCount: item.activityCount,
+                trainingScore: item.trainingScore,
+            }));
+
+        return {
+            kpi: {
+                totalStudents,
+                averageScore,
+                mostActiveActivity,
+            },
+            participationTrend: this.buildTrend(records),
+            scoreDistribution: {
+                excellent: toPercent(excellent),
+                good: toPercent(good),
+                fair: toPercent(fair),
+                average: toPercent(average),
+            },
+            leaderboard,
+        };
+    }
+
+    async getStudentStatsFilterOptions(
+        query: StudentStatsFilterOptionsQueryDto,
+    ): Promise<StudentStatsFilterOptionsResponse> {
+        const academicService = this.academicService as unknown as AcademicServiceFilterOptionsAdapter;
+        const facultiesRaw = await academicService.findAllFaculties();
+        const classesRaw = query.facultyId
+            ? await academicService.findClassesByFacultyId(query.facultyId)
+            : await academicService.findAllClasses();
+
+        const faculties = facultiesRaw
+            .map((faculty) => ({
+                value: String(faculty?._id || ''),
+                label: String(faculty?.name || 'N/A'),
+            }))
+            .filter((item) => Boolean(item.value))
+            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+
+        const classes = classesRaw
+            .map((classItem) => ({
+                value: String(classItem?._id || ''),
+                label: String(classItem?.name || 'N/A'),
+                facultyId: String(classItem?.facultyId || ''),
+            }))
+            .filter((item) => Boolean(item.value) && Boolean(item.facultyId))
+            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+
+        return {
+            faculties,
+            classes,
         };
     }
 

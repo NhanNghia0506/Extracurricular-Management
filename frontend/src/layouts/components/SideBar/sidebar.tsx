@@ -9,6 +9,8 @@ interface MenuItem {
     icon: string; // Class name của FontAwesome
     label: string;
     isDanger?: boolean;// Tùy chọn: đánh dấu mục nguy hiểm (như Sign Out)
+    subItems?: MenuItem[];
+    isSubmenuParent?: boolean;
 }
 
 // 2. Khởi tạo mảng dữ liệu (như bạn yêu cầu)
@@ -20,6 +22,8 @@ const MAIN_MENU: MenuItem[] = [
     { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Tổ chức' }, // Hoặc fa-user-group
     { id: 'create-activity', icon: 'fa-solid fa-plus', label: 'Tạo hoạt động mới' },
 ];
+
+
 
 const BOTTOM_MENU: MenuItem[] = [
     { id: 'settings', icon: 'fa-solid fa-gear', label: 'Cài đặt' },
@@ -34,6 +38,7 @@ const ROUTE_MAP: { [key: string]: string } = {
     'my-certificates': '/my-certificates',
     'organizations': '/organizations',
     'create-activity': '/create-activity',
+
     'settings': '/settings',
 };
 

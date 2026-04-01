@@ -35,6 +35,7 @@ import MembersManagementPage from '../pages/MembersManagementPage';
 import OrganizerDetailPage from '../pages/OrganizerDetailPage';
 import ActivityCategoryManagement from '../pages/ActivityCategoryManagementPage';
 import TrainingScoreReportPage from '../pages/TrainingScoreReportPage';
+import StudentStatsPage from '../pages/StudentStatsPage';
 
 const AppRoutes: React.FC = () => {
     const location = useLocation();
@@ -89,6 +90,14 @@ const AppRoutes: React.FC = () => {
                     }
                 />
                 <Route path="/student-dashboard" element={<StudentDashboardPage />} />
+                <Route
+                    path="/admin/student-stats"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <StudentStatsPage />
+                        </ProtectedRoute>
+                    }
+                />
             </Route>
 
             <Route element={<NoSidebarLayout />}>

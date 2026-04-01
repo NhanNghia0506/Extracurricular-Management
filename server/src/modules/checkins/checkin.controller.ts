@@ -8,6 +8,8 @@ import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
 import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.dto';
 import { AdminGuard } from 'src/guards/admin.guard';
+import { StudentStatsQueryDto } from './dtos/student-stats.query.dto';
+import { StudentStatsFilterOptionsQueryDto } from './dtos/student-stats-filter-options.query.dto';
 
 @Controller('checkins')
 export class CheckinController {
@@ -68,5 +70,17 @@ export class CheckinController {
     @UseGuards(AuthGuard, AdminGuard)
     async getTrainingScoreReport(@Query() query: TrainingScoreReportQueryDto) {
         return this.checkinService.getTrainingScoreReport(query);
+    }
+
+    @Get('admin/student-stats')
+    @UseGuards(AuthGuard, AdminGuard)
+    async getStudentStats(@Query() query: StudentStatsQueryDto) {
+        return this.checkinService.getStudentStats(query);
+    }
+
+    @Get('admin/student-stats/filter-options')
+    @UseGuards(AuthGuard, AdminGuard)
+    async getStudentStatsFilterOptions(@Query() query: StudentStatsFilterOptionsQueryDto) {
+        return this.checkinService.getStudentStatsFilterOptions(query);
     }
 }

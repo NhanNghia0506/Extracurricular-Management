@@ -126,6 +126,23 @@ export interface TrainingScoreReportQueryResult {
     summary: TrainingScoreReportSummary;
 }
 
+export interface StudentStatsFilter {
+    startDate: Date;
+    endDate: Date;
+    facultyId?: string;
+    classId?: string;
+}
+
+export interface StudentStatsRecord {
+    studentId: string;
+    name: string;
+    studentCode: string;
+    className: string;
+    activityTitle: string;
+    trainingScore: number;
+    firstCheckinAt: Date;
+}
+
 @Injectable()
 export class CheckinRepository {
     constructor(
@@ -666,5 +683,121 @@ export class CheckinRepository {
                 averageTrainingScore: 0,
             },
         };
+    }
+
+    async findStudentStatsRecords(filter: StudentStatsFilter): Promise<StudentStatsRecord[]> {
+        const matchCheckin: PipelineStage.Match['$match'] = {
+            status: { $in: [CheckinStatus.SUCCESS, CheckinStatus.LATE] },
+            createdAt: {
+                $gte: filter.startDate,
+                $lte: filter.endDate,
+            },
+        };
+
+        const pipeline: PipelineStage[] = [
+            { $match: matchCheckin },
+            {
+                $lookup: {
+                    from: 'checkinsessions',
+                    localField: 'checkinSessionId',
+                    foreignField: '_id',
+                    as: 'session',
+                },
+            },
+            { $unwind: { path: '$session', preserveNullAndEmptyArrays: false } },
+            {
+                $lookup: {
+                    from: 'activities',
+                    localField: 'session.activityId',
+                    foreignField: '_id',
+                    as: 'activity',
+                },
+            },
+            { $unwind: { path: '$activity', preserveNullAndEmptyArrays: false } },
+            {
+                $lookup: {
+                    from: 'students',
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'student',
+                },
+            },
+            { $unwind: { path: '$student', preserveNullAndEmptyArrays: false } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'user',
+                },
+            },
+            { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: 'classes',
+                    localField: 'student.classId',
+                    foreignField: '_id',
+                    as: 'class',
+                },
+            },
+            { $unwind: { path: '$class', preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: 'faculties',
+                    localField: 'class.facultyId',
+                    foreignField: '_id',
+                    as: 'faculty',
+                },
+            },
+            { $unwind: { path: '$faculty', preserveNullAndEmptyArrays: true } },
+        ];
+
+        if (filter.facultyId && Types.ObjectId.isValid(filter.facultyId)) {
+            pipeline.push({
+                $match: {
+                    'faculty._id': new Types.ObjectId(filter.facultyId),
+                },
+            });
+        }
+
+        if (filter.classId && Types.ObjectId.isValid(filter.classId)) {
+            pipeline.push({
+                $match: {
+                    'class._id': new Types.ObjectId(filter.classId),
+                },
+            });
+        }
+
+        pipeline.push(
+            {
+                $group: {
+                    _id: {
+                        userId: '$userId',
+                        activityId: '$activity._id',
+                    },
+                    studentId: { $first: '$userId' },
+                    name: { $first: '$user.name' },
+                    studentCode: { $first: '$student.studentCode' },
+                    className: { $first: '$class.name' },
+                    activityTitle: { $first: '$activity.title' },
+                    trainingScore: { $first: { $ifNull: ['$activity.trainingScore', 0] } },
+                    firstCheckinAt: { $min: '$createdAt' },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    studentId: { $toString: '$studentId' },
+                    name: { $ifNull: ['$name', 'Unknown'] },
+                    studentCode: { $ifNull: ['$studentCode', 'N/A'] },
+                    className: { $ifNull: ['$className', 'N/A'] },
+                    activityTitle: { $ifNull: ['$activityTitle', 'N/A'] },
+                    trainingScore: 1,
+                    firstCheckinAt: 1,
+                },
+            },
+        );
+
+        return this.checkinModel.aggregate<StudentStatsRecord>(pipeline).exec();
     }
 }

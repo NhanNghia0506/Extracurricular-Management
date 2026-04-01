@@ -28,6 +28,10 @@ export class AcademicRepository {
         return this.classModel.find({ facultyId: id }).lean();
     }
 
+    findAllClasses() {
+        return this.classModel.find().lean();
+    }
+
     findFacultyById(facultyId: string) {
         const id = new Types.ObjectId(facultyId);
         return this.facultyModel.findById(id).lean();

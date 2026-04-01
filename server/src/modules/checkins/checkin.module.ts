@@ -10,6 +10,7 @@ import { UserModule } from '../users/user.module';
 import { StudentModule } from '../students/student.module';
 import { CheckinGateway } from '../../events/checkin.gateway';
 import { CertificateModule } from '../certificates/certificate.module';
+import { AcademicModule } from '../academic/academic.module';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { CertificateModule } from '../certificates/certificate.module';
         CheckinSessionModule,
         ActivityParticipantModule,
         CertificateModule,
+        AcademicModule,
     ],
     controllers: [CheckinController],
     providers: [CheckinService, CheckinRepository, CheckinGateway],

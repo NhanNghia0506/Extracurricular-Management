@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 // Import CSS Module
 import styles from './header.module.scss';
@@ -23,12 +23,36 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
     const [user, setUser] = useState<{ name: string; email: string; avatar?: string | null } | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [localSearchValue, setLocalSearchValue] = useState(searchValue || '');
+    const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
+    const [role, setRole] = useState<string | null>('');
+    const adminDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (typeof searchValue === 'string') {
             setLocalSearchValue(searchValue);
         }
     }, [searchValue]);
+
+    // Get user role
+    useEffect(() => {
+        setRole(authService.getRole());
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target as Node)) {
+                setAdminDropdownOpen(false);
+            }
+        };
+
+        if (adminDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [adminDropdownOpen]);
 
     useEffect(() => {
         let isMounted = true;
@@ -117,6 +141,73 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                     <div className="d-flex align-items-center gap-3">
                         {isAuthenticated ? (
                             <>
+                                {/* Admin Management Dropdown */}
+                                {role === 'ADMIN' && (
+                                    <div className={styles.adminDropdown} ref={adminDropdownRef}>
+                                        <button
+                                            className={styles.actionBtn}
+                                            aria-label="Quản lý"
+                                            onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
+                                        >
+                                            <i className="fa-solid fa-sliders"></i>
+                                        </button>
+                                        {adminDropdownOpen && (
+                                            <div className={styles.dropdownMenu}>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/admin/student-stats');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-chart-line"></i>
+                                                    <span>Thống kê sinh viên</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/activity-approval');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-check-circle"></i>
+                                                    <span>Duyệt hoạt động</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/organizer-approval');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-check-double"></i>
+                                                    <span>Duyệt tổ chức</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/admin/activity-categories');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-list"></i>
+                                                    <span>Danh mục hoạt động</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/admin/training-score-report');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-file-chart-line"></i>
+                                                    <span>Báo cáo điểm rèn luyện</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Notification Bell */}
                                 <button className={styles.actionBtn} aria-label="Notifications" onClick={() => navigate('/notifications')}>
                                     <FontAwesomeIcon icon={faBell} />
