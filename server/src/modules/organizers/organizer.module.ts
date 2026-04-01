@@ -13,6 +13,7 @@ import { Activity, ActivitySchema } from "../activities/activity.entity";
 import { ActivityParticipant, ActivityParticipantSchema } from "../activity-participants/activity-participant.entity";
 import { CheckinSession, CheckinSessionSchema } from "../checkin-sessions/checkin-session.entity";
 import { Checkin, CheckinSchema } from "../checkins/checkin.entity";
+import { AdminGuard } from "src/guards/admin.guard";
 
 @Module({
     imports: [
@@ -28,7 +29,7 @@ import { Checkin, CheckinSchema } from "../checkins/checkin.entity";
         NotificationModule,
     ],
     controllers: [OrganizerController],
-    providers: [OrganizerService, OrganizerRepository, UploadService, AuthGuard],
+    providers: [OrganizerService, OrganizerRepository, UploadService, AuthGuard, AdminGuard],
     exports: [OrganizerService, OrganizerRepository],
 })
 export class OrganizerModule { }

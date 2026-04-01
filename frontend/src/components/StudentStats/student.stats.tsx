@@ -17,52 +17,52 @@ const StudentStats: React.FC = () => {
         <div className={styles.dashboard}>
             {/* HEADER */}
             <header className={styles.header}>
-                <div>
+                <div className={styles.headerContent}>
                     <h1>Thống kê sinh viên tích cực</h1>
                     <p style={{ color: '#718096' }}>Phân tích chuyên sâu về các hoạt động ngoại khóa...</p>
-                </div>
-                <div className={styles.filters}>
-                    <div className={styles.filterGroup}>
-                        <label htmlFor="faculty-select">Khoa</label>
-                        <select
-                            id="faculty-select"
-                            value={filters.faculty}
-                            onChange={(e) => setFilters({ faculty: e.target.value, className: 'all' })}
-                        >
-                            <option value="all">Tất cả khoa</option>
-                            {faculties.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                        </select>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label htmlFor="class-select">Lớp</label>
-                        <select
-                            id="class-select"
-                            value={filters.className}
-                            onChange={(e) => setFilters({ className: e.target.value })}
-                        >
-                            <option value="all">Tất cả lớp</option>
-                            {classes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                        </select>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label htmlFor="month-select">Tháng</label>
-                        <select
-                            id="month-select"
-                            value={filters.month}
-                            onChange={(e) => setFilters({ month: e.target.value })}
-                        >
-                            {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label htmlFor="year-select">Năm</label>
-                        <select
-                            id="year-select"
-                            value={filters.year}
-                            onChange={(e) => setFilters({ year: e.target.value })}
-                        >
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
+                    <div className={styles.filters}>
+                        <div className={styles.filterGroup}>
+                            <label htmlFor="faculty-select">Khoa</label>
+                            <select
+                                id="faculty-select"
+                                value={filters.faculty}
+                                onChange={(e) => setFilters({ faculty: e.target.value, className: 'all' })}
+                            >
+                                <option value="all">Tất cả khoa</option>
+                                {faculties.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                            </select>
+                        </div>
+                        <div className={styles.filterGroup}>
+                            <label htmlFor="class-select">Lớp</label>
+                            <select
+                                id="class-select"
+                                value={filters.className}
+                                onChange={(e) => setFilters({ className: e.target.value })}
+                            >
+                                <option value="all">Tất cả lớp</option>
+                                {classes.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                        </div>
+                        <div className={styles.filterGroup}>
+                            <label htmlFor="month-select">Tháng</label>
+                            <select
+                                id="month-select"
+                                value={filters.month}
+                                onChange={(e) => setFilters({ month: e.target.value })}
+                            >
+                                {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            </select>
+                        </div>
+                        <div className={styles.filterGroup}>
+                            <label htmlFor="year-select">Năm</label>
+                            <select
+                                id="year-select"
+                                value={filters.year}
+                                onChange={(e) => setFilters({ year: e.target.value })}
+                            >
+                                {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </header>

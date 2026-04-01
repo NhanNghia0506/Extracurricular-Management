@@ -166,6 +166,16 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                                                 <button
                                                     className={styles.dropdownItem}
                                                     onClick={() => {
+                                                        navigate('/admin/organizer-stats');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-people-group"></i>
+                                                    <span>Thống kê ban tổ chức</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
                                                         navigate('/activity-approval');
                                                         setAdminDropdownOpen(false);
                                                     }}

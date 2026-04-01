@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout/mainlayout';
 import WithSidebarLayout from '../layouts/WithSidebarLayout/withsidebarlayout';
 import NoSidebarLayout from '../layouts/NoSidebarLayout/nosidebarlayout';
@@ -29,21 +29,14 @@ import LiveCheckinPage from '../pages/LiveCheckinPage';
 import ActivityApprovalPage from '../pages/ActivityApprovalPage';
 import OrganizerApprovalPage from '../pages/OrganizerApprovalPage';
 import VerifyCertificatePage from '../pages/VerifyCertificatePage';
-import authService from '../services/auth.service';
 import StudentDashboardPage from '../pages/StudentDashboardPage';
 import MembersManagementPage from '../pages/MembersManagementPage';
 import OrganizerDetailPage from '../pages/OrganizerDetailPage';
 import ActivityCategoryManagement from '../pages/ActivityCategoryManagementPage';
 import TrainingScoreReportPage from '../pages/TrainingScoreReportPage';
 import StudentStatsPage from '../pages/StudentStatsPage';
-
+import OrganizerStatsPage from '../pages/OrganizerStatsPage';
 const AppRoutes: React.FC = () => {
-    const location = useLocation();
-
-    useEffect(() => {
-        console.log('AppRoutes current user:', authService.getCurrentUser());
-    }, [location.pathname]);
-
     return (
         <Routes>
             {/* Login không dùng layout */}
@@ -95,6 +88,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <StudentStatsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/organizer-stats"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <OrganizerStatsPage />
                         </ProtectedRoute>
                     }
                 />

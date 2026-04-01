@@ -8,6 +8,8 @@ import type { Request as ExpressRequest } from 'express';
 import { OrganizerApprovalQueryDto } from "./dtos/organizer-approval-query.dto";
 import { UpdateOrganizerApprovalDto } from "./dtos/update-organizer-approval.dto";
 import { UpdateOrganizerDto } from "./dtos/update.organizer.dto";
+import { AdminGuard } from "src/guards/admin.guard";
+import { OrganizerStatsQueryDto } from "./dtos/organizer-stats.query.dto";
 
 @Controller("organizers")
 export class OrganizerController {
@@ -52,6 +54,12 @@ export class OrganizerController {
         @Query() query: OrganizerApprovalQueryDto,
     ) {
         return this.organizerService.getApprovalDashboard(req.user?.role, query);
+    }
+
+    @Get('admin/stats')
+    @UseGuards(AuthGuard, AdminGuard)
+    getOrganizerStats(@Query() query: OrganizerStatsQueryDto) {
+        return this.organizerService.getOrganizerStats(query);
     }
 
     @Get('admin/approval/:id')

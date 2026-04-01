@@ -1,5 +1,10 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { OrganizerApprovalRecord, OrganizerRepository, OrganizerUserReference } from "./organizer.repository";
+import {
+    OrganizerApprovalRecord,
+    OrganizerRepository,
+    OrganizerStatsRecord,
+    OrganizerUserReference,
+} from "./organizer.repository";
 import { CreateOrganizerDto } from "./dtos/create.organizer.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
@@ -15,6 +20,8 @@ import { NotificationService } from "../notifications/notification.service";
 import { OrganizerApprovalQueryDto } from "./dtos/organizer-approval-query.dto";
 import { UpdateOrganizerApprovalDto } from "./dtos/update-organizer-approval.dto";
 import { UpdateOrganizerDto } from "./dtos/update.organizer.dto";
+import { OrganizerStatsQueryDto } from "./dtos/organizer-stats.query.dto";
+import { OrganizerStatsResponseDto } from "./dtos/organizer-stats.response.dto";
 import { Organizer } from "./organizer.entity";
 import { Activity, ActivityDocument } from "../activities/activity.entity";
 import { ActivityParticipant, ParticipantStatus } from "../activity-participants/activity-participant.entity";
@@ -30,6 +37,8 @@ const ORGANIZER_APPROVAL_STATUS: Record<'PENDING' | 'NEEDS_EDIT' | 'APPROVED' | 
     APPROVED: OrganizerApprovalStatus.APPROVED,
     REJECTED: OrganizerApprovalStatus.REJECTED,
 };
+
+type OrganizerSortBy = 'activityCount' | 'participantCount' | 'averageRating';
 
 @Injectable()
 export class OrganizerService {
@@ -331,6 +340,245 @@ export class OrganizerService {
 
     delete(id: string) {
         return this.organizerRepository.delete(id);
+    }
+
+    async getOrganizerStats(query: OrganizerStatsQueryDto): Promise<OrganizerStatsResponseDto> {
+        const month = this.parseMonth(query.month);
+        const year = this.parseYear(query.year);
+        const sortBy = this.parseSortBy(query.sortBy);
+
+        const startDate = new Date(year, month - 1, 1, 0, 0, 0, 0);
+        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+        const records = await this.organizerRepository.findOrganizerStatsRecords({
+            startDate,
+            endDate,
+        });
+
+        const organizerMap = new Map<string, {
+            organizerName: string;
+            activityCount: number;
+            participantCount: number;
+            ratingTotal: number;
+            ratingCount: number;
+        }>();
+        const categoryParticipantMap = new Map<string, number>();
+
+        let topRatedActivity = 'Chưa có dữ liệu';
+        let topRatedActivityScore = -1;
+
+        for (const record of records) {
+            const current = organizerMap.get(record.organizerId) || {
+                organizerName: record.organizerName,
+                activityCount: 0,
+                participantCount: 0,
+                ratingTotal: 0,
+                ratingCount: 0,
+            };
+
+            current.activityCount += 1;
+            current.participantCount += record.participantCount;
+
+            if (record.averageRating > 0) {
+                current.ratingTotal += record.averageRating;
+                current.ratingCount += 1;
+            }
+
+            organizerMap.set(record.organizerId, current);
+            categoryParticipantMap.set(
+                record.categoryName,
+                (categoryParticipantMap.get(record.categoryName) || 0) + record.participantCount,
+            );
+
+            if (record.averageRating > topRatedActivityScore) {
+                topRatedActivityScore = record.averageRating;
+                topRatedActivity = record.activityTitle;
+            }
+        }
+
+        const totalOrganizers = organizerMap.size;
+        const totalActivities = records.length;
+        const totalParticipants = records.reduce((sum, item) => sum + item.participantCount, 0);
+
+        const ratedActivities = records.filter((item) => item.averageRating > 0);
+        const averageRating = ratedActivities.length > 0
+            ? Number((ratedActivities.reduce((sum, item) => sum + item.averageRating, 0) / ratedActivities.length).toFixed(2))
+            : 0;
+
+        let mostParticipatedCategory = 'Chưa có dữ liệu';
+        let highestCategoryParticipants = -1;
+        for (const [categoryName, participantCount] of categoryParticipantMap.entries()) {
+            if (participantCount > highestCategoryParticipants) {
+                highestCategoryParticipants = participantCount;
+                mostParticipatedCategory = categoryName;
+            }
+        }
+
+        const organizers = Array.from(organizerMap.entries()).map(([organizerId, item]) => ({
+            organizerId,
+            organizerName: item.organizerName,
+            activityCount: item.activityCount,
+            participantCount: item.participantCount,
+            averageRating: item.ratingCount > 0
+                ? Number((item.ratingTotal / item.ratingCount).toFixed(2))
+                : 0,
+        }));
+
+        const sortedOrganizers = [...organizers].sort((a, b) => {
+            if (sortBy === 'averageRating') {
+                if (b.averageRating !== a.averageRating) {
+                    return b.averageRating - a.averageRating;
+                }
+                if (b.participantCount !== a.participantCount) {
+                    return b.participantCount - a.participantCount;
+                }
+                return b.activityCount - a.activityCount;
+            }
+
+            if (sortBy === 'participantCount') {
+                if (b.participantCount !== a.participantCount) {
+                    return b.participantCount - a.participantCount;
+                }
+                if (b.activityCount !== a.activityCount) {
+                    return b.activityCount - a.activityCount;
+                }
+                return b.averageRating - a.averageRating;
+            }
+
+            if (b.activityCount !== a.activityCount) {
+                return b.activityCount - a.activityCount;
+            }
+            if (b.participantCount !== a.participantCount) {
+                return b.participantCount - a.participantCount;
+            }
+            return b.averageRating - a.averageRating;
+        });
+
+        const topOrganizer = sortedOrganizers[0]?.organizerName || 'Chưa có dữ liệu';
+
+        const leaderboard = sortedOrganizers.slice(0, 10).map((item, index) => ({
+            rank: index + 1,
+            organizerId: item.organizerId,
+            organizerName: item.organizerName,
+            activityCount: item.activityCount,
+            participantCount: item.participantCount,
+            averageRating: item.averageRating,
+        }));
+
+        const topActivities = [...records]
+            .sort((a, b) => {
+                if (b.averageRating !== a.averageRating) {
+                    return b.averageRating - a.averageRating;
+                }
+                return b.participantCount - a.participantCount;
+            })
+            .slice(0, 8)
+            .map((item) => ({
+                title: item.activityTitle,
+                organizerName: item.organizerName,
+                participantCount: item.participantCount,
+                averageRating: item.averageRating,
+            }));
+
+        const ratingDistribution = this.buildRatingDistribution(records);
+
+        return {
+            kpi: {
+                totalOrganizers,
+                totalActivities,
+                totalParticipants,
+                averageRating,
+                topOrganizer,
+                topRatedActivity,
+                mostParticipatedCategory,
+            },
+            activityTrend: this.buildActivityTrend(records),
+            ratingDistribution,
+            organizerLeaderboard: leaderboard,
+            topActivities,
+        };
+    }
+
+    private buildActivityTrend(records: OrganizerStatsRecord[]) {
+        const monthKeys: string[] = [];
+        const counts = new Map<string, number>();
+
+        for (let i = 5; i >= 0; i -= 1) {
+            const current = new Date();
+            current.setMonth(current.getMonth() - i);
+            const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+            monthKeys.push(key);
+            counts.set(key, 0);
+        }
+
+        for (const record of records) {
+            const activityDate = new Date(record.activityDate);
+            if (Number.isNaN(activityDate.getTime())) {
+                continue;
+            }
+
+            const key = `${activityDate.getFullYear()}-${String(activityDate.getMonth() + 1).padStart(2, '0')}`;
+            if (!counts.has(key)) {
+                continue;
+            }
+
+            counts.set(key, (counts.get(key) || 0) + 1);
+        }
+
+        return {
+            labels: monthKeys,
+            data: monthKeys.map((key) => counts.get(key) || 0),
+        };
+    }
+
+    private buildRatingDistribution(records: OrganizerStatsRecord[]) {
+        const rated = records.filter((item) => item.averageRating > 0);
+        if (rated.length === 0) {
+            return {
+                excellent: 0,
+                good: 0,
+                fair: 0,
+                low: 0,
+            };
+        }
+
+        const excellent = rated.filter((item) => item.averageRating >= 4.5).length;
+        const good = rated.filter((item) => item.averageRating >= 4 && item.averageRating < 4.5).length;
+        const fair = rated.filter((item) => item.averageRating >= 3 && item.averageRating < 4).length;
+        const low = rated.filter((item) => item.averageRating < 3).length;
+
+        const toPercent = (value: number) => Number(((value / rated.length) * 100).toFixed(2));
+
+        return {
+            excellent: toPercent(excellent),
+            good: toPercent(good),
+            fair: toPercent(fair),
+            low: toPercent(low),
+        };
+    }
+
+    private parseMonth(rawMonth?: string): number {
+        const month = Number(rawMonth || new Date().getMonth() + 1);
+        if (!Number.isInteger(month) || month < 1 || month > 12) {
+            throw new BadRequestException('month phải nằm trong khoảng 1 đến 12');
+        }
+        return month;
+    }
+
+    private parseYear(rawYear?: string): number {
+        const year = Number(rawYear || new Date().getFullYear());
+        if (!Number.isInteger(year) || year < 2020 || year > 2100) {
+            throw new BadRequestException('year không hợp lệ');
+        }
+        return year;
+    }
+
+    private parseSortBy(rawSortBy?: string): OrganizerSortBy {
+        if (rawSortBy === 'participantCount' || rawSortBy === 'averageRating') {
+            return rawSortBy;
+        }
+
+        return 'activityCount';
     }
 
     async getApprovalDashboard(
