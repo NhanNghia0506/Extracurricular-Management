@@ -10,6 +10,8 @@ import { faBell, faMessage } from '@fortawesome/free-regular-svg-icons';
 import logo from 'assets/images/logoUniActivity.png';
 import authService from 'services/auth.service';
 import notificationService from 'services/notification.service';
+import activityService from 'services/activity.service';
+import { ActivityListItem } from '../../../types/activity.types';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
 import { NOTIFICATION_UNREAD_COUNT_EVENT } from '../../../utils/notification-realtime';
 
@@ -23,9 +25,12 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
     const [user, setUser] = useState<{ name: string; email: string; avatar?: string | null } | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [localSearchValue, setLocalSearchValue] = useState(searchValue || '');
+    const [activities, setActivities] = useState<ActivityListItem[]>([]);
+    const [searchFocused, setSearchFocused] = useState(false);
     const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
     const [role, setRole] = useState<string | null>('');
     const adminDropdownRef = useRef<HTMLDivElement>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (typeof searchValue === 'string') {
@@ -44,15 +49,19 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
             if (adminDropdownRef.current && !adminDropdownRef.current.contains(event.target as Node)) {
                 setAdminDropdownOpen(false);
             }
+
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setSearchFocused(false);
+            }
         };
 
-        if (adminDropdownOpen) {
+        if (adminDropdownOpen || searchFocused) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => {
                 document.removeEventListener('mousedown', handleClickOutside);
             };
         }
-    }, [adminDropdownOpen]);
+    }, [adminDropdownOpen, searchFocused]);
 
     useEffect(() => {
         let isMounted = true;
@@ -75,6 +84,25 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
 
     useEffect(() => {
         let isMounted = true;
+
+        activityService.list()
+            .then((response) => {
+                if (!isMounted) {
+                    return;
+                }
+
+                const payload = response.data;
+                const nextActivities: ActivityListItem[] = Array.isArray(payload?.data)
+                    ? payload.data
+                    : (payload?.data?.data || []);
+
+                if (Array.isArray(nextActivities)) {
+                    setActivities(nextActivities);
+                }
+            })
+            .catch(() => {
+                // Ignore search source fetch errors in header.
+            });
 
         notificationService.getUnreadCount()
             .then((response) => {
@@ -105,6 +133,40 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
     const displayName = user?.name || '';
     const avatarUrl = user?.avatar || undefined;
 
+    const normalizedKeyword = localSearchValue.trim().toLowerCase();
+    const searchResults = normalizedKeyword
+        ? activities
+            .filter((activity) => {
+                const organizerName = typeof activity.organizerId === 'string'
+                    ? activity.organizerId
+                    : (activity.organizerId?.name || '');
+
+                return [activity.title, organizerName]
+                    .filter(Boolean)
+                    .some((value) => String(value).toLowerCase().includes(normalizedKeyword));
+            })
+            .slice(0, 6)
+        : [];
+    const showSearchDropdown = searchFocused && normalizedKeyword.length > 0;
+
+    const resolveActivityImage = (activity: ActivityListItem): string => {
+        const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+        if (!activity.image) {
+            return 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400&auto=format&fit=crop';
+        }
+
+        if (activity.image.startsWith('http://') || activity.image.startsWith('https://')) {
+            return activity.image;
+        }
+
+        return `${baseUrl}/uploads/${activity.image}`;
+    };
+
+    const handleSelectActivity = (activityId: string) => {
+        setSearchFocused(false);
+        navigate(`/activity-detail?id=${activityId}`);
+    };
+
     return (
         <header className={styles.headerWrapper}>
             {/* Container-fluid giúp nội dung trải rộng nhưng vẫn có padding 2 bên */}
@@ -122,19 +184,53 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
 
                     {/* --- 2. Center: Search Bar --- */}
                     {/* d-none d-md-block: Ẩn trên mobile, hiện trên màn hình medium trở lên */}
-                    <div className={`${styles.searchContainer} d-none d-md-block`}>
+                    <div className={`${styles.searchContainer} d-none d-md-block`} ref={searchRef}>
                         <i className={`fa-solid fa-magnifying-glass ${styles.searchIcon}`}></i>
                         <input
                             type="text"
                             className={styles.searchInput}
                             placeholder="Search activities, clubs, or events..."
                             value={typeof searchValue === 'string' ? searchValue : localSearchValue}
+                            onFocus={() => setSearchFocused(true)}
                             onChange={(e) => {
                                 const nextValue = e.target.value;
                                 setLocalSearchValue(nextValue);
                                 onSearch && onSearch(nextValue);
                             }}
                         />
+
+                        {showSearchDropdown && (
+                            <div className={styles.searchDropdown}>
+                                {searchResults.length === 0 ? (
+                                    <div className={styles.searchEmpty}>Không tìm thấy hoạt động phù hợp.</div>
+                                ) : (
+                                    searchResults.map((activity) => {
+                                        const organizerName = typeof activity.organizerId === 'string'
+                                            ? activity.organizerId
+                                            : (activity.organizerId?.name || 'Ban tổ chức chưa cập nhật');
+
+                                        return (
+                                            <button
+                                                key={activity._id}
+                                                type="button"
+                                                className={styles.searchItem}
+                                                onClick={() => handleSelectActivity(activity._id)}
+                                            >
+                                                <img
+                                                    src={resolveActivityImage(activity)}
+                                                    alt={activity.title}
+                                                    className={styles.searchItemImage}
+                                                />
+                                                <span className={styles.searchItemText}>
+                                                    <strong>{activity.title}</strong>
+                                                    <small>{organizerName}</small>
+                                                </span>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* --- 3. Right: Auth or Profile --- */}

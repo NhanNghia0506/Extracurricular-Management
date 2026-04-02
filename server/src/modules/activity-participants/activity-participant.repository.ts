@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { ActivityParticipant, ParticipantStatus } from "./activity-participant.entity";
+import { ActivityParticipant, ActivityParticipantDocument, ParticipantStatus } from "./activity-participant.entity";
 import { Model, Types } from "mongoose";
 
 interface RegisteredActivityScheduleRow {
@@ -8,6 +8,13 @@ interface RegisteredActivityScheduleRow {
     title: string;
     startAt: Date;
     endAt?: Date;
+}
+
+interface PendingParticipantRow {
+    _id: Types.ObjectId;
+    activityId: Types.ObjectId;
+    userId: Types.ObjectId;
+    registeredAt?: Date;
 }
 
 @Injectable()
@@ -25,6 +32,37 @@ export class ActivityParticipantRepository {
         return this.activityParticipantModel.countDocuments({ activityId: objectId });
     }
 
+    // Count only REGISTERED participants (for capacity checking)
+    countRegisteredByActivityId(activityId: string): Promise<number> {
+        const objectId = new Types.ObjectId(activityId);
+        return this.activityParticipantModel.countDocuments({
+            activityId: objectId,
+            status: ParticipantStatus.REGISTERED,
+        });
+    }
+
+    // Find first PENDING participant in queue for auto-promotion
+    findFirstPendingByActivityId(activityId: string): Promise<PendingParticipantRow | null> {
+        const objectId = new Types.ObjectId(activityId);
+        return this.activityParticipantModel.findOne({
+            activityId: objectId,
+            status: ParticipantStatus.PENDING,
+        }).sort({ registeredAt: 1 }).select('_id activityId userId registeredAt').lean<PendingParticipantRow>().exec();
+    }
+
+    // Find participant by ID (for fetching single record)
+    findById(id: string): Promise<ActivityParticipantDocument | null> {
+        return this.activityParticipantModel.findById(new Types.ObjectId(id)).exec();
+    }
+
+    // Update participant status
+    updateStatus(id: string, status: ParticipantStatus): Promise<ActivityParticipantDocument | null> {
+        return this.activityParticipantModel.findByIdAndUpdate(
+            new Types.ObjectId(id),
+            { status },
+            { new: true },
+        ).exec();
+    }
 
     findByActivityIdWithClassFacultyNames(activityId: string) {
         const objectId = new Types.ObjectId(activityId);
@@ -60,7 +98,7 @@ export class ActivityParticipantRepository {
             {
                 $lookup: {
                     from: 'faculties',
-                    localField: 'student.facultyId',
+                    localField: 'class.facultyId',
                     foreignField: '_id',
                     as: 'faculty',
                 },
@@ -141,6 +179,7 @@ export class ActivityParticipantRepository {
             {
                 $project: {
                     _id: 0,
+                    participantId: '$_id',
                     activityId: '$activity._id',
                     title: '$activity.title',
                     description: '$activity.description',

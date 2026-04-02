@@ -28,6 +28,10 @@ const ActivityParticipants: React.FC = () => {
     const [exportingFormat, setExportingFormat] = useState<'csv' | 'xlsx' | null>(null);
     const [exportError, setExportError] = useState<string | null>(null);
     const [exportMessage, setExportMessage] = useState<string | null>(null);
+    const [cancellingParticipantId, setCancellingParticipantId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const pageSize = 10;
 
     useEffect(() => {
         const fetchParticipants = async () => {
@@ -68,6 +72,22 @@ const ActivityParticipants: React.FC = () => {
             return matchesSearch && matchesClass && matchesStatus;
         });
     }, [participants, searchTerm, selectedClassFilter, selectedStatusFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedClassFilter, selectedStatusFilter, participants.length]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / pageSize));
+    const shouldPaginate = filteredParticipants.length > pageSize;
+
+    const paginatedParticipants = useMemo(() => {
+        if (!shouldPaginate) {
+            return filteredParticipants;
+        }
+
+        const start = (currentPage - 1) * pageSize;
+        return filteredParticipants.slice(start, start + pageSize);
+    }, [filteredParticipants, currentPage, shouldPaginate]);
 
     const classFilterOptions = useMemo(() => {
         const values = Array.from(
@@ -119,13 +139,13 @@ const ActivityParticipants: React.FC = () => {
             case 'REGISTERED':
                 return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'APPROVED':
-                return { label: 'Đã đăng ký', className: 'confirmed' };
+                return { label: 'Đã duyệt', className: 'checkedIn' };
             case 'PENDING':
-                return { label: 'Đã đăng ký', className: 'confirmed' };
+                return { label: 'Chờ duyệt', className: 'pending' };
             case 'REJECTED':
-                return { label: 'Đã đăng ký', className: 'confirmed' };
+                return { label: 'Bị từ chối', className: 'rejected' };
             case 'CANCELLED':
-                return { label: 'Đã hủy', className: 'pending' };
+                return { label: 'Đã hủy', className: 'cancelled' };
             default:
                 return { label: 'Đã đăng ký', className: 'confirmed' };
         }
@@ -155,15 +175,42 @@ const ActivityParticipants: React.FC = () => {
             case 'REGISTERED':
                 return 'Đã đăng ký';
             case 'APPROVED':
-                return 'Đã đăng ký';
+                return 'Đã duyệt';
             case 'PENDING':
-                return 'Đã đăng ký';
+                return 'Chờ duyệt';
             case 'REJECTED':
-                return 'Đã đăng ký';
+                return 'Bị từ chối';
             case 'CANCELLED':
                 return 'Đã hủy';
             default:
                 return 'Đã đăng ký';
+        }
+    };
+
+    const handleCancelParticipant = async (participantId?: string) => {
+        if (!participantId) {
+            alert('Không tìm thấy thông tin đăng ký để hủy.');
+            return;
+        }
+
+        const confirmed = window.confirm('Bạn có chắc muốn hủy đăng ký của sinh viên này?');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setCancellingParticipantId(participantId);
+            await activityService.cancelRegistration(participantId);
+
+            setParticipants((prev) => prev.map((item) => (
+                item._id === participantId
+                    ? { ...item, status: 'CANCELLED' }
+                    : item
+            )));
+        } catch (err: any) {
+            alert(err?.response?.data?.message || 'Không thể hủy đăng ký lúc này.');
+        } finally {
+            setCancellingParticipantId(null);
         }
     };
 
@@ -455,7 +502,7 @@ const ActivityParticipants: React.FC = () => {
                             </tr>
                         )}
 
-                        {!loading && !error && filteredParticipants.map((stu, index) => {
+                        {!loading && !error && paginatedParticipants.map((stu, index) => {
                             const statusInfo = mapStatus(stu.status);
                             const initials = getInitials(stu.studentName);
                             return (
@@ -478,7 +525,16 @@ const ActivityParticipants: React.FC = () => {
                                             {statusInfo.label}
                                         </span>
                                     </td>
-                                    <td><i className="fa-solid fa-ellipsis-vertical text-muted cursor-pointer"></i></td>
+                                    <td>
+                                        <button
+                                            type="button"
+                                            className={styles.cancelBtn}
+                                            disabled={stu.status === 'CANCELLED' || cancellingParticipantId === stu._id}
+                                            onClick={() => handleCancelParticipant(stu._id)}
+                                        >
+                                            {cancellingParticipantId === stu._id ? 'Đang hủy...' : 'Hủy đăng ký'}
+                                        </button>
+                                    </td>
                                 </tr>
                             );
                         })}
@@ -487,16 +543,37 @@ const ActivityParticipants: React.FC = () => {
 
                 {/* 4. Phân trang */}
                 <div className={styles.pagination}>
-                    <span>Hiển thị <b>{filteredParticipants.length}</b> / <b>{participants.length}</b> sinh viên</span>
-                    <div className={styles.pageNumbers}>
-                        <button><i className="fa-solid fa-chevron-left"></i></button>
-                        <button className={styles.active}>1</button>
-                        <button>2</button>
-                        <button>3</button>
-                        <span>...</span>
-                        <button>126</button>
-                        <button><i className="fa-solid fa-chevron-right"></i></button>
-                    </div>
+                    <span>Hiển thị <b>{paginatedParticipants.length}</b> / <b>{filteredParticipants.length}</b> sinh viên</span>
+                    {shouldPaginate && (
+                        <div className={styles.pageNumbers}>
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <i className="fa-solid fa-chevron-left"></i>
+                            </button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    type="button"
+                                    key={page}
+                                    className={currentPage === page ? styles.active : ''}
+                                    onClick={() => setCurrentPage(page)}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                            >
+                                <i className="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

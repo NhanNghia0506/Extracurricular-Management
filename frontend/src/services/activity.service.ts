@@ -54,6 +54,7 @@ const activityService = {
         return typeof count === 'number' ? count : Number(count) || 0;
     },
     myActivities: () => apiService.get('/activities/my-activities'),
+    cancelRegistration: (participantId: string) => apiService.delete(`/activity-participants/${participantId}`),
 }
 
 export default activityService;

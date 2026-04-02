@@ -266,6 +266,24 @@
         }
     }
 
+    &.cancelled {
+        background: var(--color-bg-very-light);
+        color: var(--color-text-muted);
+
+        &::before {
+            background: var(--color-text-muted);
+        }
+    }
+
+    &.rejected {
+        background: var(--color-status-error-light);
+        color: var(--color-status-error);
+
+        &::before {
+            background: var(--color-status-error);
+        }
+    }
+
     &.checkedIn {
         background: var(--color-bg-blue-light);
         color: var(--color-primary-blue);
@@ -302,5 +320,24 @@
                 border-color: var(--color-primary-blue);
             }
         }
+    }
+}
+
+.cancelBtn {
+    border: 1px solid #fecaca;
+    background: #fff5f5;
+    color: #b91c1c;
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+        background: #fee2e2;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 }

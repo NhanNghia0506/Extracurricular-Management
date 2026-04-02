@@ -38,6 +38,8 @@ export interface ActivityDetailResponse {
   category: any;
   participantCount: number;
   isRegistered: boolean;
+  participantRegistrationId?: string | null;
+  participantStatus?: string | null;
   isOwner: boolean;
   canDelete: boolean;
   approvalStatus: string;

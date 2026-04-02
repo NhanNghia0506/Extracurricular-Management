@@ -7,6 +7,7 @@ import { LocationData } from '@/types/activity.types';
 
 interface MyActivityItem {
     _id?: string;
+    participantId?: string;
     activityId: string;
     title: string;
     description?: string;
@@ -65,6 +66,30 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
 
         fetchMyActivities();
     }, []);
+
+    const handleCancelRegistration = async (participantId?: string) => {
+        if (!participantId) {
+            alert('Không tìm thấy thông tin đăng ký để hủy.');
+            return;
+        }
+
+        const confirmed = window.confirm('Bạn có chắc muốn hủy đăng ký hoạt động này?');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await activityService.cancelRegistration(participantId);
+            setActivities((prev) => prev.map((item) => (
+                item.participantId === participantId
+                    ? { ...item, participantStatus: 'CANCELLED' }
+                    : item
+            )));
+            alert('Đã hủy đăng ký thành công');
+        } catch (err: any) {
+            alert(err?.response?.data?.message || 'Không thể hủy đăng ký. Vui lòng thử lại!');
+        }
+    };
 
     const statusPresentationMap = useMemo(() => ({
         PENDING: { label: 'Chờ phê duyệt', color: '#f59e0b' },
@@ -150,9 +175,9 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
             case 'APPROVED':
                 return { label: 'Đã đăng ký' };
             case 'PENDING':
-                return { label: 'Đã đăng ký' };
+                return { label: 'Danh sách chờ' };
             case 'REJECTED':
-                return { label: 'Đã đăng ký' };
+                return { label: 'Bị từ chối' };
             case 'CANCELLED':
                 return { label: 'Đã hủy' };
             default:
@@ -259,6 +284,7 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                     const participantStatus = mapParticipantStatus(act.participantStatus);
                     const activityId = getActivityId(act);
                     const canOpenFeedback = getActivityStatusKey(act) !== 'COMPLETED';
+                    const canCancelRegistration = act.participantStatus === 'REGISTERED' || act.participantStatus === 'PENDING' || act.participantStatus === 'APPROVED';
                     return (
                         <div key={activityId} className={styles.activityCard}>
                             <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
@@ -278,6 +304,15 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                                     {participantStatus.label}
                                 </span>
                                 <div className="d-flex align-items-center gap-2">
+                                    {canCancelRegistration && (
+                                        <button
+                                            type="button"
+                                            className={styles.cancelActionBtn}
+                                            onClick={() => handleCancelRegistration(act.participantId)}
+                                        >
+                                            Hủy đăng ký
+                                        </button>
+                                    )}
                                     {canOpenFeedback && (
                                         <Link to={`/activity-detail?id=${activityId}#feedback`} className={styles.actionLink}>Đánh giá</Link>
                                     )}

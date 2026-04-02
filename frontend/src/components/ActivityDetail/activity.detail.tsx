@@ -92,6 +92,7 @@ const ActivityDetail: React.FC = () => {
     const [deleting, setDeleting] = useState(false);
     const [showCreateChatModal, setShowCreateChatModal] = useState(false);
     const [showRegisterConfirmModal, setShowRegisterConfirmModal] = useState(false);
+    const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
     const [showJoinChatPromptModal, setShowJoinChatPromptModal] = useState(false);
     const [showScheduleConflictModal, setShowScheduleConflictModal] = useState(false);
     const [scheduleConflictMessage, setScheduleConflictMessage] = useState('');
@@ -184,7 +185,10 @@ const ActivityDetail: React.FC = () => {
             setActivity(response.data.data);
             const nextConversationState = await loadConversationState(id);
 
-            if (nextConversationState.hasConversation && nextConversationState.conversationId) {
+            const nextParticipantStatus = response.data?.data?.participantStatus;
+            if (nextParticipantStatus === 'PENDING') {
+                alert('Hoạt động đã đầy. Bạn đã được thêm vào danh sách chờ.');
+            } else if (nextConversationState.hasConversation && nextConversationState.conversationId) {
                 setShowJoinChatPromptModal(true);
             } else {
                 alert('Đăng ký tham gia thành công!');
@@ -202,6 +206,35 @@ const ActivityDetail: React.FC = () => {
                 alert(errorMessage);
             }
             console.error('Error registering:', err);
+        } finally {
+            setRegistering(false);
+        }
+    };
+
+    const handleCancelRegistration = async () => {
+        if (!id || !activity?.participantRegistrationId) {
+            return;
+        }
+
+        try {
+            setRegistering(true);
+            const response = await activityService.cancelRegistration(activity.participantRegistrationId);
+            const message = response.data?.message || 'Đã hủy đăng ký thành công';
+            const promotedUserName = response.data?.data?.promotedUserName || response.data?.promotedUserName;
+
+            setShowCancelConfirmModal(false);
+
+            const detailResponse = await activityService.getDetail(id);
+            setActivity(detailResponse.data.data);
+
+            if (promotedUserName) {
+                alert(`${message}. ${promotedUserName} đã được chuyển từ danh sách chờ.`);
+            } else {
+                alert(message);
+            }
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Không thể hủy đăng ký. Vui lòng thử lại!');
+            console.error('Error cancelling registration:', err);
         } finally {
             setRegistering(false);
         }
@@ -317,6 +350,9 @@ const ActivityDetail: React.FC = () => {
     const isApproved = activity.approvalStatus === 'APPROVED';
     const needsEdit = activity.approvalStatus === 'NEEDS_EDIT';
     const canAccessChat = hasConversation && (activity.isOwner || currentUserRole === 'ADMIN' || activity.isRegistered);
+    const isWaitlisted = activity.participantStatus === 'PENDING';
+    const isRegisteredParticipant = activity.participantStatus === 'REGISTERED' || activity.participantStatus === 'APPROVED';
+    const isActivityFull = Boolean(activity.participantCount && activity.registeredCount >= activity.participantCount);
     const deleteDeadline = new Date(new Date(activity.startAt).getTime() - deleteNoticePeriodInMs);
     const directionsUrl = activity.location
         ? `https://www.google.com/maps/search/?api=1&query=${activity.location.latitude},${activity.location.longitude}`
@@ -480,20 +516,37 @@ const ActivityDetail: React.FC = () => {
                                 >
                                     <i className="fa-solid fa-id-card"></i>
                                     {activity.isRegistered
-                                        ? 'Đã đăng ký'
-                                        : registering ? 'Đang đăng ký...' : 'Đăng ký ngay'
+                                        ? (isWaitlisted ? 'Đang trong danh sách chờ' : 'Đã đăng ký')
+                                        : (isActivityFull ? 'Tham gia danh sách chờ' : (registering ? 'Đang đăng ký...' : 'Đăng ký ngay'))
                                     }
                                 </button>
+                                {!activity.isRegistered && isActivityFull && (
+                                    <p className="small text-muted mt-2 mb-0">
+                                        Hoạt động đã đủ chỗ. Bạn có thể tham gia danh sách chờ để được chuyển vào khi có chỗ trống.
+                                    </p>
+                                )}
                                 {activity.isRegistered && (
-                                    <button
-                                        className={styles.registerBtn}
-                                        onClick={handleGoToAttendance}
-                                        disabled={!checkinSession?._id}
-                                        title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
-                                    >
-                                        <i className="fa-solid fa-fingerprint"></i>
-                                        Đi đến trang điểm danh
-                                    </button>
+                                    <>
+                                        {isRegisteredParticipant && (
+                                            <button
+                                                className={styles.registerBtn}
+                                                onClick={handleGoToAttendance}
+                                                disabled={!checkinSession?._id}
+                                                title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
+                                            >
+                                                <i className="fa-solid fa-fingerprint"></i>
+                                                Đi đến trang điểm danh
+                                            </button>
+                                        )}
+                                        <button
+                                            className={styles.actionBtnOutline}
+                                            onClick={() => setShowCancelConfirmModal(true)}
+                                            disabled={registering || !activity.participantRegistrationId}
+                                        >
+                                            <i className="fa-solid fa-user-minus"></i>
+                                            Hủy đăng ký
+                                        </button>
+                                    </>
                                 )}
                             </>
                         )}
@@ -651,6 +704,45 @@ const ActivityDetail: React.FC = () => {
                                 disabled={registering}
                             >
                                 {registering ? 'Đang đăng ký...' : 'Xác nhận đăng ký'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showCancelConfirmModal && (
+                <div className={styles.modalOverlay} onClick={() => !registering && setShowCancelConfirmModal(false)}>
+                    <div className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3>Xác nhận hủy đăng ký</h3>
+                            <button
+                                type="button"
+                                className={styles.modalCloseBtn}
+                                onClick={() => setShowCancelConfirmModal(false)}
+                                disabled={registering}
+                            >
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <p className={styles.modalBodyText}>
+                            Bạn có chắc muốn hủy đăng ký hoạt động <strong>{activity.title}</strong> không?
+                        </p>
+                        <div className={styles.modalActions}>
+                            <button
+                                type="button"
+                                className={styles.modalSecondaryBtn}
+                                onClick={() => setShowCancelConfirmModal(false)}
+                                disabled={registering}
+                            >
+                                Quay lại
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.modalPrimaryBtn}
+                                onClick={handleCancelRegistration}
+                                disabled={registering}
+                            >
+                                {registering ? 'Đang hủy...' : 'Xác nhận hủy'}
                             </button>
                         </div>
                     </div>

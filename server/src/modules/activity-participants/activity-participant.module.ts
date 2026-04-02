@@ -7,6 +7,7 @@ import { ActivityParticipantRepository } from './activity-participant.repository
 import { AuthGuard } from 'src/guards/auth.guard';
 import { ActivityModule } from '../activities/activity.module';
 import { UserModule } from '../users/user.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { UserModule } from '../users/user.module';
             { name: ActivityParticipant.name, schema: ActivityParticipantSchema },
         ]),
         UserModule,
+        NotificationModule,
         forwardRef(() => ActivityModule),
     ],
     controllers: [ActivityParticipantController],

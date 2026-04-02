@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 
-export type ActivityParticipantDocument = ActivityParticipant & Document;
+export type ActivityParticipantDocument = HydratedDocument<ActivityParticipant>;
 
 export enum ParticipantStatus {
     REGISTERED = 'REGISTERED',
@@ -13,6 +13,8 @@ export enum ParticipantStatus {
 
 @Schema({ timestamps: true })
 export class ActivityParticipant {
+    _id?: Types.ObjectId;
+
     @Prop({ required: true, type: Types.ObjectId, ref: 'Activity' })
     activityId: Types.ObjectId;
 

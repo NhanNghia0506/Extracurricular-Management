@@ -1,10 +1,12 @@
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException, forwardRef } from "@nestjs/common";
 import { ActivityParticipantRepository } from "./activity-participant.repository";
 import { CreateActivityParticipantDto } from "./dtos/create.activity-participant.dto";
 import { ActivityParticipant, ParticipantStatus } from "./activity-participant.entity";
 import { Types } from "mongoose";
 import { ActivityService } from "../activities/activity.service";
-import { ActivityApprovalStatus } from "src/global/globalEnum";
+import { ActivityApprovalStatus, UserRole, NotificationType, NotificationPriority } from "src/global/globalEnum";
+import { NotificationService } from "../notifications/notification.service";
+import UserService from "../users/user.service";
 
 @Injectable()
 export class ActivityParticipantService {
@@ -12,6 +14,8 @@ export class ActivityParticipantService {
         private readonly activityParticipantRepository: ActivityParticipantRepository,
         @Inject(forwardRef(() => ActivityService))
         private readonly activityService: ActivityService,
+        private readonly notificationService: NotificationService,
+        private readonly userService: UserService,
     ) { }
 
     // Đăng ký tham gia hoạt động
@@ -64,17 +68,19 @@ export class ActivityParticipantService {
             );
         }
 
-        const participantQuantity = await this.countParticipantsByActivity(activityParticipantData.activityId);
+        // Count ONLY REGISTERED participants for capacity checking
+        const registeredCount = await this.activityParticipantRepository.countRegisteredByActivityId(activityParticipantData.activityId);
 
-        // Kiểm tra số lượng đăng ký đã vượt quá giới hạn chưa
-        if (activity.participantCount > 0 && participantQuantity >= activity.participantCount) {
-            throw new BadRequestException('Số lượng tham gia đã đủ');
+        // Determine status: REGISTERED if slot available, PENDING if full
+        let status = ParticipantStatus.REGISTERED;
+        if (activity.participantCount > 0 && registeredCount >= activity.participantCount) {
+            status = ParticipantStatus.PENDING;
         }
 
         const activityParticipant = {
             activityId: new Types.ObjectId(activityParticipantData.activityId),
             userId: new Types.ObjectId(userId),
-            status: ParticipantStatus.REGISTERED,
+            status,
             registeredAt: activityParticipantData.registeredAt || new Date(),
         } as ActivityParticipant;
 
@@ -82,7 +88,112 @@ export class ActivityParticipantService {
     }
 
     countParticipantsByActivity(activityId: string) {
-        return this.activityParticipantRepository.countByActivityId(activityId);
+        // Count REGISTERED participants for capacity/progress tracking
+        return this.activityParticipantRepository.countRegisteredByActivityId(activityId);
+    }
+
+    // Handle capacity check and auto-promotion of PENDING users
+    private async handleCapacityAndPromotion(activityId: string): Promise<{ wasPromoted: boolean; promotedUserId?: string; promotedUserName?: string }> {
+        try {
+            const activity = await this.activityService.findById(activityId);
+            if (!activity || activity.participantCount === 0) {
+                // Unlimited capacity or activity not found
+                return { wasPromoted: false };
+            }
+
+            // Count REGISTERED participants
+            const registeredCount = await this.activityParticipantRepository.countRegisteredByActivityId(activityId);
+
+            // Check if slot is available and there's someone waiting
+            if (registeredCount < activity.participantCount) {
+                const nextPending = await this.activityParticipantRepository.findFirstPendingByActivityId(activityId);
+
+                if (nextPending) {
+                    const pendingId = String(nextPending._id || '');
+                    if (!pendingId) {
+                        return { wasPromoted: false };
+                    }
+
+                    // Promote PENDING to REGISTERED
+                    await this.activityParticipantRepository.updateStatus(
+                        pendingId,
+                        ParticipantStatus.REGISTERED,
+                    );
+
+                    // Get user info for notification
+                    const promotedUser = await this.userService.getProfile(nextPending.userId.toString());
+
+                    if (promotedUser) {
+                        // Send notification
+                        await this.notificationService.create({
+                            userId: String(promotedUser.id),
+                            senderName: 'Hệ thống',
+                            senderType: 'SYSTEM',
+                            title: 'Bạn đã được chuyển từ danh sách chờ',
+                            message: `Bạn đã được chuyển sang danh sách tham gia cho hoạt động "${activity.title}". Vui lòng kiểm tra chi tiết.`,
+                            type: NotificationType.ACTIVITY,
+                            priority: NotificationPriority.HIGH,
+                            linkUrl: `/activity-detail?id=${activityId}`,
+                            meta: {
+                                activityId,
+                                activityTitle: activity.title,
+                                activityDate: activity.startAt,
+                            },
+                        });
+                    }
+
+                    return {
+                        wasPromoted: true,
+                        promotedUserId: nextPending.userId.toString(),
+                        promotedUserName: promotedUser?.name,
+                    };
+                }
+            }
+
+            return { wasPromoted: false };
+        } catch (error) {
+            // Log error but don't throw - promotion failure shouldn't break cancellation
+            console.error('Error during waitlist promotion:', error);
+            return { wasPromoted: false, promotedUserName: undefined };
+        }
+    }
+
+    // Cancel participant registration
+    async cancelParticipation(participantId: string, userId: string, userRole: UserRole): Promise<any> {
+        if (!Types.ObjectId.isValid(participantId)) {
+            throw new BadRequestException('participantId không hợp lệ');
+        }
+
+        const participant = await this.activityParticipantRepository.findById(participantId);
+        if (!participant) {
+            throw new NotFoundException('Không tìm thấy đăng ký tham gia');
+        }
+
+        // Permission check: only participant, activity owner, or admin can cancel
+        const isParticipant = participant.userId.toString() === userId;
+        const isAdmin = userRole === UserRole.ADMIN;
+        const activity = await this.activityService.findById(participant.activityId.toString());
+        const isActivityOwner = activity?.createdBy?.toString?.() === userId;
+
+        if (!isParticipant && !isAdmin && !isActivityOwner) {
+            throw new UnauthorizedException('Bạn không có quyền hủy đăng ký này');
+        }
+
+        // Set status to CANCELLED
+        await this.activityParticipantRepository.updateStatus(participantId, ParticipantStatus.CANCELLED);
+
+        // Only auto-promote if the cancelled participant was REGISTERED
+        let promotionResult: { wasPromoted: boolean; promotedUserId?: string; promotedUserName?: string } = { wasPromoted: false };
+        if (participant.status === ParticipantStatus.REGISTERED) {
+            promotionResult = await this.handleCapacityAndPromotion(participant.activityId.toString());
+        }
+
+        return {
+            success: true,
+            message: 'Đã hủy đăng ký',
+            wasPromoted: promotionResult.wasPromoted,
+            promotedUserName: promotionResult.promotedUserName,
+        };
     }
 
     // Lấy danh sách sinh viên đăng kí tham gia hoạt động theo activityId kèm thông tin lớp và khoa, chức năng này chỉ dành cho teacher

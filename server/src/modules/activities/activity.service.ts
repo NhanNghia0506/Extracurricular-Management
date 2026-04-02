@@ -21,6 +21,7 @@ import {
     ActivityDetailResponse,
 } from 'src/global/globalInterface';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
+import { ParticipantStatus } from '../activity-participants/activity-participant.entity';
 import { UploadService } from '../../interceptors/upload.service';
 import { NotificationService } from '../notifications/notification.service';
 import { MailService } from '../mail/mail.service';
@@ -202,7 +203,13 @@ export class ActivityService {
         this.ensureActivityVisible(activity, userId, userRole);
 
         const participantCount = await this.activityParticipantService.countParticipantsByActivity(id);
-        const isRegistered = userId ? await this.activityParticipantService.findByActivityAndUserId(id, userId) !== null : false;
+        const participantRegistration = userId
+            ? await this.activityParticipantService.findByActivityAndUserId(id, userId)
+            : null;
+        const participantStatus = participantRegistration?.status || null;
+        const isRegistered = participantRegistration !== null
+            && participantStatus !== ParticipantStatus.CANCELLED
+            && participantStatus !== ParticipantStatus.REJECTED;
         const isOwner = userId === activity.createdBy?.toString();
         const canDelete = this.canDeleteActivity(activity, userId, userRole);
         return {
@@ -220,6 +227,8 @@ export class ActivityService {
             category: activity.categoryId,
             registeredCount: participantCount,
             isRegistered: isRegistered,
+            participantRegistrationId: participantRegistration?._id?.toString?.() || null,
+            participantStatus,
             isOwner: isOwner,
             canDelete,
             approvalStatus: activity.approvalStatus,

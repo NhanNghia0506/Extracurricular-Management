@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, UnauthorizedException, Get, Param } from "@nestjs/common";
+import { Controller, Post, Body, Req, UseGuards, UnauthorizedException, Get, Param, Delete } from "@nestjs/common";
 import { ActivityParticipantService } from "./activity-participant.service";
 import { CreateActivityParticipantDto } from "./dtos/create.activity-participant.dto";
 import { AuthGuard } from "src/guards/auth.guard";
@@ -45,5 +45,18 @@ export class ActivityParticipantController {
         return this.activityParticipantService.findActivitiesByUserId(userId);
     }
 
+    @UseGuards(AuthGuard)
+    @Delete(':participantId')
+    cancelParticipation(@Param('participantId') participantId: string, @Req() req: Request) {
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+        if (!userId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+        if (userRole !== UserRole.USER && userRole !== UserRole.ADMIN) {
+            throw new UnauthorizedException('User role is invalid');
+        }
+        return this.activityParticipantService.cancelParticipation(participantId, userId, userRole);
+    }
 
 }
