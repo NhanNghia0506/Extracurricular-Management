@@ -93,6 +93,8 @@ const ActivityDetail: React.FC = () => {
     const [showCreateChatModal, setShowCreateChatModal] = useState(false);
     const [showRegisterConfirmModal, setShowRegisterConfirmModal] = useState(false);
     const [showJoinChatPromptModal, setShowJoinChatPromptModal] = useState(false);
+    const [showScheduleConflictModal, setShowScheduleConflictModal] = useState(false);
+    const [scheduleConflictMessage, setScheduleConflictMessage] = useState('');
     const [hasConversation, setHasConversation] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isConversationMember, setIsConversationMember] = useState(false);
@@ -188,7 +190,17 @@ const ActivityDetail: React.FC = () => {
                 alert('Đăng ký tham gia thành công!');
             }
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Không thể đăng ký. Vui lòng thử lại!');
+            const rawMessage = err.response?.data?.message;
+            const errorMessage = Array.isArray(rawMessage)
+                ? rawMessage.join(', ')
+                : (rawMessage || 'Không thể đăng ký. Vui lòng thử lại!');
+
+            if (String(errorMessage).toLowerCase().includes('trùng')) {
+                setScheduleConflictMessage(String(errorMessage));
+                setShowScheduleConflictModal(true);
+            } else {
+                alert(errorMessage);
+            }
             console.error('Error registering:', err);
         } finally {
             setRegistering(false);
@@ -678,6 +690,33 @@ const ActivityDetail: React.FC = () => {
                                 disabled={joiningConversation}
                             >
                                 {joiningConversation ? 'Đang tham gia...' : 'Tham gia nhóm chat'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showScheduleConflictModal && (
+                <div className={styles.modalOverlay} onClick={() => setShowScheduleConflictModal(false)}>
+                    <div className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3>Không thể đăng ký</h3>
+                            <button
+                                type="button"
+                                className={styles.modalCloseBtn}
+                                onClick={() => setShowScheduleConflictModal(false)}
+                            >
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <p className={styles.modalBodyText}>{scheduleConflictMessage}</p>
+                        <div className={styles.modalActions}>
+                            <button
+                                type="button"
+                                className={styles.modalPrimaryBtn}
+                                onClick={() => setShowScheduleConflictModal(false)}
+                            >
+                                Đã hiểu
                             </button>
                         </div>
                     </div>

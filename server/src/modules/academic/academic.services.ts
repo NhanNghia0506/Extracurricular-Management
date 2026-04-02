@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AcademicRepository } from "./academic.repository";
 import { CreateFacultyDto } from "./dtos/create.faculty.dto";
 import { CreateClassDto } from "./dtos/create.class.dto";
@@ -15,23 +15,80 @@ export class AcademicService {
         private readonly academicRepository: AcademicRepository
     ) { }
 
-    createFaculty(facultyData: CreateFacultyDto) {
+    async createFaculty(facultyData: CreateFacultyDto) {
+        const name = facultyData.name.trim();
+        const email = facultyData.email.trim().toLowerCase();
+        const facultyCode = facultyData.facultyCode.trim().toUpperCase();
+        const phone = facultyData.phone.trim();
+
+        if (!name || !email || !facultyCode || !phone) {
+            throw new BadRequestException('Thông tin khoa không hợp lệ');
+        }
+
+        const [existingByCode, existingByEmail, existingByName] = await Promise.all([
+            this.academicRepository.findFacultyByCode(facultyCode),
+            this.academicRepository.findFacultyByEmail(email),
+            this.academicRepository.findFacultyByName(name),
+        ]);
+        if (existingByCode) {
+            throw new BadRequestException('Mã khoa đã tồn tại');
+        }
+
+        if (existingByEmail) {
+            throw new BadRequestException('Email khoa đã tồn tại');
+        }
+
+        if (existingByName) {
+            throw new BadRequestException('Tên khoa đã tồn tại');
+        }
+
         // map từ faculty dto sang faculty entity
         const faculty = {
-            name: facultyData.name,
-            email: facultyData.email,
-            facultyCode: facultyData.facultyCode,
-            phone: facultyData.phone,
+            name,
+            email,
+            facultyCode,
+            phone,
         };
         return this.academicRepository.createFaculty(faculty);
     }
 
-    createClass(classData: CreateClassDto) {
+    async createClass(classData: CreateClassDto) {
+        const name = classData.name.trim();
+        const code = classData.code.trim().toUpperCase();
+        const facultyId = classData.facultyId.trim();
+
+        if (!name || !code || !facultyId) {
+            throw new BadRequestException('Thông tin lớp không hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(facultyId)) {
+            throw new BadRequestException('facultyId không hợp lệ');
+        }
+
+        const faculty = await this.academicRepository.findFacultyById(facultyId);
+        if (!faculty) {
+            throw new NotFoundException('Không tìm thấy khoa tương ứng');
+        }
+
+        const facultyObjectId = new Types.ObjectId(facultyId);
+        const [existingByCode, existingByName] = await Promise.all([
+            this.academicRepository.findClassByCode(code),
+            this.academicRepository.findClassByNameAndFaculty(name, facultyObjectId),
+        ]);
+
+        if (existingByCode) {
+            throw new BadRequestException('Mã lớp đã tồn tại');
+        }
+
+        if (existingByName) {
+            throw new BadRequestException('Tên lớp đã tồn tại trong khoa này');
+        }
+
         // map từ class dto sang class entity
         const classEntity = {
-            name: classData.name,
-            code: classData.code,
-            facultyId: new Types.ObjectId(classData.facultyId),
+            name,
+            code,
+            facultyId: facultyObjectId,
         };
         return this.academicRepository.createClass(classEntity);
     }

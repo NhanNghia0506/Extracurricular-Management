@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Get, Query, BadRequestException, Param } from "@nestjs/common";
+import { Controller, Post, Body, Get, Query, BadRequestException, Param, ForbiddenException, Req, UseGuards } from "@nestjs/common";
 import { AcademicService } from "./academic.services";
 import { CreateFacultyDto } from "./dtos/create.faculty.dto";
 import { CreateClassDto } from "./dtos/create.class.dto";
+import { AuthGuard } from "src/guards/auth.guard";
+import { UserRole } from "src/global/globalEnum";
+import type { Request } from "express";
 
 @Controller("academic")
 export class AcademicController {
@@ -9,13 +12,23 @@ export class AcademicController {
         private readonly academicService: AcademicService
     ) { }
 
+    private ensureAdmin(req: Request): void {
+        if (req.user?.role !== UserRole.ADMIN) {
+            throw new ForbiddenException('Chỉ admin hệ thống mới có quyền thực hiện thao tác này');
+        }
+    }
+
+    @UseGuards(AuthGuard)
     @Post("faculty")
-    createFaculty(@Body() createFacultyDto: CreateFacultyDto) {
+    createFaculty(@Body() createFacultyDto: CreateFacultyDto, @Req() req: Request) {
+        this.ensureAdmin(req);
         return this.academicService.createFaculty(createFacultyDto);
     }
 
+    @UseGuards(AuthGuard)
     @Post("class")
-    createClass(@Body() createClassDto: CreateClassDto) {
+    createClass(@Body() createClassDto: CreateClassDto, @Req() req: Request) {
+        this.ensureAdmin(req);
         return this.academicService.createClass(createClassDto);
     }
 

@@ -15,8 +15,28 @@ export class AcademicRepository {
         return this.facultyModel.create(faculty);
     }
 
+    findFacultyByCode(facultyCode: string) {
+        return this.facultyModel.findOne({ facultyCode }).lean();
+    }
+
+    findFacultyByEmail(email: string) {
+        return this.facultyModel.findOne({ email }).lean();
+    }
+
+    findFacultyByName(name: string) {
+        return this.facultyModel.findOne({ name }).lean();
+    }
+
     createClass(classData: Partial<Class>) {
         return this.classModel.create(classData);
+    }
+
+    findClassByCode(code: string) {
+        return this.classModel.findOne({ code }).lean();
+    }
+
+    findClassByNameAndFaculty(name: string, facultyId: Types.ObjectId) {
+        return this.classModel.findOne({ name, facultyId }).lean();
     }
 
     findAllFaculties() {

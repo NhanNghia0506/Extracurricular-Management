@@ -16,6 +16,10 @@ export class ActivityParticipantService {
 
     // Đăng ký tham gia hoạt động
     async create(activityParticipantData: CreateActivityParticipantDto, userId: string) {
+        if (!Types.ObjectId.isValid(activityParticipantData.activityId)) {
+            throw new BadRequestException('activityId không hợp lệ');
+        }
+
         const activity = await this.activityService.findById(activityParticipantData.activityId);
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
@@ -23,6 +27,41 @@ export class ActivityParticipantService {
 
         if (activity.approvalStatus !== ActivityApprovalStatus.APPROVED) {
             throw new ForbiddenException('Hoạt động chưa được duyệt nên chưa thể đăng ký tham gia');
+        }
+
+        const existingRegistration = await this.activityParticipantRepository.findByActivityAndUserId(
+            activityParticipantData.activityId,
+            userId,
+        );
+
+        if (existingRegistration && existingRegistration.status !== ParticipantStatus.CANCELLED) {
+            throw new BadRequestException('Bạn đã đăng ký hoạt động này rồi');
+        }
+
+        const targetStart = new Date(activity.startAt);
+        const targetEnd = activity.endAt ? new Date(activity.endAt) : targetStart;
+
+        const registeredSchedules = await this.activityParticipantRepository.findUserRegisteredActivitySchedules(
+            userId,
+            activityParticipantData.activityId,
+        );
+
+        const conflictingSchedule = registeredSchedules.find((scheduled) => {
+            const scheduledStart = new Date(scheduled.startAt);
+            const scheduledEnd = scheduled.endAt ? new Date(scheduled.endAt) : scheduledStart;
+
+            return scheduledStart.getTime() <= targetEnd.getTime()
+                && targetStart.getTime() <= scheduledEnd.getTime();
+        });
+
+        if (conflictingSchedule) {
+            const formatDateTime = (value: Date) => value.toLocaleString('vi-VN');
+            const conflictStart = new Date(conflictingSchedule.startAt);
+            const conflictEnd = conflictingSchedule.endAt ? new Date(conflictingSchedule.endAt) : conflictStart;
+
+            throw new BadRequestException(
+                `Lịch bị trùng với hoạt động "${conflictingSchedule.title}" (${formatDateTime(conflictStart)} - ${formatDateTime(conflictEnd)}).`,
+            );
         }
 
         const participantQuantity = await this.countParticipantsByActivity(activityParticipantData.activityId);

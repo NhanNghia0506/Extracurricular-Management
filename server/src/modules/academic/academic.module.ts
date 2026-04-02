@@ -1,20 +1,23 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { Class, ClassSchema } from "./entities/class.entity";
 import { Faculty, FacultySchema } from "./entities/faculty.entity";
 import { AcademicController } from "./academic.controller";
 import { AcademicRepository } from "./academic.repository";
 import { AcademicService } from "./academic.services";
+import { AuthGuard } from "src/guards/auth.guard";
+import { UserModule } from "../users/user.module";
 
 @Module({
     imports: [
+        forwardRef(() => UserModule),
         MongooseModule.forFeature([
             { name: Class.name, schema: ClassSchema },
             { name: Faculty.name, schema: FacultySchema }
         ])
     ],
     controllers: [AcademicController],
-    providers: [AcademicService, AcademicRepository],
+    providers: [AcademicService, AcademicRepository, AuthGuard],
     exports: [AcademicService],
 })
 

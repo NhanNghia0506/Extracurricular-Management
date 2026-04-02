@@ -3,6 +3,13 @@ import { InjectModel } from "@nestjs/mongoose";
 import { ActivityParticipant, ParticipantStatus } from "./activity-participant.entity";
 import { Model, Types } from "mongoose";
 
+interface RegisteredActivityScheduleRow {
+    activityId: Types.ObjectId;
+    title: string;
+    startAt: Date;
+    endAt?: Date;
+}
+
 @Injectable()
 export class ActivityParticipantRepository {
     constructor(
@@ -147,6 +154,44 @@ export class ActivityParticipantRepository {
                     categoryId: { _id: '$category._id', name: '$category.name' },
                     registeredAt: '$registeredAt',
                     participantStatus: '$status'
+                },
+            },
+        ]).exec();
+    }
+
+    findUserRegisteredActivitySchedules(userId: string, excludeActivityId?: string): Promise<RegisteredActivityScheduleRow[]> {
+        const objectId = new Types.ObjectId(userId);
+        const excludedObjectId = excludeActivityId ? new Types.ObjectId(excludeActivityId) : null;
+
+        return this.activityParticipantModel.aggregate<RegisteredActivityScheduleRow>([
+            {
+                $match: {
+                    userId: objectId,
+                    status: { $nin: [ParticipantStatus.CANCELLED, ParticipantStatus.REJECTED] },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'activities',
+                    localField: 'activityId',
+                    foreignField: '_id',
+                    as: 'activity',
+                },
+            },
+            { $unwind: { path: '$activity', preserveNullAndEmptyArrays: false } },
+            {
+                $match: {
+                    ...(excludedObjectId ? { 'activity._id': { $ne: excludedObjectId } } : {}),
+                    'activity.status': { $ne: 'CANCELLED' },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    activityId: '$activity._id',
+                    title: '$activity.title',
+                    startAt: '$activity.startAt',
+                    endAt: '$activity.endAt',
                 },
             },
         ]).exec();
