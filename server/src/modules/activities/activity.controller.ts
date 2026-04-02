@@ -34,6 +34,7 @@ import {
 import { ActivityApprovalQueryDto } from './dtos/activity-approval-query.dto';
 import { UpdateActivityApprovalDto } from './dtos/update-activity-approval.dto';
 import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
+import { ActivityRecommendationQueryDto } from './dtos/activity-recommendation-query.dto';
 
 
 @Controller('activities')
@@ -124,6 +125,16 @@ export class ActivityController {
         @Query() query: ActivityApprovalQueryDto,
     ): Promise<ActivityApprovalDashboardResponse> {
         return this.activityService.getApprovalDashboard(req.user?.role, query.approvalStatus);
+    }
+
+    @ResponseMessage('Lấy danh sách hoạt động gợi ý thành công')
+    @Get('recommended')
+    @UseGuards(AuthGuard)
+    async getRecommendedActivities(
+        @Req() req: ExpressRequest,
+        @Query() query: ActivityRecommendationQueryDto,
+    ): Promise<{ strategy: 'hybrid'; items: unknown[] }> {
+        return this.activityService.getRecommendations(req.user!.id!, query);
     }
 
     @ResponseMessage('Lấy chi tiết duyệt hoạt động thành công')

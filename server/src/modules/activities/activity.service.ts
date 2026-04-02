@@ -3,9 +3,11 @@ import {
     ActivityApprovalRecord,
     ActivityNamedReference,
     ActivityRepository,
+    RecommendationCandidateRecord,
     ActivityUserReference,
 } from './activity.repository';
 import { CreateActivityDto } from './dtos/create.activity.dto';
+import { ActivityRecommendationQueryDto } from './dtos/activity-recommendation-query.dto';
 import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
 import { UpdateActivityDto } from './dtos/update.activity.dto';
 import { Types } from 'mongoose';
@@ -37,6 +39,25 @@ interface ActivityApprovalReviewPayload {
     reviewNote?: string;
     isPriority?: boolean;
     notifyOrganizer?: boolean;
+}
+
+interface ActivityRecommendationItem {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+    location?: Activity['location'];
+    status: ActivityStatus;
+    startAt: Date;
+    endAt?: Date;
+    trainingScore: number;
+    participantCount: number;
+    organizerId: { _id?: Types.ObjectId; name?: string } | null;
+    categoryId: { _id?: Types.ObjectId; name?: string } | null;
+    averageRating: number;
+    matchScore: number;
+    reason: string;
+    isPriority: boolean;
 }
 
 
@@ -120,6 +141,43 @@ export class ActivityService {
                 normalizedUserId && activity.createdBy?.toString() === normalizedUserId,
             ),
         }))
+    }
+
+    async getRecommendations(
+        userId: string,
+        query: ActivityRecommendationQueryDto,
+    ): Promise<{ strategy: 'hybrid'; items: ActivityRecommendationItem[] }> {
+        const limit = query.limit || 6;
+
+        const [joinedActivityIds, categoryAffinities, academicContext] = await Promise.all([
+            // Lấy hoạt động mà người dùng đã tham gia
+            this.activityRepository.getJoinedActivityIds(userId),
+            // map danh mục
+            this.activityRepository.getUserCategoryAffinities(userId),
+            this.activityRepository.getStudentAcademicContext(userId),
+        ]);
+
+        const candidates = await this.activityRepository.findRecommendationCandidates(
+            userId,
+            joinedActivityIds,
+            academicContext.classId,
+            academicContext.facultyId,
+        );
+
+        const items = candidates
+            .map((item) => this.scoreRecommendation(item, categoryAffinities))
+            .sort((a, b) => {
+                if (b.matchScore !== a.matchScore) {
+                    return b.matchScore - a.matchScore;
+                }
+                return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+            })
+            .slice(0, limit);
+
+        return {
+            strategy: 'hybrid',
+            items,
+        };
     }
 
     /**
@@ -669,6 +727,73 @@ export class ActivityService {
             id: createdBy._id?.toString(),
             name: createdBy.name,
             email: createdBy.email,
+        };
+    }
+
+    private scoreRecommendation(
+        item: RecommendationCandidateRecord,
+        categoryAffinities: Map<string, number>,
+    ): ActivityRecommendationItem {
+        const categoryKey = item.categoryId?._id ? String(item.categoryId._id) : '';
+        const categoryCount = categoryAffinities.get(categoryKey) || 0;
+
+        const categoryScore = Math.min(categoryCount * 8, 24);
+        const cohortScore = Math.min((item.cohortCount || 0) * 2, 20);
+        const ratingScore = Math.min(((item.averageRating || 0) / 5) * 20, 20);
+        const popularityScore = Math.min((item.participantCount || 0) / 5, 12);
+        const trainingScore = Math.min((item.trainingScore || 0) / 5, 12);
+
+        const startDate = new Date(item.startAt);
+        const daysUntilStart = Math.ceil((startDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const freshnessScore = daysUntilStart <= 7 ? 12 : daysUntilStart <= 30 ? 8 : 4;
+        const priorityBoost = item.isPriority ? 8 : 0;
+
+        const rawScore =
+            categoryScore +
+            cohortScore +
+            ratingScore +
+            popularityScore +
+            trainingScore +
+            freshnessScore +
+            priorityBoost;
+
+        const matchScore = Math.min(Math.round(rawScore), 100);
+
+        let reason = 'Phù hợp với lịch hoạt động gần đây của bạn';
+        const strongestSignal = [
+            { key: 'category', value: categoryScore },
+            { key: 'cohort', value: cohortScore },
+            { key: 'rating', value: ratingScore },
+            { key: 'freshness', value: freshnessScore },
+        ].sort((a, b) => b.value - a.value)[0]?.key;
+
+        if (strongestSignal === 'category' && categoryCount > 0) {
+            reason = `Phù hợp với sở thích danh mục ${item.categoryId?.name || ''}`.trim();
+        } else if (strongestSignal === 'cohort' && item.cohortCount > 0) {
+            reason = 'Được sinh viên cùng lớp/khoa quan tâm';
+        } else if (strongestSignal === 'rating' && item.averageRating > 0) {
+            reason = `Đánh giá cao (${item.averageRating}/5)`;
+        } else if (strongestSignal === 'freshness') {
+            reason = 'Sắp diễn ra, phù hợp để đăng ký ngay';
+        }
+
+        return {
+            id: item._id.toString(),
+            title: item.title,
+            description: item.description,
+            image: item.image,
+            location: item.location,
+            status: item.status,
+            startAt: item.startAt,
+            endAt: item.endAt,
+            trainingScore: item.trainingScore,
+            participantCount: item.participantCount,
+            organizerId: item.organizerId,
+            categoryId: item.categoryId,
+            averageRating: item.averageRating,
+            matchScore,
+            reason,
+            isPriority: item.isPriority,
         };
     }
 

@@ -2,10 +2,25 @@ import {
     ActivityApprovalDashboardResponse,
     ActivityApprovalDetailResponse,
     ActivityApprovalReviewPayload,
+    ActivityListItem,
     CreateActivity,
 } from "@/types/activity.types";
 import { SuccessResponse } from "@/types/response.types";
 import apiService from "./api.service";
+
+export interface RecommendedActivityItem extends ActivityListItem {
+    id: string;
+    averageRating: number;
+    matchScore: number;
+    reason: string;
+    participantCount: number;
+    isPriority: boolean;
+}
+
+export interface RecommendedActivitiesResponse {
+    strategy: 'hybrid';
+    items: RecommendedActivityItem[];
+}
 
 const activityService = {
     create: (data: CreateActivity) => apiService.post(`/activities?organizerId=${data.organizerId}&categoryId=${data.categoryId}`, data),
@@ -22,6 +37,12 @@ const activityService = {
     categories: () => apiService.get('/activity-categories'),
     list: () => apiService.get('/activities'),
     getDetail: (id: string) => apiService.get(`/activities/${id}`),
+    recommended: (limit = 6) => apiService.get<SuccessResponse<RecommendedActivitiesResponse>>('/activities/recommended', {
+        params: {
+            limit,
+            strategy: 'hybrid',
+        },
+    }),
     approvalDashboard: () => apiService.get<SuccessResponse<ActivityApprovalDashboardResponse>>('/activities/admin/approval'),
     approvalDetail: (id: string) => apiService.get<SuccessResponse<ActivityApprovalDetailResponse>>(`/activities/admin/approval/${id}`),
     reviewApproval: (id: string, payload: ActivityApprovalReviewPayload) => apiService.patch<SuccessResponse<ActivityApprovalDetailResponse>>(`/activities/admin/approval/${id}`, payload),
