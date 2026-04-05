@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L, { LatLngExpression } from 'leaflet';
+// @ts-ignore
 import 'leaflet/dist/leaflet.css';
 import styles from './activity.detail.module.scss';
 import activityService from '../../services/activity.service';
@@ -354,6 +355,17 @@ const ActivityDetail: React.FC = () => {
     const isRegisteredParticipant = activity.participantStatus === 'REGISTERED' || activity.participantStatus === 'APPROVED';
     const isActivityFull = Boolean(activity.participantCount && activity.registeredCount >= activity.participantCount);
     const deleteDeadline = new Date(new Date(activity.startAt).getTime() - deleteNoticePeriodInMs);
+    const showMobileStickyAction = !activity.isOwner;
+    const mobileActionLabel = activity.isRegistered
+        ? (isRegisteredParticipant ? 'Đi đến trang điểm danh' : 'Đang trong danh sách chờ')
+        : (isActivityFull ? 'Tham gia danh sách chờ' : (registering ? 'Đang đăng ký...' : 'Đăng ký ngay'));
+    const mobileActionIconClass = activity.isRegistered && isRegisteredParticipant
+        ? 'fa-solid fa-fingerprint'
+        : 'fa-solid fa-id-card';
+    const mobileActionDisabled = activity.isRegistered ? !isRegisteredParticipant || !checkinSession?._id : registering;
+    const mobileActionHandler = activity.isRegistered && isRegisteredParticipant
+        ? handleGoToAttendance
+        : () => setShowRegisterConfirmModal(true);
     const directionsUrl = activity.location
         ? `https://www.google.com/maps/search/?api=1&query=${activity.location.latitude},${activity.location.longitude}`
         : 'https://www.google.com/maps';
@@ -510,7 +522,7 @@ const ActivityDetail: React.FC = () => {
                         ) : (
                             <>
                                 <button
-                                    className={styles.registerBtn}
+                                    className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
                                     onClick={() => setShowRegisterConfirmModal(true)}
                                     disabled={registering || activity.isRegistered}
                                 >
@@ -529,7 +541,7 @@ const ActivityDetail: React.FC = () => {
                                     <>
                                         {isRegisteredParticipant && (
                                             <button
-                                                className={styles.registerBtn}
+                                                className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
                                                 onClick={handleGoToAttendance}
                                                 disabled={!checkinSession?._id}
                                                 title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
@@ -657,6 +669,23 @@ const ActivityDetail: React.FC = () => {
                     </div>
                 </aside>
             </div>
+
+            {showMobileStickyAction && (
+                <div className={styles.mobileStickyFooter}>
+                    <button
+                        type="button"
+                        className={styles.mobileStickyButton}
+                        onClick={mobileActionHandler}
+                        disabled={mobileActionDisabled}
+                        title={activity.isRegistered && isRegisteredParticipant && !checkinSession?._id
+                            ? 'Hoạt động chưa có phiên điểm danh'
+                            : undefined}
+                    >
+                        <i className={mobileActionIconClass}></i>
+                        {mobileActionLabel}
+                    </button>
+                </div>
+            )}
 
             {showCreateChatModal && (
                 <CreateConversation

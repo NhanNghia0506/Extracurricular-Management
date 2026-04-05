@@ -10,6 +10,11 @@ $border-radius: 16px;
     margin: 0 auto;
     padding: 2rem;
     background-color: $bg-light;
+
+    @media (max-width: 992px) {
+        padding: 0.75rem;
+        padding-bottom: 6.5rem;
+    }
 }
 
 // --- Banner Section ---
@@ -135,6 +140,10 @@ $border-radius: 16px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+
+    @media (max-width: 992px) {
+        grid-template-columns: 1fr;
+    }
 
     .infoBox {
         background: var(--color-bg-white);
@@ -475,4 +484,47 @@ $border-radius: 16px;
 .modalPrimaryBtn {
     background: $primary-blue;
     color: var(--color-white);
+}
+
+.desktopPrimaryAction {
+    @media (max-width: 992px) {
+        display: none;
+    }
+}
+
+.mobileStickyFooter {
+    display: none;
+
+    @media (max-width: 992px) {
+        display: block;
+        position: fixed !important;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1300;
+        padding: 0.65rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom));
+        background: rgba(248, 250, 252, 0.95);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid var(--color-border-light);
+        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.12);
+    }
+}
+
+.mobileStickyButton {
+    width: 100%;
+    min-height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: $primary-blue;
+    color: var(--color-white);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
@@ -16,6 +16,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L, { DivIcon, LatLngBounds, LatLngExpression, LatLngTuple } from 'leaflet';
+// @ts-ignore
 import 'leaflet/dist/leaflet.css';
 import styles from './live.checkin.module.scss';
 import type { ActivityDetailResponse } from '../../types/activity.types';
@@ -71,7 +72,6 @@ const buildInitials = (name: string) => {
 };
 
 const buildCheckinMarkerIcon = (checkin: CheckinResponse, isSelected: boolean): DivIcon => {
-  const avatarUrl = buildAssetUrl(checkin.student.avatar);
   const label = escapeHtml(checkin.student.name);
   const initials = escapeHtml(buildInitials(checkin.student.name));
   const borderColor = isSelected ? '#2563eb' : '#ffffff';
@@ -79,6 +79,7 @@ const buildCheckinMarkerIcon = (checkin: CheckinResponse, isSelected: boolean): 
     ? '0 10px 22px rgba(37, 99, 235, 0.26)'
     : '0 8px 20px rgba(15, 23, 42, 0.18)';
 
+  // Optimized: Remove avatar image to reduce load on mobile
   return L.divIcon({
     className: '',
     iconSize: [110, 54],
@@ -90,9 +91,7 @@ const buildCheckinMarkerIcon = (checkin: CheckinResponse, isSelected: boolean): 
           <span style="width:8px;height:8px;border-radius:999px;background:#22c55e;flex-shrink:0;"></span>
           <span style="overflow:hidden;text-overflow:ellipsis;">${label}</span>
         </div>
-        ${avatarUrl
-        ? `<img src="${escapeHtml(avatarUrl)}" alt="${label}" style="width:36px;height:36px;border-radius:999px;border:3px solid ${borderColor};object-fit:cover;background:#fff;box-shadow:${shadow};" />`
-        : `<div style="width:36px;height:36px;border-radius:999px;border:3px solid ${borderColor};display:flex;align-items:center;justify-content:center;background:#0f766e;color:#fff;font-size:12px;font-weight:700;box-shadow:${shadow};">${initials}</div>`}
+        <div style="width:36px;height:36px;border-radius:999px;border:3px solid ${borderColor};display:flex;align-items:center;justify-content:center;background:#0f766e;color:#fff;font-size:12px;font-weight:700;box-shadow:${shadow};">${initials}</div>
       </div>
     `,
   });
@@ -140,7 +139,7 @@ const MapViewportController: React.FC<{
   center: LatLngTuple;
   checkins: CheckinResponse[];
   selectedCheckin: CheckinResponse | null;
-}> = ({ center, checkins, selectedCheckin }) => {
+}> = React.memo(({ center, checkins, selectedCheckin }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -164,7 +163,7 @@ const MapViewportController: React.FC<{
   }, [center, checkins, map, selectedCheckin]);
 
   return null;
-};
+});
 
 const LiveCheckin: React.FC = () => {
   const navigate = useNavigate();
@@ -177,6 +176,10 @@ const LiveCheckin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce socket updates to prevent excessive re-renders on mobile
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingCheckinRef = useRef<CheckinResponse | null>(null);
 
   const center = useMemo<LatLngTuple>(() => {
     if (!checkinSession?.location) {
@@ -269,11 +272,23 @@ const LiveCheckin: React.FC = () => {
         student: payload.student,
       };
 
-      setCheckins((prev) => {
-        const withoutCurrent = prev.filter((item) => item.student.id !== realtimeItem.student.id);
-        return [realtimeItem, ...withoutCurrent];
-      });
-      setSelectedCheckin(realtimeItem);
+      // Store pending checkin and debounce updates (200ms) to reduce lag on mobile
+      pendingCheckinRef.current = realtimeItem;
+
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = setTimeout(() => {
+        const checkin = pendingCheckinRef.current;
+        if (checkin) {
+          setCheckins((prev) => {
+            const withoutCurrent = prev.filter((item) => item.student.id !== checkin.student.id);
+            return [checkin, ...withoutCurrent];
+          });
+          setSelectedCheckin(checkin);
+        }
+      }, 200);
     };
 
     socketService.on('checkin:new', handleNewCheckin);
@@ -287,6 +302,9 @@ const LiveCheckin: React.FC = () => {
     }
 
     return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
       socket.emit('leave-session', { sessionId });
       socketService.off('checkin:new', handleNewCheckin);
     };
