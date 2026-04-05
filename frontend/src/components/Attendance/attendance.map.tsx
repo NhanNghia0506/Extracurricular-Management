@@ -4,6 +4,12 @@ import L, { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import styles from './attendance.module.scss';
 
+const GEO_OPTIONS: PositionOptions = {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 15000,
+};
+
 // Icon cho vị trí người dùng
 const userIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -50,6 +56,23 @@ const AttendanceMap: React.FC<AttendanceMapProps> = ({
     const [userLocation, setUserLocation] = useState<LatLngExpression | null>(null);
     const mapRef = useRef(null);
 
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            return;
+        }
+
+        // Prefetch vị trí để tránh chờ lâu khi user bấm "Vị trí của tôi"
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation([position.coords.latitude, position.coords.longitude]);
+            },
+            () => {
+                // Không chặn UI nếu preload GPS thất bại.
+            },
+            GEO_OPTIONS,
+        );
+    }, []);
+
     // Định vị vị trí người dùng hiện tại khi click nút
     const handleLocate = () => {
         if (navigator.geolocation) {
@@ -57,12 +80,18 @@ const AttendanceMap: React.FC<AttendanceMapProps> = ({
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation([latitude, longitude]);
+
+                    if (mapRef.current) {
+                        const map = (mapRef.current as any).leafletElement || (mapRef.current as any);
+                        map?.setView([latitude, longitude], 16);
+                    }
                 },
                 (error) => {
                     console.error('Lỗi khi lấy vị trí:', error);
                     // Nếu không lấy được vị trí, set default tại attendanceLocation
                     setUserLocation(attendanceLocation);
-                }
+                },
+                GEO_OPTIONS,
             );
         } else {
             // Trình duyệt không hỗ trợ geolocation

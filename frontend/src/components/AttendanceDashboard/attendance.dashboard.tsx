@@ -4,7 +4,7 @@ import {
     faSearch, faFilter, faFileExport, faPlus,
     faUserFriends, faMapMarkerAlt,
     faCheckCircle, faTimesCircle,
-    faFeed, faLocationCrosshairs, faTableColumns
+    faFeed, faLocationCrosshairs, faTableColumns, faClipboardList
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -332,6 +332,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         navigate(`/live-checkin?checkinsession=${sessionId}`);
     };
 
+    const goToAttendanceReport = () => {
+        if (!sessionId) {
+            return;
+        }
+
+        navigate(`/admin/attendance-report?sessionId=${sessionId}`);
+    };
+
     const openManualModal = () => {
         setManualError(null);
         setManualSuccess(null);
@@ -406,6 +414,9 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                         </button>
                         <button type="button" className={styles.switchBtn} onClick={goToLiveMap} disabled={!sessionId}>
                             <FontAwesomeIcon icon={faLocationCrosshairs} /> Bản đồ realtime
+                        </button>
+                        <button type="button" className={styles.switchBtn} onClick={goToAttendanceReport} disabled={!sessionId}>
+                            <FontAwesomeIcon icon={faClipboardList} /> Báo cáo điểm danh
                         </button>
                     </div>
                     <button className={styles.btnSecondary}><FontAwesomeIcon icon={faFilter} /> Bộ lọc</button>

@@ -521,6 +521,15 @@ const ActivityDetail: React.FC = () => {
                             </>
                         ) : (
                             <>
+                                {currentUserRole === 'ADMIN' && checkinSession?._id && (
+                                    <button
+                                        className={styles.actionBtnOutline}
+                                        onClick={() => navigate(`/admin/attendance-report?sessionId=${checkinSession._id}`)}
+                                    >
+                                        <i className="fa-solid fa-clipboard-list"></i>
+                                        Báo cáo điểm danh
+                                    </button>
+                                )}
                                 <button
                                     className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
                                     onClick={() => setShowRegisterConfirmModal(true)}

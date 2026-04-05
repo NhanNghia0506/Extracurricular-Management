@@ -6,6 +6,18 @@ import checkinSessionService from '../../services/checkin-session.service';
 import type { CheckinSession } from '@/types/checkin-session.types';
 import { formatTime } from '../../utils/date-time';
 
+type CachedLocation = {
+    latitude: number;
+    longitude: number;
+    capturedAt: number;
+};
+
+const GEO_OPTIONS: PositionOptions = {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 15000,
+};
+
 const Attendance: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -16,6 +28,7 @@ const Attendance: React.FC = () => {
     const [checkinError, setCheckinError] = useState<string | null>(null);
     const [checkinSuccess, setCheckinSuccess] = useState(false);
     const [hasCheckinSuccessfully, setHasCheckinSuccessfully] = useState(false);
+    const [cachedLocation, setCachedLocation] = useState<CachedLocation | null>(null);
 
     useEffect(() => {
         const fetchCheckinSession = async () => {
@@ -40,6 +53,27 @@ const Attendance: React.FC = () => {
         fetchCheckinSession();
     }, [searchParams]);
 
+    useEffect(() => {
+        if (!checkinSession?._id || !navigator.geolocation) {
+            return;
+        }
+
+        // Preload GPS sớm để giảm thời gian chờ khi người dùng bấm điểm danh trên mobile
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setCachedLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    capturedAt: Date.now(),
+                });
+            },
+            () => {
+                // Bỏ qua lỗi preload, khi điểm danh sẽ thử lấy lại GPS.
+            },
+            GEO_OPTIONS,
+        );
+    }, [checkinSession?._id]);
+
     const handleCheckin = async () => {
         if (!checkinSession?._id) return;
 
@@ -48,13 +82,27 @@ const Attendance: React.FC = () => {
         setCheckinSuccess(false);
 
         try {
-            // Lấy vị trí của người dùng
-            const position = await new Promise<GeolocationCoordinates>((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => resolve(pos.coords),
-                    (err) => reject(err)
-                );
-            });
+            const isCachedLocationFresh = cachedLocation
+                ? Date.now() - cachedLocation.capturedAt <= 20000
+                : false;
+            const freshCachedLocation = isCachedLocationFresh ? cachedLocation : null;
+
+            // Ưu tiên vị trí vừa lấy gần đây để thao tác nhanh hơn trên mobile.
+            const position = freshCachedLocation
+                ? {
+                    latitude: freshCachedLocation.latitude,
+                    longitude: freshCachedLocation.longitude,
+                }
+                : await new Promise<{ latitude: number; longitude: number }>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                        }),
+                        (err) => reject(err),
+                        GEO_OPTIONS,
+                    );
+                });
 
             // Submit dữ liệu với vị trí
             const response = await checkinSessionService.checkin(
@@ -62,6 +110,12 @@ const Attendance: React.FC = () => {
                 position.latitude,
                 position.longitude
             );
+
+            setCachedLocation({
+                latitude: position.latitude,
+                longitude: position.longitude,
+                capturedAt: Date.now(),
+            });
 
             const checkinData = response.data.data;
 
