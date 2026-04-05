@@ -638,8 +638,8 @@ const ActivityDetail: React.FC = () => {
                                 </Marker>
                             </MapContainer>
                         </div>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <span className="small fw-bold text-muted">
+                        <div className={styles.mapMetaRow}>
+                            <span className={styles.mapMetaAddress}>
                                 <i className="fa-solid fa-location-arrow me-1"></i>
                                 {activity.location?.address || 'Địa điểm sự kiện'}
                             </span>
@@ -647,7 +647,7 @@ const ActivityDetail: React.FC = () => {
                                 href={directionsUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="small text-primary text-decoration-none fw-bold"
+                                className={styles.mapMetaLink}
                             >
                                 Lấy chỉ đường
                             </a>
