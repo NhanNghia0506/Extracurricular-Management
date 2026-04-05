@@ -136,7 +136,6 @@ const Attendance: React.FC = () => {
     const now = new Date();
     const isOngoing = now >= startTime && now <= endTime;
     const hasNotStarted = now < startTime;
-    const hasEnded = now > endTime;
 
     return (
         <div className={styles.attendanceContainer}>
