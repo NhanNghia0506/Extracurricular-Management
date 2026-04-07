@@ -9,6 +9,8 @@ $primary-blue: #2563eb;
     padding: 1.5rem;
     border-radius: 16px;
     border: 1px solid #e2e8f0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .header {
@@ -45,6 +47,7 @@ $primary-blue: #2563eb;
     display: flex;
     gap: 12px;
     margin-bottom: 2rem;
+    min-width: 0;
 
     .userAvatar {
         width: 40px;
@@ -55,6 +58,7 @@ $primary-blue: #2563eb;
 
     .fieldContainer {
         flex: 1;
+        min-width: 0;
 
         .inputBox {
             background-color: $bg-comment;
@@ -63,9 +67,13 @@ $primary-blue: #2563eb;
             display: flex;
             align-items: center;
             gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
 
             input {
                 flex: 1;
+                min-width: 0;
                 background: transparent;
                 border: none;
                 outline: none;
@@ -75,6 +83,7 @@ $primary-blue: #2563eb;
             .iconActions {
                 display: flex;
                 gap: 12px;
+                flex-shrink: 0;
                 color: $text-muted;
                 cursor: pointer;
 
@@ -242,4 +251,30 @@ $primary-blue: #2563eb;
     color: #dc2626;
     font-size: 0.9rem;
     font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .commentsContainer {
+        padding: 1rem;
+    }
+
+    .inputWrapper {
+        gap: 8px;
+
+        .fieldContainer {
+            .inputBox {
+                padding: 0.5rem 0.75rem;
+                gap: 8px;
+            }
+
+            .iconActions {
+                gap: 8px;
+
+                .submitBtn {
+                    padding: 0.28rem 0.65rem;
+                    font-size: 0.75rem;
+                }
+            }
+        }
+    }
 }
