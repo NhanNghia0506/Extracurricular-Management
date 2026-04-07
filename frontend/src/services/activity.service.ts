@@ -33,6 +33,7 @@ const activityService = {
     updateWithFile: (activityId: string, formData: FormData) => {
         return apiService.put(`/activities/${activityId}`, formData);
     },
+    endActivity: (activityId: string) => apiService.patch(`/activities/${activityId}/end`),
     delete: (activityId: string) => apiService.delete(`/activities/${activityId}`),
     categories: () => apiService.get('/activity-categories'),
     list: () => apiService.get('/activities'),

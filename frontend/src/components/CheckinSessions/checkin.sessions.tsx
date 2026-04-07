@@ -114,13 +114,18 @@ const SessionManagement: React.FC = () => {
                 const sessionsData: CheckinSession[] = Array.isArray(sessionsResponse.data?.data)
                     ? sessionsResponse.data.data
                     : [];
+                const sortedSessionsData = [...sessionsData].sort((a, b) => {
+                    const aTime = new Date(a.startTime || a.createdAt || 0).getTime();
+                    const bTime = new Date(b.startTime || b.createdAt || 0).getTime();
+                    return bTime - aTime;
+                });
 
                 setActivity(activityData);
-                setSessions(sessionsData);
+                setSessions(sortedSessionsData);
 
                 if (sessionsData.length > 0) {
                     const totalsEntries = await Promise.all(
-                        sessionsData.map(async (session) => {
+                        sortedSessionsData.map(async (session) => {
                             try {
                                 const result = await checkinService.getCheckinsBySessionId(session._id, 'SUCCESS');
                                 return [session._id, Number(result.total || 0)] as const;

@@ -1,4 +1,4 @@
-export type ParticipantStatus = 'REGISTERED' | 'CANCELLED' | 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+export type ParticipantStatus = 'REGISTERED' | 'CANCELLED' | 'PENDING' | 'APPROVED' | 'PARTICIPATED' | 'REJECTED' | string;
 export interface ParticipantItem {
     _id: string;
     userId?: string;

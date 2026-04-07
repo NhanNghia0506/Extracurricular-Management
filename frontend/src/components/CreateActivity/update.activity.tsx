@@ -73,6 +73,11 @@ const UpdateActivity: React.FC = () => {
                 const response = await activityService.getDetail(activityId);
                 const activity: ActivityDetailResponse = response.data.data;
 
+                if (activity.status === 'COMPLETED') {
+                    setLoadError('Hoạt động đã kết thúc nên không thể chỉnh sửa.');
+                    return;
+                }
+
                 setTitle(activity.title || '');
                 setDescription(activity.description || '');
                 setCategoryId(activity.category?._id || '');

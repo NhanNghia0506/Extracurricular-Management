@@ -80,6 +80,7 @@ const formatDuration = (totalMinutes: number): string => {
 const ConfigureAttendance: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [activityName, setActivityName] = useState('');
+    const [activityStatus, setActivityStatus] = useState('');
     const [sessionTitle, setSessionTitle] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -107,6 +108,7 @@ const ConfigureAttendance: React.FC = () => {
                 const response = await activityService.getDetail(activityId);
                 const activityData: ActivityDetailResponse = response.data.data;
                 setActivityName(activityData.title || '');
+                setActivityStatus(activityData.status || '');
                 setSessionTitle(`Phiên điểm danh - ${activityData.title || 'Hoạt động'}`);
                 setActivityLocationAddress(activityData.location?.address || '');
                 setActivityDateBase(activityData.startAt);
@@ -230,6 +232,11 @@ const ConfigureAttendance: React.FC = () => {
     const handleCreateCheckinSession = async () => {
         if (!activityId) {
             setError('Thiếu activityId trong query');
+            return;
+        }
+
+        if (!sessionId && activityStatus === 'COMPLETED') {
+            setError('Hoạt động đã kết thúc nên không thể tạo phiên điểm danh mới.');
             return;
         }
 
@@ -425,12 +432,15 @@ const ConfigureAttendance: React.FC = () => {
                             </div>
                         </div>
 
-                        <button className={styles.primaryBtn} onClick={handleCreateCheckinSession} disabled={submitting}>
+                        <button className={styles.primaryBtn} onClick={handleCreateCheckinSession} disabled={submitting || (!sessionId && activityStatus === 'COMPLETED')}>
                             <i className="fa-solid fa-circle-check"></i>
                             {submitting
                                 ? (sessionId ? 'Đang cập nhật...' : 'Đang tạo...')
                                 : (sessionId ? 'Cập nhật buổi điểm danh' : 'Tạo buổi điểm danh')}
                         </button>
+                        {!sessionId && activityStatus === 'COMPLETED' && (
+                            <p className="small text-danger mt-2 mb-0">Hoạt động đã kết thúc nên không thể tạo phiên điểm danh mới.</p>
+                        )}
                         <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Lưu nháp</button>
                     </div>
 

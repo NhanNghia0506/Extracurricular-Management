@@ -11,7 +11,8 @@ export interface PostData {
     organization: string;
     orgIcon: string; // FontAwesome class
     orgColor: 'blue' | 'orange'; // Theme màu logo
-    status: 'OPEN' | 'WAITLIST';
+    status: string;
+    statusTone?: 'open' | 'ongoing' | 'completed' | 'cancelled' | 'closed' | 'default';
     image: string;
     description: string;
     location: string;
@@ -29,7 +30,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const navigate = useNavigate();
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
-    
+
     // Kiểm tra description có dài hơn 150 ký tự không
     const isLongDescription = data.description.length > 150;
     const displayText = isExpanded ? data.description : data.description.slice(0, 150);
@@ -54,7 +55,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
         >
             {/* 1. Header: Logo, Tên tổ chức, Trạng thái */}
             <div className={styles.header}>
-                <div className="d-flex gap-3 align-items-center">
+                <div className={`d-flex gap-3 align-items-center ${styles.headerMain}`}>
                     <div className={`${styles.orgIconBox} ${styles[data.orgColor]}`}>
                         <i className={data.orgIcon}></i>
                     </div>
@@ -64,7 +65,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                     </div>
                 </div>
 
-                <span className={`${styles.statusBadge} ${data.status === 'OPEN' ? styles.open : styles.waitlist}`}>
+                <span className={`${styles.statusBadge} ${styles[data.statusTone || 'default']}`}>
                     {data.status}
                 </span>
             </div>
@@ -85,7 +86,7 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
                     {!isExpanded && isLongDescription && '...'}
                 </p>
                 {isLongDescription && (
-                    <button 
+                    <button
                         className={styles.toggleBtn}
                         onClick={(e) => {
                             e.stopPropagation();

@@ -6,6 +6,7 @@ import { ParticipantItem, ParticipantStatus } from '@/types/participan.types';
 import checkinSessionService from '../../services/checkin-session.service';
 import checkinService from '../../services/checkin.service';
 import { CheckinResponse } from '../../types/checkin.types';
+import type { ActivityDetailResponse } from '@/types/activity.types';
 import {
     buildSafeFileName,
     exportRowsToCsv,
@@ -25,6 +26,7 @@ const ActivityParticipants: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
+    const [activityStatus, setActivityStatus] = useState<string>('');
     const [exportingFormat, setExportingFormat] = useState<'csv' | 'xlsx' | null>(null);
     const [exportError, setExportError] = useState<string | null>(null);
     const [exportMessage, setExportMessage] = useState<string | null>(null);
@@ -55,6 +57,30 @@ const ActivityParticipants: React.FC = () => {
 
         fetchParticipants();
     }, [activityId]);
+
+    useEffect(() => {
+        const fetchActivityStatus = async () => {
+            if (!activityId) {
+                return;
+            }
+
+            try {
+                const response = await activityService.getDetail(activityId);
+                const activityData = response.data?.data as ActivityDetailResponse | undefined;
+                setActivityStatus(activityData?.status || '');
+            } catch {
+                setActivityStatus('');
+            }
+        };
+
+        fetchActivityStatus();
+    }, [activityId]);
+
+    useEffect(() => {
+        if (activityStatus === 'COMPLETED' && selectedStatusFilter === 'ALL') {
+            setSelectedStatusFilter('PARTICIPATED');
+        }
+    }, [activityStatus, selectedStatusFilter]);
 
     const filteredParticipants = useMemo(() => {
         const keyword = searchTerm.trim().toLowerCase();
@@ -110,8 +136,12 @@ const ActivityParticipants: React.FC = () => {
             ),
         );
 
+        if (activityStatus === 'COMPLETED' && !values.includes('PARTICIPATED')) {
+            values.unshift('PARTICIPATED');
+        }
+
         return values;
-    }, [participants]);
+    }, [participants, activityStatus]);
 
     const totalRegistered = participants.length;
     const activeCount = participants.filter((p) => (p.status || 'REGISTERED') !== 'CANCELLED').length;
@@ -140,6 +170,8 @@ const ActivityParticipants: React.FC = () => {
                 return { label: 'Đã đăng ký', className: 'confirmed' };
             case 'APPROVED':
                 return { label: 'Đã duyệt', className: 'checkedIn' };
+            case 'PARTICIPATED':
+                return { label: 'Đã tham gia', className: 'participated' };
             case 'PENDING':
                 return { label: 'Chờ duyệt', className: 'pending' };
             case 'REJECTED':
@@ -176,6 +208,8 @@ const ActivityParticipants: React.FC = () => {
                 return 'Đã đăng ký';
             case 'APPROVED':
                 return 'Đã duyệt';
+            case 'PARTICIPATED':
+                return 'Đã tham gia';
             case 'PENDING':
                 return 'Chờ duyệt';
             case 'REJECTED':
@@ -529,7 +563,7 @@ const ActivityParticipants: React.FC = () => {
                                         <button
                                             type="button"
                                             className={styles.cancelBtn}
-                                            disabled={stu.status === 'CANCELLED' || cancellingParticipantId === stu._id}
+                                            disabled={stu.status === 'CANCELLED' || stu.status === 'PARTICIPATED' || cancellingParticipantId === stu._id}
                                             onClick={() => handleCancelParticipant(stu._id)}
                                         >
                                             {cancellingParticipantId === stu._id ? 'Đang hủy...' : 'Hủy đăng ký'}

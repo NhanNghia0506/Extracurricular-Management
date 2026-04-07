@@ -31,6 +31,23 @@ interface ConversationStateSnapshot {
     isConversationMember: boolean;
 }
 
+const mapActivityStatusToVietnamese = (status?: string): string => {
+    switch (status) {
+        case 'OPEN':
+            return 'Đang mở đăng ký';
+        case 'ONGOING':
+            return 'Đang diễn ra';
+        case 'COMPLETED':
+            return 'Đã kết thúc';
+        case 'CANCELLED':
+            return 'Đã hủy';
+        case 'CLOSED':
+            return 'Đã đóng đăng ký';
+        default:
+            return status || 'Chưa cập nhật';
+    }
+};
+
 const getConversationState = async (
     activityId: string,
     currentUserId?: string,
@@ -102,6 +119,8 @@ const ActivityDetail: React.FC = () => {
     const [isConversationMember, setIsConversationMember] = useState(false);
     const [joiningConversation, setJoiningConversation] = useState(false);
     const [checkinSession, setCheckinSession] = useState<CheckinSession | null>(null);
+    const [endingActivity, setEndingActivity] = useState(false);
+    const [allParticipants, setAllParticipants] = useState<Array<{ status?: string }>>([]);
 
     const currentUser = authService.getCurrentUser();
     const currentUserId = currentUser?.id as string | undefined;
@@ -158,6 +177,16 @@ const ActivityDetail: React.FC = () => {
                 setConversationId(nextConversationState.conversationId);
                 setIsConversationMember(nextConversationState.isConversationMember);
                 await loadCheckinSession(id);
+
+                // Fetch participants data
+                try {
+                    const participantsResponse = await activityService.participantsByActivity(id);
+                    const participants = Array.isArray(participantsResponse.data?.data) ? participantsResponse.data.data : [];
+                    setAllParticipants(participants);
+                } catch (participantsErr) {
+                    console.error('Error fetching participants:', participantsErr);
+                    setAllParticipants([]);
+                }
             } catch (err: any) {
                 setError(err.message || 'Không thể tải chi tiết hoạt động');
                 console.error('Error fetching activity detail:', err);
@@ -313,6 +342,14 @@ const ActivityDetail: React.FC = () => {
         navigate(`/participants/${id}`);
     };
 
+    const handleGoToFinalizedParticipants = () => {
+        if (!id) {
+            return;
+        }
+
+        navigate(`/finalized-participants/${id}`);
+    };
+
     const handleDelete = async () => {
         if (!id || !activity?.canDelete || deleting) return;
 
@@ -337,6 +374,30 @@ const ActivityDetail: React.FC = () => {
         }
     };
 
+    const handleEndActivity = async () => {
+        if (!id || !activity?.isOwner || endingActivity) return;
+
+        const confirmed = window.confirm('Bạn có chắc muốn kết thúc hoạt động này không? Sau khi kết thúc, sẽ không thể tạo phiên điểm danh mới.');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setEndingActivity(true);
+            await activityService.endActivity(id);
+
+            const response = await activityService.getDetail(id);
+            setActivity(response.data.data);
+
+            alert('Đã kết thúc hoạt động thành công');
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Không thể kết thúc hoạt động. Vui lòng thử lại!');
+            console.error('Error ending activity:', err);
+        } finally {
+            setEndingActivity(false);
+        }
+    };
+
     if (loading) return <div className="text-center py-5">Đang tải...</div>;
     if (error) return <div className="text-center py-5 text-danger">{error}</div>;
     if (!activity || !activity.category || !activity.organizer) {
@@ -350,12 +411,15 @@ const ActivityDetail: React.FC = () => {
     const canManageDeletion = activity.isOwner || currentUserRole === 'ADMIN';
     const isApproved = activity.approvalStatus === 'APPROVED';
     const needsEdit = activity.approvalStatus === 'NEEDS_EDIT';
-    const canAccessChat = hasConversation && (activity.isOwner || currentUserRole === 'ADMIN' || activity.isRegistered);
+    const isActivityEnded = activity.status === 'COMPLETED';
+    const canEndActivity = activity.isOwner && isApproved && activity.status !== 'COMPLETED' && activity.status !== 'CANCELLED';
+    const canAccessChat = hasConversation && (activity.isOwner || currentUserRole === 'ADMIN' || (activity.isRegistered && !isActivityEnded));
     const isWaitlisted = activity.participantStatus === 'PENDING';
     const isRegisteredParticipant = activity.participantStatus === 'REGISTERED' || activity.participantStatus === 'APPROVED';
+    const participatedCount = allParticipants.filter((p) => p.status === 'PARTICIPATED').length;
     const isActivityFull = Boolean(activity.participantCount && activity.registeredCount >= activity.participantCount);
     const deleteDeadline = new Date(new Date(activity.startAt).getTime() - deleteNoticePeriodInMs);
-    const showMobileStickyAction = !activity.isOwner;
+    const showMobileStickyAction = !activity.isOwner && !isActivityEnded;
     const mobileActionLabel = activity.isRegistered
         ? (isRegisteredParticipant ? 'Đi đến trang điểm danh' : 'Đang trong danh sách chờ')
         : (isActivityFull ? 'Tham gia danh sách chờ' : (registering ? 'Đang đăng ký...' : 'Đăng ký ngay'));
@@ -369,6 +433,12 @@ const ActivityDetail: React.FC = () => {
     const directionsUrl = activity.location
         ? `https://www.google.com/maps/search/?api=1&query=${activity.location.latitude},${activity.location.longitude}`
         : 'https://www.google.com/maps';
+    const organizerImageUrl = activity.organizer?.image
+        ? (activity.organizer.image.startsWith('http')
+            ? activity.organizer.image
+            : `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}/uploads/${activity.organizer.image}`)
+        : 'https://api.dicebear.com/7.x/avataaars/svg?seed=Organizer';
+    const activityStatusLabel = mapActivityStatusToVietnamese(activity.status);
 
     return (
         <div className={styles.detailPage}>
@@ -391,18 +461,18 @@ const ActivityDetail: React.FC = () => {
                         <div className={styles.headerInfo}>
                             <h1>{activity.title}</h1>
                             <p className={styles.hostText}>Tổ chức bởi {activity.organizer.name}</p>
-                            <span className={styles.upcomingBadge}>● {activity.status}</span>
+                            <span className={styles.upcomingBadge}>● {activityStatusLabel}</span>
                         </div>
 
                         <div className={styles.hostProfile}>
                             <div className={styles.profileLeft}>
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" alt="Dr. Sarah" />
+                                <img src={organizerImageUrl} alt={activity.organizer.name} />
                                 <div>
                                     <span className={styles.name}>{activity.organizer.name}</span>
-                                    <span className={styles.title}>Event Coordinator & Associate Professor</span>
+                                    {/* <span className={styles.title}>Event Coordinator & Associate Professor</span> */}
                                 </div>
                             </div>
-                            <button className={styles.chatBtn}><i className="fa-regular fa-comment-dots"></i></button>
+                            {/* <button className={styles.chatBtn}><i className="fa-regular fa-comment-dots"></i></button> */}
                         </div>
                     </section>
 
@@ -509,7 +579,7 @@ const ActivityDetail: React.FC = () => {
                                         Tạo nhóm chat
                                     </button>
                                 )}
-                                {needsEdit && (
+                                {needsEdit && !isActivityEnded && (
                                     <button
                                         className={styles.registerBtn}
                                         onClick={handleGoToUpdate}
@@ -530,44 +600,50 @@ const ActivityDetail: React.FC = () => {
                                         Báo cáo điểm danh
                                     </button>
                                 )}
-                                <button
-                                    className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
-                                    onClick={() => setShowRegisterConfirmModal(true)}
-                                    disabled={registering || activity.isRegistered}
-                                >
-                                    <i className="fa-solid fa-id-card"></i>
-                                    {activity.isRegistered
-                                        ? (isWaitlisted ? 'Đang trong danh sách chờ' : 'Đã đăng ký')
-                                        : (isActivityFull ? 'Tham gia danh sách chờ' : (registering ? 'Đang đăng ký...' : 'Đăng ký ngay'))
-                                    }
-                                </button>
-                                {!activity.isRegistered && isActivityFull && (
-                                    <p className="small text-muted mt-2 mb-0">
-                                        Hoạt động đã đủ chỗ. Bạn có thể tham gia danh sách chờ để được chuyển vào khi có chỗ trống.
-                                    </p>
-                                )}
-                                {activity.isRegistered && (
+                                {!isActivityEnded ? (
                                     <>
-                                        {isRegisteredParticipant && (
-                                            <button
-                                                className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
-                                                onClick={handleGoToAttendance}
-                                                disabled={!checkinSession?._id}
-                                                title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
-                                            >
-                                                <i className="fa-solid fa-fingerprint"></i>
-                                                Đi đến trang điểm danh
-                                            </button>
-                                        )}
                                         <button
-                                            className={styles.actionBtnOutline}
-                                            onClick={() => setShowCancelConfirmModal(true)}
-                                            disabled={registering || !activity.participantRegistrationId}
+                                            className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
+                                            onClick={() => setShowRegisterConfirmModal(true)}
+                                            disabled={registering || activity.isRegistered}
                                         >
-                                            <i className="fa-solid fa-user-minus"></i>
-                                            Hủy đăng ký
+                                            <i className="fa-solid fa-id-card"></i>
+                                            {activity.isRegistered
+                                                ? (isWaitlisted ? 'Đang trong danh sách chờ' : 'Đã đăng ký')
+                                                : (isActivityFull ? 'Tham gia danh sách chờ' : (registering ? 'Đang đăng ký...' : 'Đăng ký ngay'))
+                                            }
                                         </button>
+                                        {!activity.isRegistered && isActivityFull && (
+                                            <p className="small text-muted mt-2 mb-0">
+                                                Hoạt động đã đủ chỗ. Bạn có thể tham gia danh sách chờ để được chuyển vào khi có chỗ trống.
+                                            </p>
+                                        )}
+                                        {activity.isRegistered && (
+                                            <>
+                                                {isRegisteredParticipant && (
+                                                    <button
+                                                        className={`${styles.registerBtn} ${styles.desktopPrimaryAction}`}
+                                                        onClick={handleGoToAttendance}
+                                                        disabled={!checkinSession?._id}
+                                                        title={!checkinSession?._id ? 'Hoạt động chưa có phiên điểm danh' : undefined}
+                                                    >
+                                                        <i className="fa-solid fa-fingerprint"></i>
+                                                        Đi đến trang điểm danh
+                                                    </button>
+                                                )}
+                                                <button
+                                                    className={styles.actionBtnOutline}
+                                                    onClick={() => setShowCancelConfirmModal(true)}
+                                                    disabled={registering || !activity.participantRegistrationId}
+                                                >
+                                                    <i className="fa-solid fa-user-minus"></i>
+                                                    Hủy đăng ký
+                                                </button>
+                                            </>
+                                        )}
                                     </>
+                                ) : (
+                                    <p className="small text-muted mt-2 mb-0">Hoạt động đã kết thúc, không còn chức năng thao tác cho người tham gia.</p>
                                 )}
                             </>
                         )}
@@ -672,9 +748,26 @@ const ActivityDetail: React.FC = () => {
                                 <i className="fa-solid fa-chart-line"></i> Dashboard điểm danh
                             </button>
                         )}
-                        <button className={styles.actionBtnOutline}>
-                            <i className="fa-solid fa-share-nodes"></i> Chia sẻ sự kiện
-                        </button>
+                        {canEndActivity && (
+                            <button
+                                className={styles.endActivityBtn}
+                                onClick={handleEndActivity}
+                                disabled={endingActivity}
+                                title={endingActivity ? 'Đang kết thúc...' : 'Kết thúc hoạt động'}
+                            >
+                                <i className="fa-solid fa-circle-stop"></i>
+                                {endingActivity ? 'Đang kết thúc...' : 'Kết thúc hoạt động'}
+                            </button>
+                        )}
+                        {isActivityEnded && activity.isOwner && (
+                            <button
+                                className={styles.finalizedBtn}
+                                onClick={handleGoToFinalizedParticipants}
+                            >
+                                <i className="fa-solid fa-check-circle"></i>
+                                Danh sách đã tham gia ({participatedCount})
+                            </button>
+                        )}
                     </div>
                 </aside>
             </div>

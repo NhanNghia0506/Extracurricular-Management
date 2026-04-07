@@ -8,6 +8,23 @@ interface FeedProps {
     searchTerm?: string;
 }
 
+const getStatusPresentation = (status?: string): { label: string; tone: 'open' | 'ongoing' | 'completed' | 'cancelled' | 'closed' | 'default' } => {
+    switch (status) {
+        case 'OPEN':
+            return { label: 'Đang mở đăng ký', tone: 'open' };
+        case 'ONGOING':
+            return { label: 'Đang diễn ra', tone: 'ongoing' };
+        case 'COMPLETED':
+            return { label: 'Đã kết thúc', tone: 'completed' };
+        case 'CANCELLED':
+            return { label: 'Đã hủy', tone: 'cancelled' };
+        case 'CLOSED':
+            return { label: 'Đã đóng đăng ký', tone: 'closed' };
+        default:
+            return { label: 'Chưa cập nhật', tone: 'default' };
+    }
+};
+
 const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
     const [activities, setActivities] = useState<ActivityListItem[]>([]);
     const [recommendedActivities, setRecommendedActivities] = useState<RecommendedActivityItem[]>([]);
@@ -84,7 +101,7 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 ? `${baseUrl}/uploads/${activity.image}`
                 : 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
 
-            const status = activity.status === 'OPEN' ? 'OPEN' : 'WAITLIST';
+            const statusPresentation = getStatusPresentation(activity.status);
 
             return {
                 id: activity._id,
@@ -92,7 +109,8 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 organization: organizerName,
                 orgIcon: 'fa-solid fa-building',
                 orgColor: index % 2 === 0 ? 'blue' : 'orange',
-                status,
+                status: statusPresentation.label,
+                statusTone: statusPresentation.tone,
                 image: imageUrl,
                 description: activity.description,
                 location: locationText,
@@ -116,7 +134,7 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 ? `${baseUrl}/uploads/${activity.image}`
                 : 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
 
-            const status = activity.status === 'OPEN' ? 'OPEN' : 'WAITLIST';
+            const statusPresentation = getStatusPresentation(activity.status);
 
             return {
                 post: {
@@ -125,7 +143,8 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                     organization: organizerName,
                     orgIcon: 'fa-solid fa-building',
                     orgColor: index % 2 === 0 ? 'blue' : 'orange',
-                    status,
+                    status: statusPresentation.label,
+                    statusTone: statusPresentation.tone,
                     image: imageUrl,
                     description: activity.description,
                     location: locationText,

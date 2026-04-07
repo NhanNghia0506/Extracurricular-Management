@@ -38,6 +38,7 @@ import StudentStatsPage from '../pages/StudentStatsPage';
 import OrganizerStatsPage from '../pages/OrganizerStatsPage';
 import AcademicManagementPage from '../pages/AcademicManagementPage';
 import AttendanceReportPage from '../pages/AttendanceReportPage';
+import ActivityFinalizedParticipantsPage from '../pages/ActivityFinalizedParticipantsPage';
 const AppRoutes: React.FC = () => {
     return (
         <Routes>
@@ -105,6 +106,7 @@ const AppRoutes: React.FC = () => {
 
             <Route element={<NoSidebarLayout />}>
                 <Route path="/participants/:activityId" element={<ActivityParticipantsPage />} />
+                <Route path="/finalized-participants/:activityId" element={<ActivityFinalizedParticipantsPage />} />
                 <Route path="/notifications" element={<NotificationsCenterPage />} />
                 <Route path="/notification-detail" element={<NotificationDetailPage />} />
                 <Route

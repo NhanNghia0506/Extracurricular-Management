@@ -39,6 +39,8 @@ interface StatusPresentation {
     color: string;
 }
 
+type ActivityRuntimeStatus = 'OPEN' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'CLOSED' | 'UNKNOWN';
+
 interface MyActivitiesProps {
     searchTerm?: string;
 }
@@ -91,16 +93,14 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
         }
     };
 
-    const statusPresentationMap = useMemo(() => ({
-        PENDING: { label: 'Chờ phê duyệt', color: '#f59e0b' },
-        NEEDS_EDIT: { label: 'Cần chỉnh sửa', color: '#f97316' },
-        REJECTED: { label: 'Bị từ chối', color: '#ef4444' },
+    const activityStatusPresentationMap = useMemo(() => ({
         OPEN: { label: 'Đang mở đăng ký', color: '#10b981' },
         ONGOING: { label: 'Đang diễn ra', color: '#2563eb' },
-        COMPLETED: { label: 'Đã hoàn thành', color: '#64748b' },
+        COMPLETED: { label: 'Đã kết thúc', color: '#64748b' },
         CANCELLED: { label: 'Đã hủy', color: '#dc2626' },
         CLOSED: { label: 'Đã đóng đăng ký', color: '#7c3aed' },
-    } as Record<Exclude<StatusFilterKey, 'ALL'>, StatusPresentation>), []);
+        UNKNOWN: { label: 'Chưa cập nhật', color: '#64748b' },
+    } as Record<ActivityRuntimeStatus, StatusPresentation>), []);
 
     const statusFilterConfig = useMemo(() => ([
         { key: 'ALL' as const, label: 'Tất cả trạng thái', icon: 'fa-table-cells-large' },
@@ -114,12 +114,28 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
     ]), []);
 
     const getActivityStatusKey = useMemo(() => (activity: MyActivityItem): StatusFilterKey => {
+        // Always prioritize terminal runtime states in feed.
+        if (activity.status === 'COMPLETED') return 'COMPLETED';
+        if (activity.status === 'CANCELLED') return 'CANCELLED';
+        if (activity.status === 'CLOSED') return 'CLOSED';
+
         if (activity.relation === 'created') {
             if (activity.approvalStatus === 'PENDING') return 'PENDING';
             if (activity.approvalStatus === 'NEEDS_EDIT') return 'NEEDS_EDIT';
             if (activity.approvalStatus === 'REJECTED') return 'REJECTED';
         }
 
+        switch (activity.status) {
+            case 'OPEN':
+                return 'OPEN';
+            case 'ONGOING':
+                return 'ONGOING';
+            default:
+                return 'ALL';
+        }
+    }, []);
+
+    const getActivityRuntimeStatus = useMemo(() => (activity: MyActivityItem): ActivityRuntimeStatus => {
         switch (activity.status) {
             case 'OPEN':
                 return 'OPEN';
@@ -132,19 +148,9 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
             case 'CLOSED':
                 return 'CLOSED';
             default:
-                return 'ALL';
+                return 'UNKNOWN';
         }
     }, []);
-
-    const getStatusPresentation = useMemo(() => (activity: MyActivityItem): StatusPresentation => {
-        const statusKey = getActivityStatusKey(activity);
-
-        if (statusKey === 'ALL') {
-            return { label: 'Chưa cập nhật', color: '#64748b' };
-        }
-
-        return statusPresentationMap[statusKey];
-    }, [getActivityStatusKey, statusPresentationMap]);
 
     const formatDateTime = (value?: string) => {
         if (!value) return 'Chưa cập nhật';
@@ -280,16 +286,17 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                     </div>
                 )}
                 {!loading && !error && participatedActivities.map((act) => {
-                    const statusPresentation = getStatusPresentation(act);
+                    const runtimeStatus = getActivityRuntimeStatus(act);
+                    const runtimeStatusPresentation = activityStatusPresentationMap[runtimeStatus];
                     const participantStatus = mapParticipantStatus(act.participantStatus);
                     const activityId = getActivityId(act);
                     const canOpenFeedback = getActivityStatusKey(act) !== 'COMPLETED';
                     const canCancelRegistration = act.participantStatus === 'REGISTERED' || act.participantStatus === 'PENDING' || act.participantStatus === 'APPROVED';
                     return (
                         <div key={activityId} className={styles.activityCard}>
-                            <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
+                            <div className={`${styles.imageWrapper} ${runtimeStatus === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
-                                <span className={styles.statusTag} style={{ background: statusPresentation.color }}>{statusPresentation.label}</span>
+                                <span className={styles.statusTag} style={{ background: runtimeStatusPresentation.color }}>{runtimeStatusPresentation.label}</span>
                                 <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 
@@ -297,6 +304,7 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                                 <h5>{act.title}</h5>
                                 <div className={styles.infoRow}><i className="fa-regular fa-calendar"></i> {formatDateTime(act.startAt)}</div>
                                 <div className={styles.infoRow}><i className="fa-solid fa-location-dot"></i> {act.location?.address || 'Chưa cập nhật'}</div>
+                                <div className={styles.infoRow}><i className="fa-solid fa-flag-checkered"></i> Trạng thái hoạt động: {runtimeStatusPresentation.label}</div>
                             </div>
 
                             <div className={styles.cardFooter}>
@@ -345,13 +353,14 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                     </div>
                 )}
                 {!loading && !error && createdActivities.map((act) => {
-                    const statusPresentation = getStatusPresentation(act);
+                    const runtimeStatus = getActivityRuntimeStatus(act);
+                    const runtimeStatusPresentation = activityStatusPresentationMap[runtimeStatus];
                     const activityId = getActivityId(act);
                     return (
                         <div key={activityId} className={styles.activityCard}>
-                            <div className={`${styles.imageWrapper} ${act.status === 'COMPLETED' ? styles.ended : ''}`}>
+                            <div className={`${styles.imageWrapper} ${runtimeStatus === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
-                                <span className={styles.statusTag} style={{ background: statusPresentation.color }}>{statusPresentation.label}</span>
+                                <span className={styles.statusTag} style={{ background: runtimeStatusPresentation.color }}>{runtimeStatusPresentation.label}</span>
                                 <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 
@@ -359,6 +368,7 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                                 <h5>{act.title}</h5>
                                 <div className={styles.infoRow}><i className="fa-regular fa-calendar"></i> {formatDateTime(act.startAt)}</div>
                                 <div className={styles.infoRow}><i className="fa-solid fa-location-dot"></i> {act.location?.address || 'Chưa cập nhật'}</div>
+                                <div className={styles.infoRow}><i className="fa-solid fa-flag-checkered"></i> Trạng thái hoạt động: {runtimeStatusPresentation.label}</div>
                             </div>
 
                             <div className={styles.cardFooter}>

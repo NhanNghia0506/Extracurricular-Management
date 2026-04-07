@@ -53,6 +53,7 @@ export interface ActivityDetailResponse {
     organizer: {
         _id: string;
         name: string;
+        image?: string;
     };
     category: {
         _id: string;
