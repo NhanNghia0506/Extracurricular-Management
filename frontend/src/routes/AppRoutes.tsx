@@ -39,6 +39,7 @@ import OrganizerStatsPage from '../pages/OrganizerStatsPage';
 import AcademicManagementPage from '../pages/AcademicManagementPage';
 import AttendanceReportPage from '../pages/AttendanceReportPage';
 import ActivityFinalizedParticipantsPage from '../pages/ActivityFinalizedParticipantsPage';
+import ActivityStatsPage from '../pages/ActivityStatsPage';
 const AppRoutes: React.FC = () => {
     return (
         <Routes>
@@ -148,6 +149,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <TrainingScoreReportPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/activity-stats"
+                    element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ActivityStatsPage />
                         </ProtectedRoute>
                     }
                 />

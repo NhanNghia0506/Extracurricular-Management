@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Activity } from "./activity.entity";
-import { Model, Types } from "mongoose";
+import { Model, PipelineStage, Types } from "mongoose";
 import { ActivityApprovalStatus, ActivityStatus } from "src/global/globalEnum";
 
 export interface ActivityNamedReference {
@@ -38,6 +38,22 @@ export interface RecommendationCandidateRecord {
     averageRating: number;
     ratingCount: number;
     cohortCount: number;
+}
+
+export interface ActivityStatsFilter {
+    startDate: Date;
+    endDate: Date;
+}
+
+export interface ActivityStatsRecord {
+    activityId: string;
+    title: string;
+    status: ActivityStatus;
+    startAt: Date;
+    endAt?: Date;
+    categoryName: string;
+    participantCount: number;
+    averageRating: number;
 }
 
 interface JoinedActivityRow {
@@ -90,7 +106,7 @@ export class ActivityRepository {
     findById(id: string) {
         return this.activityModel
             .findById(id)
-            .populate('organizerId', 'name')
+            .populate('organizerId', 'name image')
             .populate('categoryId', 'name')
             .exec();
     }
@@ -256,6 +272,95 @@ export class ActivityRepository {
         }
 
         return result;
+    }
+
+    async findActivityStatsRecords(filter: ActivityStatsFilter): Promise<ActivityStatsRecord[]> {
+        const pipeline: PipelineStage[] = [
+            {
+                $match: {
+                    approvalStatus: ActivityApprovalStatus.APPROVED,
+                    startAt: {
+                        $gte: filter.startDate,
+                        $lte: filter.endDate,
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'activitycategories',
+                    localField: 'categoryId',
+                    foreignField: '_id',
+                    as: 'category',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$category',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'activityparticipants',
+                    let: { activityId: '$_id' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$activityId', '$$activityId'] },
+                                        { $ne: ['$status', 'CANCELLED'] },
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            $count: 'participantCount',
+                        },
+                    ],
+                    as: 'participantSummary',
+                },
+            },
+            {
+                $lookup: {
+                    from: 'activityfeedbacks',
+                    let: { activityId: '$_id' },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ['$activityId', '$$activityId'] },
+                            },
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                averageRating: { $avg: '$rating' },
+                            },
+                        },
+                    ],
+                    as: 'ratingSummary',
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    activityId: { $toString: '$_id' },
+                    title: { $ifNull: ['$title', 'N/A'] },
+                    status: '$status',
+                    startAt: '$startAt',
+                    endAt: '$endAt',
+                    categoryName: { $ifNull: ['$category.name', 'Không phân loại'] },
+                    participantCount: {
+                        $ifNull: [{ $arrayElemAt: ['$participantSummary.participantCount', 0] }, 0],
+                    },
+                    averageRating: {
+                        $round: [{ $ifNull: [{ $arrayElemAt: ['$ratingSummary.averageRating', 0] }, 0] }, 2],
+                    },
+                },
+            },
+        ];
+
+        return this.activityModel.aggregate<ActivityStatsRecord>(pipeline).exec();
     }
 
     async findRecommendationCandidates(

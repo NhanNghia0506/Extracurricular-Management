@@ -7,6 +7,8 @@ export interface Organizer {
     description: string;
     image?: string;
     approvalStatus?: string;
+    reviewNote?: string | null;
+    reviewedAt?: string | null;
     createdBy?: string;
     status?: number;
     createdAt?: string;

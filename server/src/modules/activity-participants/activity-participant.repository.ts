@@ -2,6 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { ActivityParticipant, ActivityParticipantDocument, ParticipantStatus } from "./activity-participant.entity";
 import { Model, Types } from "mongoose";
+import { CheckinSession } from "../checkin-sessions/checkin-session.entity";
+import { Checkin } from "../checkins/checkin.entity";
+import { CheckinStatus } from "src/global/globalEnum";
 
 interface RegisteredActivityScheduleRow {
     activityId: Types.ObjectId;
@@ -17,10 +20,17 @@ interface PendingParticipantRow {
     registeredAt?: Date;
 }
 
+interface PerfectAttendanceRow {
+    _id: Types.ObjectId;
+    attendedSessionCount: number;
+}
+
 @Injectable()
 export class ActivityParticipantRepository {
     constructor(
         @InjectModel(ActivityParticipant.name) private readonly activityParticipantModel: Model<ActivityParticipant>,
+        @InjectModel(CheckinSession.name) private readonly checkinSessionModel: Model<CheckinSession>,
+        @InjectModel(Checkin.name) private readonly checkinModel: Model<Checkin>,
     ) { }
 
     create(activityParticipant: Partial<ActivityParticipant>) {
@@ -62,6 +72,69 @@ export class ActivityParticipantRepository {
             { status },
             { new: true },
         ).exec();
+    }
+
+    async findUserIdsWithPerfectAttendance(activityId: string): Promise<string[]> {
+        const sessions: Array<{ _id: Types.ObjectId }> = await this.checkinSessionModel
+            .find({ activityId: new Types.ObjectId(activityId) })
+            .select('_id')
+            .lean<Array<{ _id: Types.ObjectId }>>()
+            .exec();
+
+        if (sessions.length === 0) {
+            return [];
+        }
+
+        const sessionIds: Types.ObjectId[] = sessions.map((session) => session._id);
+        const eligible: PerfectAttendanceRow[] = await this.checkinModel.aggregate<PerfectAttendanceRow>([
+            {
+                $match: {
+                    checkinSessionId: { $in: sessionIds },
+                    status: { $in: [CheckinStatus.SUCCESS, CheckinStatus.LATE] },
+                },
+            },
+            {
+                $group: {
+                    _id: '$userId',
+                    sessionIds: { $addToSet: '$checkinSessionId' },
+                },
+            },
+            {
+                $project: {
+                    attendedSessionCount: { $size: '$sessionIds' },
+                },
+            },
+            {
+                $match: {
+                    attendedSessionCount: sessionIds.length,
+                },
+            },
+        ]).exec();
+
+        return eligible.map((row) => row._id.toString());
+    }
+
+    async updateStatusesByActivityAndUserIds(
+        activityId: string,
+        userIds: string[],
+        status: ParticipantStatus,
+    ): Promise<number> {
+        if (userIds.length === 0) {
+            return 0;
+        }
+
+        const result = await this.activityParticipantModel.updateMany(
+            {
+                activityId: new Types.ObjectId(activityId),
+                userId: { $in: userIds.map((userId) => new Types.ObjectId(userId)) },
+                status: { $nin: [ParticipantStatus.CANCELLED, ParticipantStatus.REJECTED, ParticipantStatus.PARTICIPATED] },
+            },
+            {
+                $set: { status },
+            },
+        ).exec();
+
+        return result.modifiedCount || 0;
     }
 
     findByActivityIdWithClassFacultyNames(activityId: string) {
@@ -137,6 +210,34 @@ export class ActivityParticipantRepository {
             activityId: new Types.ObjectId(activityId),
             userId: new Types.ObjectId(userId)
         }).exec();
+    }
+
+    findActiveByActivityAndUserId(activityId: string, userId: string) {
+        return this.activityParticipantModel.findOne({
+            activityId: new Types.ObjectId(activityId),
+            userId: new Types.ObjectId(userId),
+            status: { $ne: ParticipantStatus.CANCELLED },
+        }).exec();
+    }
+
+    findLatestByActivityAndUserId(activityId: string, userId: string) {
+        return this.activityParticipantModel.findOne({
+            activityId: new Types.ObjectId(activityId),
+            userId: new Types.ObjectId(userId),
+        }).sort({ updatedAt: -1, createdAt: -1 }).exec();
+    }
+
+    reactivateRegistration(id: string, status: ParticipantStatus, registeredAt: Date) {
+        return this.activityParticipantModel.findByIdAndUpdate(
+            new Types.ObjectId(id),
+            {
+                $set: {
+                    status,
+                    registeredAt,
+                },
+            },
+            { new: true },
+        ).exec();
     }
 
     deleteByActivityId(activityId: string) {

@@ -11,14 +11,18 @@ import { OptionalAuthGuard } from 'src/guards/optional-auth.guard';
 import { UserModule } from '../users/user.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { MailModule } from '../mail/mail.module';
+import { Organizer, OrganizerSchema } from '../organizers/organizer.entity';
+import { CertificateModule } from '../certificates/certificate.module';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: Activity.name, schema: ActivitySchema },
+            { name: Organizer.name, schema: OrganizerSchema },
         ]),
         UserModule,
         NotificationModule,
+        CertificateModule,
         forwardRef(() => ActivityParticipantModule),
         OrganizerMemberModule,
         MailModule,

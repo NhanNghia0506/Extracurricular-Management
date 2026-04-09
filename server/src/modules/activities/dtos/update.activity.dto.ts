@@ -54,4 +54,12 @@ export class UpdateActivityDto {
     @IsString()
     @IsOptional()
     image?: string; // Lưu tên file (filename từ Multer)
+
+    @IsString()
+    @IsOptional()
+    organizerId?: string;
+
+    @IsString()
+    @IsOptional()
+    categoryId?: string;
 }

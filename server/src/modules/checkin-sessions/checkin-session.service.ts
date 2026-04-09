@@ -5,7 +5,7 @@ import { CreateCheckinSessionDto } from './dtos/create.checkin-session.dto';
 import { CheckinSessionRepository } from './checkin-session.repository';
 import { CheckinSession } from './checkin-session.entity';
 import { UpdateCheckinSessionDto } from './dtos/update.checkin-session.dto';
-import { NotificationPriority, NotificationType, UserRole } from 'src/global/globalEnum';
+import { ActivityStatus, NotificationPriority, NotificationType, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -28,6 +28,10 @@ export class CheckinSessionService {
         const activity = await this.activityService.findById(createCheckinSessionDto.activityId);
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        if (activity.status === ActivityStatus.COMPLETED) {
+            throw new BadRequestException('Không thể tạo phiên điểm danh cho hoạt động đã kết thúc');
         }
 
         if (createCheckinSessionDto.startTime >= createCheckinSessionDto.endTime) {

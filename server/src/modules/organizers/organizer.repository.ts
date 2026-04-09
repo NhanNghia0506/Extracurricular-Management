@@ -92,7 +92,7 @@ export class OrganizerRepository {
             },
             {
                 $match: {
-                    'activity.createdAt': {
+                    'activity.startAt': {
                         $gte: filter.startDate,
                         $lte: filter.endDate,
                     },
@@ -162,7 +162,7 @@ export class OrganizerRepository {
                     organizerName: '$name',
                     activityId: { $toString: '$activity._id' },
                     activityTitle: { $ifNull: ['$activity.title', 'N/A'] },
-                    activityDate: '$activity.createdAt',
+                    activityDate: '$activity.startAt',
                     categoryName: { $ifNull: ['$category.name', 'Không phân loại'] },
                     participantCount: {
                         $ifNull: [{ $arrayElemAt: ['$participantSummary.participantCount', 0] }, 0],

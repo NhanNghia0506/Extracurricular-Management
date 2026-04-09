@@ -44,6 +44,7 @@ const OrganizerDetail: React.FC = () => {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [editError, setEditError] = useState('');
+    const [editSuccess, setEditSuccess] = useState('');
     const [formName, setFormName] = useState('');
     const [formEmail, setFormEmail] = useState('');
     const [formPhone, setFormPhone] = useState('');
@@ -124,6 +125,17 @@ const OrganizerDetail: React.FC = () => {
 
         return myManagerOrganizerIds.includes(organizerId);
     }, [myManagerOrganizerIds, organizerId]);
+    const approvalStatus = overview?.organizer?.approvalStatus || 'PENDING';
+    const isRejected = approvalStatus === 'REJECTED';
+    const isNeedsEdit = approvalStatus === 'NEEDS_EDIT';
+    const canResubmit = isRejected || isNeedsEdit;
+    const approvalBadgeText = isRejected
+        ? 'Bị từ chối'
+        : isNeedsEdit
+            ? 'Cần bổ sung'
+            : approvalStatus === 'APPROVED'
+                ? 'Đã duyệt'
+                : 'Chờ duyệt';
 
     useEffect(() => {
         if (!overview?.organizer) {
@@ -136,6 +148,7 @@ const OrganizerDetail: React.FC = () => {
         setFormDescription(overview.organizer.description || '');
         setImageFile(null);
         setImagePreview(getImageUrl(overview.organizer.image));
+        setEditSuccess('');
     }, [overview]);
 
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +180,7 @@ const OrganizerDetail: React.FC = () => {
         setImageFile(null);
         setImagePreview(getImageUrl(overview.organizer.image));
         setEditError('');
+        setEditSuccess('');
         setEditing(false);
     };
 
@@ -195,6 +209,7 @@ const OrganizerDetail: React.FC = () => {
 
         setSaving(true);
         setEditError('');
+        setEditSuccess('');
 
         try {
             const formData = new FormData();
@@ -208,12 +223,18 @@ const OrganizerDetail: React.FC = () => {
             }
 
             const targetId = organizerId || overview!.organizer.id;
+            const wasResubmitting = canResubmit;
             await organizerService.update(targetId, formData);
 
             const refreshed = await organizerService.overview(targetId);
             const refreshedData = refreshed.data?.data ?? refreshed.data;
             setOverview(refreshedData);
             setEditing(false);
+            setEditSuccess(
+                wasResubmitting
+                    ? 'Đã cập nhật thông tin và gửi lại yêu cầu duyệt cho admin.'
+                    : 'Đã cập nhật thông tin ban tổ chức thành công.',
+            );
         } catch (submitError: any) {
             console.error('Lỗi cập nhật ban tổ chức:', submitError);
             setEditError(submitError?.response?.data?.message || 'Không thể cập nhật thông tin ban tổ chức.');
@@ -247,7 +268,7 @@ const OrganizerDetail: React.FC = () => {
                         <h2>{overview.organizer.name}</h2>
                     </div>
                 )}
-                <span className={styles.badge}>Organizer Dashboard</span>
+                <span className={styles.badge}>{approvalBadgeText}</span>
             </div>
 
             <div className={styles.contentGrid}>
@@ -273,11 +294,22 @@ const OrganizerDetail: React.FC = () => {
                                     }
                                     setEditing((prev) => !prev);
                                     setEditError('');
+                                    setEditSuccess('');
                                 }}
                             >
-                                <FontAwesomeIcon icon={faPenToSquare} /> Chỉnh sửa thông tin
+                                <FontAwesomeIcon icon={faPenToSquare} /> {canResubmit ? 'Chỉnh sửa và gửi lại duyệt' : 'Chỉnh sửa thông tin'}
                             </button>
                         </div>
+
+                        {canResubmit && overview.organizer.reviewNote && (
+                            <div className={styles.reviewNoteBox}>
+                                <strong>Phản hồi từ admin</strong>
+                                <p>{overview.organizer.reviewNote}</p>
+                                <small>Hãy cập nhật thông tin bên dưới để gửi lại yêu cầu duyệt.</small>
+                            </div>
+                        )}
+
+                        {editSuccess && <p className={styles.editSuccess}>{editSuccess}</p>}
 
                         <div className={styles.contactGrid}>
                             <div className={styles.contactItem}>
@@ -357,7 +389,7 @@ const OrganizerDetail: React.FC = () => {
                                         <FontAwesomeIcon icon={faXmark} /> Hủy
                                     </button>
                                     <button type="submit" className={styles.primaryAction} disabled={saving}>
-                                        {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                        {saving ? 'Đang gửi...' : (canResubmit ? 'Lưu và gửi lại duyệt' : 'Lưu thay đổi')}
                                     </button>
                                 </div>
                             </form>

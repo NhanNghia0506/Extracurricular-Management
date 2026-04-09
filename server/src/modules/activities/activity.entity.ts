@@ -11,23 +11,23 @@ export class Activity {
     @Prop({
         required: true,
     })
-    title: string;
+    title!: string;
 
     @Prop({
         required: true,
     })
-    description: string;
+    description!: string;
 
     @Prop({
         required: true,
     })
-    startAt: Date;
+    startAt!: Date;
 
     @Prop({
         type: Date,
         default: null,
     })
-    endAt: Date;
+    endAt!: Date;
 
     @Prop({
         required: true,
@@ -37,59 +37,59 @@ export class Activity {
             longitude: { type: Number, required: true }
         }
     })
-    location: LocationData;
+    location!: LocationData;
 
     @Prop({
         required: true,
         default: ActivityStatus.OPEN,
         enum: Object.values(ActivityStatus),
     })
-    status: ActivityStatus;
+    status!: ActivityStatus;
 
     @Prop({
         required: false,
     })
-    image: string;
+    image!: string;
 
     @Prop({
         type: Types.ObjectId,
         ref: 'Organizer',
         required: true,
     })
-    organizerId: Types.ObjectId;
+    organizerId!: Types.ObjectId;
 
     @Prop({
         type: Types.ObjectId,
         ref: 'ActivityCategory',
         required: true,
     })
-    categoryId: Types.ObjectId;
+    categoryId!: Types.ObjectId;
 
     @Prop({
         type: Types.ObjectId,
         ref: 'User',
         required: true,
     })
-    createdBy: Types.ObjectId;
+    createdBy!: Types.ObjectId;
 
     @Prop({
         required: false,
         default: 0,
     })
-    trainingScore: number;
+    trainingScore!: number;
 
     @Prop({
         required: false,
         default: 0,
     })
-    participantCount: number;
+    participantCount!: number;
 
     @Prop({
         required: true,
         default: ActivityApprovalStatus.PENDING,
         enum: Object.values(ActivityApprovalStatus),
     })
-    approvalStatus: ActivityApprovalStatus;
+    approvalStatus!: ActivityApprovalStatus;
 
     @Prop({
         type: String,
@@ -117,7 +117,7 @@ export class Activity {
         required: true,
         default: false,
     })
-    isPriority: boolean;
+    isPriority: boolean = false;
 
     createdAt?: Date;
     updatedAt?: Date;

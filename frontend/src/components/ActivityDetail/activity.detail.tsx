@@ -411,7 +411,9 @@ const ActivityDetail: React.FC = () => {
     const canManageDeletion = activity.isOwner || currentUserRole === 'ADMIN';
     const isApproved = activity.approvalStatus === 'APPROVED';
     const needsEdit = activity.approvalStatus === 'NEEDS_EDIT';
+    const isRejected = activity.approvalStatus === 'REJECTED';
     const isActivityEnded = activity.status === 'COMPLETED';
+    const canResubmitActivity = (needsEdit || isRejected) && !isActivityEnded;
     const canEndActivity = activity.isOwner && isApproved && activity.status !== 'COMPLETED' && activity.status !== 'CANCELLED';
     const canAccessChat = hasConversation && (activity.isOwner || currentUserRole === 'ADMIN' || (activity.isRegistered && !isActivityEnded));
     const isWaitlisted = activity.participantStatus === 'PENDING';
@@ -507,11 +509,11 @@ const ActivityDetail: React.FC = () => {
                             <p>{activity.description}</p>
                         </div>
 
-                        {needsEdit && activity.reviewNote && (
+                        {(needsEdit || isRejected) && activity.reviewNote && (
                             <div className={styles.reviewNoteBox}>
                                 <div className={styles.reviewNoteTitle}>
                                     <i className="fa-solid fa-pen-to-square"></i>
-                                    Yêu cầu chỉnh sửa từ quản trị viên
+                                    {needsEdit ? 'Yêu cầu chỉnh sửa từ quản trị viên' : 'Hoạt động đã bị từ chối'}
                                 </div>
                                 <p className="m-0">{activity.reviewNote}</p>
                             </div>
@@ -579,13 +581,13 @@ const ActivityDetail: React.FC = () => {
                                         Tạo nhóm chat
                                     </button>
                                 )}
-                                {needsEdit && !isActivityEnded && (
+                                {canResubmitActivity && (
                                     <button
                                         className={styles.registerBtn}
                                         onClick={handleGoToUpdate}
                                     >
                                         <i className="fa-solid fa-pen-to-square"></i>
-                                        Chỉnh sửa hoạt động
+                                        Chỉnh sửa và gửi lại duyệt
                                     </button>
                                 )}
                             </>

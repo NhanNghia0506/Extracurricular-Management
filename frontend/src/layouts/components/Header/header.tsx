@@ -272,6 +272,16 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                                                 <button
                                                     className={styles.dropdownItem}
                                                     onClick={() => {
+                                                        navigate('/admin/activity-stats');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-chart-column"></i>
+                                                    <span>Thống kê hoạt động</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
                                                         navigate('/activity-approval');
                                                         setAdminDropdownOpen(false);
                                                     }}
@@ -298,6 +308,16 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                                                 >
                                                     <i className="fa-solid fa-list"></i>
                                                     <span>Danh mục hoạt động</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/verify-certificate');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-qrcode"></i>
+                                                    <span>Quét QR xác thực chứng nhận</span>
                                                 </button>
                                                 <button
                                                     className={styles.dropdownItem}

@@ -21,7 +21,7 @@ export const useActivityData = () => {
 
                 if (response.data?.success && response.data?.data) {
                     const organizerList = response.data.data
-                        .filter((item: any) => item?.role === 'MANAGER')
+                        .filter((item: any) => item?.role === 'MANAGER' && item?.organizerId?.approvalStatus === 'APPROVED')
                         .map((item: any) => ({
                             id: item.organizerId?._id || item.organizerId,
                             name: (item.organizerId?.name || '').trim()

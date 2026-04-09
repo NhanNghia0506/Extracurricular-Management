@@ -7,6 +7,7 @@ export enum ParticipantStatus {
     REGISTERED = 'REGISTERED',
     PENDING = 'PENDING',
     APPROVED = 'APPROVED',
+    PARTICIPATED = 'PARTICIPATED',
     REJECTED = 'REJECTED',
     CANCELLED = 'CANCELLED'
 }
@@ -16,10 +17,10 @@ export class ActivityParticipant {
     _id?: Types.ObjectId;
 
     @Prop({ required: true, type: Types.ObjectId, ref: 'Activity' })
-    activityId: Types.ObjectId;
+    activityId!: Types.ObjectId;
 
     @Prop({ required: true, type: Types.ObjectId, ref: 'User' })
-    userId: Types.ObjectId;
+    userId!: Types.ObjectId;
 
     @Prop({
         required: false,

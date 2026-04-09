@@ -10,7 +10,6 @@ import { ActivityParticipantService } from '../activity-participants/activity-pa
 import { CheckinGateway } from 'src/events/checkin.gateway';
 import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
-import { CertificateService } from '../certificates/certificate.service';
 import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
@@ -127,16 +126,6 @@ export interface StudentStatsResponse {
         averageScore: number;
         mostActiveActivity: string;
     };
-    participationTrend: {
-        labels: string[];
-        data: number[];
-    };
-    scoreDistribution: {
-        excellent: number;
-        good: number;
-        fair: number;
-        average: number;
-    };
     leaderboard: Array<{
         rank: number;
         name: string;
@@ -168,7 +157,6 @@ export class CheckinService {
         private readonly checkinGateway: CheckinGateway,
         private readonly studentService: StudentService,
         private readonly userService: UserService,
-        private readonly certificateService: CertificateService,
         private readonly academicService: AcademicService,
     ) { }
 
@@ -226,52 +214,6 @@ export class CheckinService {
             throw new BadRequestException('year không hợp lệ');
         }
         return parsed;
-    }
-
-    private buildTrend(records: StudentStatsRecord[]) {
-        const labels = ['Đ1', 'Đ2', 'Đ3', 'Đ4', 'Đ5', 'Đ6', 'Đ7', 'Đ8'];
-        if (records.length === 0) {
-            return {
-                labels,
-                data: labels.map(() => 0),
-            };
-        }
-
-        const sortedTimes = records
-            .map((record) => new Date(record.firstCheckinAt).getTime())
-            .filter((value) => Number.isFinite(value))
-            .sort((a, b) => a - b);
-
-        if (sortedTimes.length === 0) {
-            return {
-                labels,
-                data: labels.map(() => 0),
-            };
-        }
-
-        const min = sortedTimes[0];
-        const max = sortedTimes[sortedTimes.length - 1];
-        const step = Math.max(1, Math.ceil((max - min + 1) / 8));
-        const bins = labels.map(() => 0);
-
-        for (const record of records) {
-            const time = new Date(record.firstCheckinAt).getTime();
-            if (!Number.isFinite(time)) {
-                continue;
-            }
-            const index = Math.min(7, Math.floor((time - min) / step));
-            bins[index] += 1;
-        }
-
-        const peak = Math.max(...bins, 0);
-        const data = peak === 0
-            ? bins
-            : bins.map((value) => Number(((value / peak) * 100).toFixed(2)));
-
-        return {
-            labels,
-            data,
-        };
     }
 
     private parseStatuses(rawStatuses: string | undefined): CheckinStatus[] | undefined {
@@ -433,12 +375,6 @@ export class CheckinService {
 
         // Emit event khi checkin xong (non-blocking)
         void this.emitCheckinEventAsync(savedCheckin, createCheckinDto.userId);
-        if ([CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(savedCheckin.status)) {
-            void this.certificateService.issueForCheckinSessionIfEligible(
-                savedCheckin.checkinSessionId.toString(),
-                createCheckinDto.userId,
-            );
-        }
 
         return savedCheckin;
     }
@@ -503,12 +439,6 @@ export class CheckinService {
         const savedCheckin = await this.checkinRepository.create(manualCheckin);
 
         void this.emitCheckinEventAsync(savedCheckin, manualCheckinDto.userId);
-        if ([CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(savedCheckin.status)) {
-            void this.certificateService.issueForCheckinSessionIfEligible(
-                savedCheckin.checkinSessionId.toString(),
-                manualCheckinDto.userId,
-            );
-        }
 
         return savedCheckin;
     }
@@ -792,15 +722,6 @@ export class CheckinService {
             }
         }
 
-        const excellent = students.filter((item) => item.trainingScore >= 90).length;
-        const good = students.filter((item) => item.trainingScore >= 80 && item.trainingScore < 90).length;
-        const fair = students.filter((item) => item.trainingScore >= 70 && item.trainingScore < 80).length;
-        const average = students.filter((item) => item.trainingScore < 70).length;
-
-        const toPercent = (value: number) => totalStudents > 0
-            ? Number(((value / totalStudents) * 100).toFixed(2))
-            : 0;
-
         const leaderboard = students
             .sort((a, b) => {
                 if (b.trainingScore !== a.trainingScore) {
@@ -826,13 +747,6 @@ export class CheckinService {
                 totalStudents,
                 averageScore,
                 mostActiveActivity,
-            },
-            participationTrend: this.buildTrend(records),
-            scoreDistribution: {
-                excellent: toPercent(excellent),
-                good: toPercent(good),
-                fair: toPercent(fair),
-                average: toPercent(average),
             },
             leaderboard,
         };

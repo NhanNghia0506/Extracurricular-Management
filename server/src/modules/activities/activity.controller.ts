@@ -35,6 +35,8 @@ import { ActivityApprovalQueryDto } from './dtos/activity-approval-query.dto';
 import { UpdateActivityApprovalDto } from './dtos/update-activity-approval.dto';
 import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
 import { ActivityRecommendationQueryDto } from './dtos/activity-recommendation-query.dto';
+import { ActivityStatsQueryDto } from './dtos/activity-stats.query.dto';
+import { AdminGuard } from 'src/guards/admin.guard';
 
 
 @Controller('activities')
@@ -127,6 +129,13 @@ export class ActivityController {
         return this.activityService.getApprovalDashboard(req.user?.role, query.approvalStatus);
     }
 
+    @ResponseMessage('Lấy thống kê hoạt động thành công')
+    @Get('admin/stats')
+    @UseGuards(AuthGuard, AdminGuard)
+    async getAdminStats(@Req() req: ExpressRequest, @Query() query: ActivityStatsQueryDto) {
+        return this.activityService.getAdminStats(req.user?.role, query);
+    }
+
     @ResponseMessage('Lấy danh sách hoạt động gợi ý thành công')
     @Get('recommended')
     @UseGuards(AuthGuard)
@@ -189,6 +198,16 @@ export class ActivityController {
             req.user?.role,
             payload,
         );
+    }
+
+    @ResponseMessage('Kết thúc hoạt động thành công')
+    @Patch(':id/end')
+    @UseGuards(AuthGuard)
+    async endActivity(
+        @Param('id') id: string,
+        @Req() req: ExpressRequest,
+    ): Promise<Activity> {
+        return this.activityService.endActivity(id, req.user!.id!);
     }
 
     /**

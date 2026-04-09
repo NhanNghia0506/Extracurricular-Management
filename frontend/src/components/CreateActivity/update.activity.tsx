@@ -152,6 +152,8 @@ const UpdateActivity: React.FC = () => {
             const formData = new FormData();
             formData.append('title', form.title);
             formData.append('description', form.description);
+            formData.append('categoryId', form.categoryId);
+            formData.append('organizerId', form.organizerId);
             formData.append('location', JSON.stringify({
                 address: location.location,
                 latitude: location.coordinates[0],

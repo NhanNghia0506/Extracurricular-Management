@@ -6,16 +6,6 @@ interface StudentStatsResponse {
         averageScore: string | number;
         mostActiveActivity: string;
     };
-    participationTrend: {
-        labels: string[];
-        data: number[];
-    };
-    scoreDistribution: {
-        excellent: number;
-        good: number;
-        fair: number;
-        average: number;
-    };
     leaderboard: Array<{
         rank: number;
         name: string;

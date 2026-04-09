@@ -5,13 +5,14 @@ import {
     ActivityRepository,
     RecommendationCandidateRecord,
     ActivityUserReference,
+    ActivityStatsRecord,
 } from './activity.repository';
 import { CreateActivityDto } from './dtos/create.activity.dto';
 import { ActivityRecommendationQueryDto } from './dtos/activity-recommendation-query.dto';
 import { SendActivityNotificationDto } from './dtos/send-activity-notification.dto';
 import { UpdateActivityDto } from './dtos/update.activity.dto';
-import { Types } from 'mongoose';
-import { ActivityStatus, NotificationPriority, NotificationType, UserRole } from '../../global/globalEnum';
+import { Model, Types } from 'mongoose';
+import { ActivityStatus, NotificationPriority, NotificationType, OrganizerApprovalStatus, UserRole } from '../../global/globalEnum';
 import { Activity } from './activity.entity';
 import {
     ActivityApprovalDashboardResponse,
@@ -25,6 +26,13 @@ import { ParticipantStatus } from '../activity-participants/activity-participant
 import { UploadService } from '../../interceptors/upload.service';
 import { NotificationService } from '../notifications/notification.service';
 import { MailService } from '../mail/mail.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Organizer } from '../organizers/organizer.entity';
+import { OrganizerMemberService } from '../organizer-members/organizer-member.service';
+import { OrganizerMemberRole } from 'src/global/globalEnum';
+import { CertificateService, IssueResult } from '../certificates/certificate.service';
+import { ActivityStatsQueryDto } from './dtos/activity-stats.query.dto';
+import { ActivityStatsResponseDto } from './dtos/activity-stats.response.dto';
 
 type ActivityApprovalValue = Activity['approvalStatus'];
 
@@ -61,6 +69,19 @@ interface ActivityRecommendationItem {
     isPriority: boolean;
 }
 
+interface CertificateIssuanceRecord {
+    userId: string;
+    result: IssueResult;
+}
+
+interface IssuedCertificatePayload {
+    _id?: Types.ObjectId | { toString(): string };
+    certificateCode: string;
+    issuedAt: Date;
+}
+
+type ActivityStatsPeriodType = 'month' | 'quarter' | 'year';
+
 
 @Injectable()
 export class ActivityService {
@@ -74,6 +95,10 @@ export class ActivityService {
         private readonly uploadService: UploadService,
         private readonly notificationService: NotificationService,
         private readonly mailService: MailService,
+        private readonly organizerMemberService: OrganizerMemberService,
+        private readonly certificateService: CertificateService,
+        @InjectModel(Organizer.name)
+        private readonly organizerModel: Model<Organizer>,
     ) { }
 
     /**
@@ -98,6 +123,8 @@ export class ActivityService {
         if (!createActivityDto.location) {
             throw new BadRequestException('location là bắt buộc');
         }
+
+        await this.ensureOrganizerApproved(createActivityDto.organizerId);
 
         // Tạo entity
         const approvalStatus: ActivityApprovalValue = userRole === UserRole.ADMIN
@@ -178,6 +205,110 @@ export class ActivityService {
         return {
             strategy: 'hybrid',
             items,
+        };
+    }
+
+    async getAdminStats(userRole: string | undefined, query: ActivityStatsQueryDto): Promise<ActivityStatsResponseDto> {
+        this.ensureSystemAdmin(userRole);
+
+        const periodType = this.parsePeriodType(query.periodType);
+        const year = this.parseYear(query.year);
+        const month = this.parseMonth(query.month);
+        const quarter = this.parseQuarter(query.quarter);
+        const { startDate, endDate } = this.resolvePeriodRange(periodType, year, month, quarter);
+
+        const records = await this.activityRepository.findActivityStatsRecords({
+            startDate,
+            endDate,
+        });
+
+        const now = Date.now();
+        const activitiesByStatus = {
+            upcoming: 0,
+            ongoing: 0,
+            completed: 0,
+        };
+
+        const categoryMap = new Map<string, number>();
+        let cancelledCount = 0;
+        let totalDurationHours = 0;
+        let durationCount = 0;
+
+        for (const item of records) {
+            const statusBucket = this.resolveStatusBucket(item, now);
+            if (statusBucket === 'cancelled') {
+                cancelledCount += 1;
+            } else {
+                activitiesByStatus[statusBucket] += 1;
+            }
+
+            categoryMap.set(item.categoryName, (categoryMap.get(item.categoryName) || 0) + 1);
+
+            if (item.endAt) {
+                const durationMs = new Date(item.endAt).getTime() - new Date(item.startAt).getTime();
+                if (durationMs > 0) {
+                    totalDurationHours += durationMs / (1000 * 60 * 60);
+                    durationCount += 1;
+                }
+            }
+        }
+
+        const totalActivities = records.length;
+        const cancellationRate = totalActivities > 0
+            ? Number(((cancelledCount / totalActivities) * 100).toFixed(2))
+            : 0;
+        const averageDurationHours = durationCount > 0
+            ? Number((totalDurationHours / durationCount).toFixed(2))
+            : 0;
+
+        const activitiesByCategory = Array.from(categoryMap.entries())
+            .map(([categoryName, count]) => ({ categoryName, count }))
+            .sort((a, b) => b.count - a.count);
+
+        const topByParticipants = [...records]
+            .sort((a, b) => {
+                if (b.participantCount !== a.participantCount) {
+                    return b.participantCount - a.participantCount;
+                }
+                return b.averageRating - a.averageRating;
+            })
+            .slice(0, 10)
+            .map((item) => ({
+                activityId: item.activityId,
+                title: item.title,
+                participantCount: item.participantCount,
+                averageRating: item.averageRating,
+                startAt: item.startAt,
+            }));
+
+        const topByRating = [...records]
+            .sort((a, b) => {
+                if (b.averageRating !== a.averageRating) {
+                    return b.averageRating - a.averageRating;
+                }
+                return b.participantCount - a.participantCount;
+            })
+            .filter((item) => item.averageRating > 0)
+            .slice(0, 10)
+            .map((item) => ({
+                activityId: item.activityId,
+                title: item.title,
+                participantCount: item.participantCount,
+                averageRating: item.averageRating,
+                startAt: item.startAt,
+            }));
+
+        return {
+            kpi: {
+                totalActivities,
+                cancellationRate,
+                averageDurationHours,
+            },
+            activitiesByStatus,
+            activitiesByCategory,
+            periodTrend: this.buildPeriodTrend(records, periodType, year, month, quarter),
+            topByParticipants,
+            topByRating,
         };
     }
 
@@ -373,6 +504,10 @@ export class ActivityService {
             throw new ForbiddenException('Bạn chỉ có quyền chỉnh sửa hoạt động của chính mình');
         }
 
+        if (activity.status === ActivityStatus.COMPLETED) {
+            throw new BadRequestException('Không thể chỉnh sửa hoạt động đã kết thúc');
+        }
+
         // Chuẩn bị dữ liệu cập nhật
         const updateData: Partial<Activity> = {};
 
@@ -385,6 +520,34 @@ export class ActivityService {
         if (updateActivityDto.endAt) updateData.endAt = updateActivityDto.endAt;
         if (updateActivityDto.trainingScore !== undefined) updateData.trainingScore = updateActivityDto.trainingScore;
         if (updateActivityDto.participantCount !== undefined) updateData.participantCount = updateActivityDto.participantCount;
+
+        if (updateActivityDto.categoryId !== undefined) {
+            if (!Types.ObjectId.isValid(updateActivityDto.categoryId)) {
+                throw new BadRequestException('categoryId phải là MongoDB ObjectId hợp lệ');
+            }
+            updateData.categoryId = new Types.ObjectId(updateActivityDto.categoryId);
+        }
+
+        if (updateActivityDto.organizerId !== undefined) {
+            if (!Types.ObjectId.isValid(updateActivityDto.organizerId)) {
+                throw new BadRequestException('organizerId phải là MongoDB ObjectId hợp lệ');
+            }
+
+            await this.ensureOrganizerApproved(updateActivityDto.organizerId);
+
+            if (userRole !== UserRole.ADMIN) {
+                const member = await this.organizerMemberService.findByUserIdAndOrganizerId(userId, updateActivityDto.organizerId);
+                if (!member || !member.isActive) {
+                    throw new ForbiddenException('Bạn không thuộc ban tổ chức được chọn');
+                }
+
+                if (member.role !== OrganizerMemberRole.MANAGER) {
+                    throw new ForbiddenException('Chỉ manager mới có quyền gán hoạt động cho ban tổ chức này');
+                }
+            }
+
+            updateData.organizerId = new Types.ObjectId(updateActivityDto.organizerId);
+        }
 
         // Xử lý ảnh: nếu có ảnh mới, xóa ảnh cũ rồi cập nhật ảnh mới
         if (newImageFilename) {
@@ -407,6 +570,64 @@ export class ActivityService {
         const updatedActivity = await this.activityRepository.update(id, updateData);
         if (!updatedActivity) {
             throw new NotFoundException('Lỗi khi cập nhật hoạt động');
+        }
+
+        return updatedActivity;
+    }
+
+    /**
+     * Kết thúc activity nếu người dùng là chủ sở hữu và activity đã được duyệt.
+     */
+    async endActivity(id: string, userId: string): Promise<Activity> {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException('ID phải là MongoDB ObjectId hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(userId)) {
+            throw new BadRequestException('userId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const activity = await this.activityRepository.findById(id);
+        if (!activity) {
+            throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        if (activity.createdBy.toString() !== userId) {
+            throw new ForbiddenException('Bạn chỉ có quyền kết thúc hoạt động của chính mình');
+        }
+
+        if (activity.approvalStatus !== ACTIVITY_APPROVAL_STATUS.APPROVED) {
+            throw new BadRequestException('Chỉ có thể kết thúc hoạt động đã được duyệt');
+        }
+
+        if (activity.status === ActivityStatus.COMPLETED) {
+            throw new BadRequestException('Hoạt động này đã được kết thúc trước đó');
+        }
+
+        if (activity.status === ActivityStatus.CANCELLED) {
+            throw new BadRequestException('Không thể kết thúc một hoạt động đã bị hủy');
+        }
+
+        const updatedActivity = await this.activityRepository.update(id, {
+            status: ActivityStatus.COMPLETED,
+        });
+
+        if (!updatedActivity) {
+            throw new NotFoundException('Lỗi khi kết thúc hoạt động');
+        }
+
+        try {
+            await this.activityParticipantService.finalizeParticipationStatuses(id);
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Không thể chốt trạng thái tham gia cho activity ${id}: ${reason}`);
+        }
+
+        try {
+            await this.issueCertificatesAndNotify(activity.id?.toString?.() || id, activity.title);
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            this.logger.warn(`Không thể phát hành chứng nhận cho activity ${id}: ${reason}`);
         }
 
         return updatedActivity;
@@ -529,6 +750,10 @@ export class ActivityService {
         const reviewNote = reviewDto.reviewNote?.trim();
         const isPriority = reviewDto.isPriority ?? activity.isPriority ?? false;
 
+        if (approvalStatus === ACTIVITY_APPROVAL_STATUS.APPROVED) {
+            await this.ensureOrganizerApproved(this.extractObjectIdString(activity.organizerId));
+        }
+
         if (
             [ACTIVITY_APPROVAL_STATUS.NEEDS_EDIT, ACTIVITY_APPROVAL_STATUS.REJECTED].includes(approvalStatus) &&
             !reviewNote
@@ -636,6 +861,256 @@ export class ActivityService {
         if (activity.approvalStatus !== ACTIVITY_APPROVAL_STATUS.APPROVED && !isOwner && !isAdmin) {
             throw new ForbiddenException('Hoạt động này chưa được duyệt công khai');
         }
+    }
+
+    private parsePeriodType(rawValue?: string): ActivityStatsPeriodType {
+        if (rawValue === 'quarter' || rawValue === 'year') {
+            return rawValue;
+        }
+
+        return 'month';
+    }
+
+    private parseMonth(rawValue?: string): number {
+        const month = Number(rawValue || new Date().getMonth() + 1);
+        if (!Number.isInteger(month) || month < 1 || month > 12) {
+            throw new BadRequestException('month phải nằm trong khoảng 1 đến 12');
+        }
+        return month;
+    }
+
+    private parseQuarter(rawValue?: string): number {
+        const currentQuarter = Math.floor(new Date().getMonth() / 3) + 1;
+        const quarter = Number(rawValue || currentQuarter);
+        if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+            throw new BadRequestException('quarter phải nằm trong khoảng 1 đến 4');
+        }
+        return quarter;
+    }
+
+    private parseYear(rawValue?: string): number {
+        const year = Number(rawValue || new Date().getFullYear());
+        if (!Number.isInteger(year) || year < 2020 || year > 2100) {
+            throw new BadRequestException('year không hợp lệ');
+        }
+        return year;
+    }
+
+    private resolvePeriodRange(periodType: ActivityStatsPeriodType, year: number, month: number, quarter: number): { startDate: Date; endDate: Date } {
+        if (periodType === 'year') {
+            return {
+                startDate: new Date(year, 0, 1, 0, 0, 0, 0),
+                endDate: new Date(year, 11, 31, 23, 59, 59, 999),
+            };
+        }
+
+        if (periodType === 'quarter') {
+            const startMonth = (quarter - 1) * 3;
+            return {
+                startDate: new Date(year, startMonth, 1, 0, 0, 0, 0),
+                endDate: new Date(year, startMonth + 3, 0, 23, 59, 59, 999),
+            };
+        }
+
+        return {
+            startDate: new Date(year, month - 1, 1, 0, 0, 0, 0),
+            endDate: new Date(year, month, 0, 23, 59, 59, 999),
+        };
+    }
+
+    private resolveStatusBucket(record: ActivityStatsRecord, now: number): 'upcoming' | 'ongoing' | 'completed' | 'cancelled' {
+        if (record.status === ActivityStatus.CANCELLED) {
+            return 'cancelled';
+        }
+
+        if (record.status === ActivityStatus.COMPLETED) {
+            return 'completed';
+        }
+
+        const start = new Date(record.startAt).getTime();
+        const end = record.endAt ? new Date(record.endAt).getTime() : null;
+
+        if (Number.isFinite(start) && now < start) {
+            return 'upcoming';
+        }
+
+        if (end && now > end) {
+            return 'completed';
+        }
+
+        return 'ongoing';
+    }
+
+    private buildPeriodTrend(
+        records: ActivityStatsRecord[],
+        periodType: ActivityStatsPeriodType,
+        year: number,
+        month: number,
+        quarter: number,
+    ): { labels: string[]; data: number[] } {
+        if (periodType === 'year') {
+            const labels = Array.from({ length: 12 }, (_, index) => `Th${index + 1}`);
+            const data = Array.from({ length: 12 }, () => 0);
+
+            for (const item of records) {
+                const date = new Date(item.startAt);
+                if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) {
+                    continue;
+                }
+                data[date.getMonth()] += 1;
+            }
+
+            return { labels, data };
+        }
+
+        if (periodType === 'quarter') {
+            const startMonth = (quarter - 1) * 3;
+            const labels = Array.from({ length: 3 }, (_, index) => `Th${startMonth + index + 1}`);
+            const data = Array.from({ length: 3 }, () => 0);
+
+            for (const item of records) {
+                const date = new Date(item.startAt);
+                if (Number.isNaN(date.getTime()) || date.getFullYear() !== year) {
+                    continue;
+                }
+
+                const monthIndex = date.getMonth() - startMonth;
+                if (monthIndex < 0 || monthIndex > 2) {
+                    continue;
+                }
+
+                data[monthIndex] += 1;
+            }
+
+            return { labels, data };
+        }
+
+        const labels = [`Th${month}`];
+        const data = [0];
+
+        for (const item of records) {
+            const date = new Date(item.startAt);
+            if (
+                Number.isNaN(date.getTime())
+                || date.getFullYear() !== year
+                || date.getMonth() !== month - 1
+            ) {
+                continue;
+            }
+
+            data[0] += 1;
+        }
+
+        return { labels, data };
+    }
+
+    private async ensureOrganizerApproved(organizerId?: string): Promise<void> {
+        if (!organizerId || !Types.ObjectId.isValid(organizerId)) {
+            throw new BadRequestException('organizerId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const organizer = await this.organizerModel.findById(organizerId).select('approvalStatus').lean();
+        if (!organizer) {
+            throw new NotFoundException('Không tìm thấy ban tổ chức với ID đã cho');
+        }
+
+        if (organizer.approvalStatus !== OrganizerApprovalStatus.APPROVED) {
+            throw new ForbiddenException('Ban tổ chức chưa được duyệt nên chưa thể sử dụng chức năng này');
+        }
+    }
+
+    private async issueCertificatesAndNotify(activityId: string, activityTitle: string): Promise<void> {
+        const participants = await this.activityParticipantService.findByActivityId(activityId);
+        const targetUserIds = Array.from(
+            new Set(
+                participants
+                    .map((participant) => participant.userId?.toString())
+                    .filter((value): value is string => Boolean(value)),
+            ),
+        );
+
+        if (targetUserIds.length === 0) {
+            return;
+        }
+
+        const issuanceResults: CertificateIssuanceRecord[] = await Promise.all(
+            targetUserIds.map(async (userId) => ({
+                userId,
+                result: await this.certificateService.issueForUserActivityIfEligible(userId, activityId),
+            })),
+        );
+
+        const notifiedUserIds = new Set<string>();
+        await Promise.all(
+            issuanceResults.map(async ({ userId, result }) => {
+                const certificate = this.asIssuedCertificate(result.certificate);
+                if (!certificate || notifiedUserIds.has(userId)) {
+                    return;
+                }
+
+                notifiedUserIds.add(userId);
+                await this.notificationService.createIfNotExistsByGroupKey({
+                    userId,
+                    senderName: 'Hệ thống chứng nhận',
+                    senderType: 'activity-certificate',
+                    title: 'Chứng nhận hoạt động',
+                    message: `Chứng nhận cho hoạt động "${activityTitle}" đã được phát hành. Bạn có thể xem và tải về trong mục Chứng nhận của tôi.`,
+                    type: NotificationType.ACTIVITY,
+                    priority: NotificationPriority.NORMAL,
+                    linkUrl: '/my-certificates',
+                    groupKey: `certificate-issued:${activityId}:${userId}`,
+                    meta: {
+                        activityId,
+                        activityTitle,
+                        certificateId: certificate._id ? certificate._id.toString() : null,
+                        certificateCode: certificate.certificateCode,
+                        issuedAt: certificate.issuedAt,
+                    },
+                });
+            }),
+        );
+    }
+
+    private asIssuedCertificate(value: unknown): IssuedCertificatePayload | null {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        const candidate = value as Partial<IssuedCertificatePayload>;
+        if (typeof candidate.certificateCode !== 'string' || !(candidate.issuedAt instanceof Date)) {
+            return null;
+        }
+
+        return {
+            _id: candidate._id,
+            certificateCode: candidate.certificateCode,
+            issuedAt: candidate.issuedAt,
+        };
+    }
+
+    private extractObjectIdString(value: unknown): string | undefined {
+        if (!value) {
+            return undefined;
+        }
+
+        if (value instanceof Types.ObjectId) {
+            return value.toString();
+        }
+
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        const objectValue = value as { _id?: unknown };
+        if (objectValue._id instanceof Types.ObjectId) {
+            return objectValue._id.toString();
+        }
+
+        if (typeof objectValue._id === 'string') {
+            return objectValue._id;
+        }
+
+        return undefined;
     }
 
     /**

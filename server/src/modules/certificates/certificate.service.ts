@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import * as path from 'path';
 import QRCode from 'qrcode';
 import { CheckinStatus } from 'src/global/globalEnum';
+import { ActivityStatus } from 'src/global/globalEnum';
 import { CertificateVerifyResponse } from 'src/global/globalInterface';
 import { Activity } from '../activities/activity.entity';
 import { CheckinSession } from '../checkin-sessions/checkin-session.entity';
@@ -19,7 +20,7 @@ import { CertificateRepository } from './certificate.repository';
 export interface IssueResult {
     issued: boolean;
     reason?: string;
-    certificate?: any;
+    certificate?: unknown;
 }
 
 @Injectable()
@@ -343,6 +344,21 @@ export class CertificateService {
         const activity = await this.activityModel.findById(new Types.ObjectId(activityId)).exec();
         if (!activity) {
             return { issued: false, reason: 'ACTIVITY_NOT_FOUND' };
+        }
+
+        if (activity.status !== ActivityStatus.COMPLETED) {
+            return { issued: false, reason: 'ACTIVITY_NOT_COMPLETED' };
+        }
+
+        const participant = await this.activityModel.db.collection('activityparticipants').findOne({
+            activityId: new Types.ObjectId(activityId),
+            userId: new Types.ObjectId(userId),
+        }, {
+            projection: { status: 1 },
+        }) as { status?: string } | null;
+
+        if (!participant || ['CANCELLED', 'REJECTED'].includes(String(participant.status || ''))) {
+            return { issued: false, reason: 'PARTICIPANT_NOT_ELIGIBLE' };
         }
 
         const sessions = await this.checkinSessionModel

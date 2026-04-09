@@ -8,6 +8,15 @@ import { ActivityApprovalStatus, UserRole, NotificationType, NotificationPriorit
 import { NotificationService } from "../notifications/notification.service";
 import UserService from "../users/user.service";
 
+interface ActivityParticipantFinalizationRepository {
+    findUserIdsWithPerfectAttendance(activityId: string): Promise<string[]>;
+    updateStatusesByActivityAndUserIds(
+        activityId: string,
+        userIds: string[],
+        status: ParticipantStatus,
+    ): Promise<number>;
+}
+
 @Injectable()
 export class ActivityParticipantService {
     constructor(
@@ -33,12 +42,12 @@ export class ActivityParticipantService {
             throw new ForbiddenException('Hoạt động chưa được duyệt nên chưa thể đăng ký tham gia');
         }
 
-        const existingRegistration = await this.activityParticipantRepository.findByActivityAndUserId(
+        const existingActiveRegistration = await this.activityParticipantRepository.findActiveByActivityAndUserId(
             activityParticipantData.activityId,
             userId,
         );
 
-        if (existingRegistration && existingRegistration.status !== ParticipantStatus.CANCELLED) {
+        if (existingActiveRegistration) {
             throw new BadRequestException('Bạn đã đăng ký hoạt động này rồi');
         }
 
@@ -77,11 +86,25 @@ export class ActivityParticipantService {
             status = ParticipantStatus.PENDING;
         }
 
+        const registeredAt = activityParticipantData.registeredAt || new Date();
+        const latestRegistration = await this.activityParticipantRepository.findLatestByActivityAndUserId(
+            activityParticipantData.activityId,
+            userId,
+        );
+
+        if (latestRegistration?.status === ParticipantStatus.CANCELLED) {
+            return this.activityParticipantRepository.reactivateRegistration(
+                latestRegistration._id.toString(),
+                status,
+                registeredAt,
+            );
+        }
+
         const activityParticipant = {
             activityId: new Types.ObjectId(activityParticipantData.activityId),
             userId: new Types.ObjectId(userId),
             status,
-            registeredAt: activityParticipantData.registeredAt || new Date(),
+            registeredAt,
         } as ActivityParticipant;
 
         return this.activityParticipantRepository.create(activityParticipant);
@@ -212,6 +235,21 @@ export class ActivityParticipantService {
 
     findByActivityAndUserId(activityId: string, userId: string): Promise<ActivityParticipant | null> {
         return this.activityParticipantRepository.findByActivityAndUserId(activityId, userId);
+    }
+
+    async finalizeParticipationStatuses(activityId: string): Promise<{ eligibleCount: number; updatedCount: number }> {
+        const repository = this.activityParticipantRepository as ActivityParticipantFinalizationRepository;
+        const eligibleUserIds = await repository.findUserIdsWithPerfectAttendance(activityId);
+        const updatedCount = await repository.updateStatusesByActivityAndUserIds(
+            activityId,
+            eligibleUserIds,
+            'PARTICIPATED' as ParticipantStatus,
+        );
+
+        return {
+            eligibleCount: eligibleUserIds.length,
+            updatedCount,
+        };
     }
 
     deleteByActivityId(activityId: string) {

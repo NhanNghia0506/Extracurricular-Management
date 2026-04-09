@@ -85,27 +85,6 @@ const OrganizerStats: React.FC = () => {
 
             <div className={styles.chartsRow}>
                 <div className={styles.chartCard}>
-                    <h3>Xu hướng số lượng hoạt động (6 tháng gần đây)</h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '200px', paddingBottom: '20px' }}>
-                        {statsData?.activityTrend?.data?.length ? (
-                            statsData.activityTrend.data.map((value, i) => {
-                                const max = Math.max(...statsData.activityTrend.data, 1);
-                                const height = Math.max((value / max) * 100, value > 0 ? 8 : 4);
-                                return (
-                                    <div key={statsData.activityTrend.labels[i]} style={{ flex: 1 }}>
-                                        <div style={{ background: '#dbeafe', height: `${height}%`, borderRadius: '8px' }}></div>
-                                        <div style={{ marginTop: 8, fontSize: 11, color: '#718096', textAlign: 'center' }}>
-                                            {statsData.activityTrend.labels[i].slice(5)}
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <p style={{ textAlign: 'center', color: '#718096' }}>Chưa có dữ liệu</p>
-                        )}
-                    </div>
-                </div>
-                <div className={styles.chartCard}>
                     <h3>Phân bổ chất lượng đánh giá</h3>
                     <ProgressBar label="Xuất sắc (>= 4.5)" percent={statsData?.ratingDistribution.excellent || 0} color="#0061ff" />
                     <ProgressBar label="Tốt (4.0 - 4.4)" percent={statsData?.ratingDistribution.good || 0} color="#38a169" />

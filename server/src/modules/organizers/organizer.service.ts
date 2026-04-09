@@ -138,6 +138,9 @@ export class OrganizerService {
                     phone: organizer.phone,
                     description: organizer.description || '',
                     image: organizer.image || '',
+                    approvalStatus: organizer.approvalStatus,
+                    reviewNote: organizer.reviewNote || null,
+                    reviewedAt: organizer.reviewedAt || null,
                     createdAt: organizer.createdAt || null,
                 },
                 stats: {
@@ -249,6 +252,9 @@ export class OrganizerService {
                 phone: organizer.phone,
                 description: organizer.description || '',
                 image: organizer.image || '',
+                approvalStatus: organizer.approvalStatus,
+                reviewNote: organizer.reviewNote || null,
+                reviewedAt: organizer.reviewedAt || null,
                 createdAt: organizer.createdAt || null,
             },
             stats: {
@@ -315,6 +321,16 @@ export class OrganizerService {
 
         if (typeof organizerData.image === 'string' && organizerData.image.trim()) {
             payload.image = organizerData.image.trim();
+        }
+
+        // Allow managers to resubmit organizer approval after admin feedback.
+        if (
+            [ORGANIZER_APPROVAL_STATUS.NEEDS_EDIT, ORGANIZER_APPROVAL_STATUS.REJECTED].includes(currentOrganizer.approvalStatus)
+        ) {
+            payload.approvalStatus = ORGANIZER_APPROVAL_STATUS.PENDING;
+            payload.reviewNote = null;
+            payload.reviewedBy = null;
+            payload.reviewedAt = null;
         }
 
         const updatedOrganizer = await this.organizerRepository.update(id, payload);
@@ -663,7 +679,7 @@ export class OrganizerService {
             throw new NotFoundException('Lỗi khi cập nhật trạng thái duyệt ban tổ chức');
         }
 
-        await this.notifyCreatorOnReview(organizer, approvalStatus, reviewNote, reviewDto.notifyOrganizer);
+        await this.notifyCreatorOnReview(organizer, approvalStatus, reviewNote, reviewDto.notifyOrganizer ?? true);
 
         return this.getApprovalDetail(id, userRole);
     }
@@ -807,13 +823,13 @@ export class OrganizerService {
         try {
             await this.notificationService.create({
                 userId: creatorId,
-                senderName: 'Quản trị duyệt ban tổ chức',
-                senderType: 'organizer-review',
+                senderName: 'Hệ thống phê duyệt ban tổ chức',
+                senderType: 'system',
                 title: content.title,
                 message: content.message,
-                type: 'ORGANIZER' as NotificationType,
+                type: NotificationType.ORGANIZER,
                 priority: content.priority,
-                linkUrl: '/organizations',
+                linkUrl: `/organizer-detail?id=${organizerId}`,
                 groupKey: `organizer-review:${organizerId}`,
                 meta: {
                     organizerId,

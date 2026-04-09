@@ -86,26 +86,6 @@ const StudentStats: React.FC = () => {
                 </div>
             </div>
 
-            {/* CHARTS SECTION */}
-            <div className={styles.chartsRow}>
-                <div className={styles.chartCard}>
-                    <h3>Xu hướng tham gia</h3>
-                    {/* Bar Chart */}
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '15px', height: '200px', paddingBottom: '20px' }}>
-                        {statsData?.participationTrend?.data?.map((h, i) => (
-                            <div key={i} style={{ flex: 1, background: i === 6 ? '#0061ff' : '#dbeafe', height: `${h}%`, borderRadius: '8px' }}></div>
-                        )) || <p style={{ textAlign: 'center', color: '#718096' }}>Chưa có dữ liệu</p>}
-                    </div>
-                </div>
-                <div className={styles.chartCard}>
-                    <h3>Phân bổ điểm rèn luyện</h3>
-                    <ProgressBar label="Xuất sắc (90-100)" percent={statsData?.scoreDistribution?.excellent || 0} color="#3182ce" />
-                    <ProgressBar label="Tốt (80-89)" percent={statsData?.scoreDistribution?.good || 0} color="#38a169" />
-                    <ProgressBar label="Khá (70-79)" percent={statsData?.scoreDistribution?.fair || 0} color="#e53e3e" />
-                    <ProgressBar label="Trung bình (<70)" percent={statsData?.scoreDistribution?.average || 0} color="#cbd5e0" />
-                </div>
-            </div>
-
             {/* LEADERBOARD */}
             <div className={styles.leaderboard}>
                 <div className={styles.tableHeader}>
@@ -145,18 +125,5 @@ const StudentStats: React.FC = () => {
     );
 };
 
-
-// Component con cho Progress Bar
-const ProgressBar = ({ label, percent, color }: any) => (
-    <div className={styles.progressWrapper}>
-        <div className={styles.labelRow}>
-            <span>{label}</span>
-            <span>{percent}%</span>
-        </div>
-        <div className={styles.barTrack}>
-            <div className={styles.barFill} style={{ width: `${percent}%`, backgroundColor: color }}></div>
-        </div>
-    </div>
-);
 
 export default StudentStats;
