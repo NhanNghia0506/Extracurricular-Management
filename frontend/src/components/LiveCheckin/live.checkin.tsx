@@ -11,6 +11,7 @@ import {
   faLocationCrosshairs,
   faMapLocationDot,
   faSignal,
+  faTriangleExclamation,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -191,6 +192,7 @@ const LiveCheckin: React.FC = () => {
 
   const sessionStatus = getSessionStatus(checkinSession);
   const latestCheckin = selectedCheckin || checkins[0] || null;
+  const suspiciousCheckins = useMemo(() => checkins.filter((item) => item.isAnomalous), [checkins]);
 
   const goToDashboard = () => {
     if (!sessionId) {
@@ -218,7 +220,7 @@ const LiveCheckin: React.FC = () => {
       const [sessionResponse, activityData, checkinResponse] = await Promise.all([
         checkinSessionService.getById(sessionId),
         checkinSessionService.getActivityBySessionId(sessionId),
-        checkinService.getCheckinsBySessionId(sessionId, 'SUCCESS'),
+        checkinService.getCheckinsBySessionId(sessionId),
       ]);
 
       const sessionData = sessionResponse.data?.data ?? null;
@@ -256,7 +258,7 @@ const LiveCheckin: React.FC = () => {
     const socket = socketService.connect('checking');
 
     const handleNewCheckin = (payload: CheckinEvent) => {
-      if (String(payload.checkin.checkinSessionId) !== sessionId || payload.checkin.status !== 'SUCCESS') {
+      if (String(payload.checkin.checkinSessionId) !== sessionId) {
         return;
       }
 
@@ -266,6 +268,9 @@ const LiveCheckin: React.FC = () => {
         latitude: payload.checkin.latitude,
         longitude: payload.checkin.longitude,
         distance: payload.checkin.distance,
+        movementSpeed: payload.checkin.movementSpeed ?? null,
+        isAnomalous: Boolean(payload.checkin.isAnomalous),
+        anomalyReason: payload.checkin.anomalyReason ?? null,
         status: payload.checkin.status,
         failReason: payload.checkin.failReason ?? null,
         createdAt: new Date(payload.checkin.createdAt).toISOString(),
@@ -367,6 +372,11 @@ const LiveCheckin: React.FC = () => {
                   <span>Lớp: {checkin.student.class || 'N/A'}</span>
                   <span>Check-in: {formatDateTime(checkin.createdAt)}</span>
                   <span>Khoảng cách: {Math.round(checkin.distance)}m</span>
+                  {checkin.isAnomalous && (
+                    <span className={styles.anomalyBadge}>
+                      <FontAwesomeIcon icon={faTriangleExclamation} /> Nghi vấn gian lận
+                    </span>
+                  )}
                 </div>
               </Popup>
             </Marker>
@@ -406,6 +416,10 @@ const LiveCheckin: React.FC = () => {
             <div>
               <strong>{latestCheckin ? 'Live' : '--'}</strong>
               <small>Tín hiệu</small>
+            </div>
+            <div>
+              <strong>{suspiciousCheckins.length}</strong>
+              <small>Nghi vấn</small>
             </div>
           </div>
 
@@ -456,6 +470,12 @@ const LiveCheckin: React.FC = () => {
             <span><FontAwesomeIcon icon={faCircle} className={styles.pulse} /> Danh sách check-in trực tuyến</span>
             <span className={styles.feedCount}><FontAwesomeIcon icon={faUsers} /> {checkins.length}</span>
           </div>
+          {suspiciousCheckins.length > 0 && (
+            <div className={styles.suspiciousBanner}>
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              <span>Có {suspiciousCheckins.length} check-in nghi vấn gian lận đang được tô đỏ.</span>
+            </div>
+          )}
           <div className={styles.feedList}>
             {checkins.length === 0 && <div className={styles.emptyText}>Chưa có dữ liệu check-in.</div>}
 
@@ -466,10 +486,17 @@ const LiveCheckin: React.FC = () => {
                 className={`${styles.feedItem} ${latestCheckin?._id === checkin._id ? styles.activeFeedItem : ''}`}
                 onClick={() => setSelectedCheckin(checkin)}
               >
-                <div className={`${styles.icon} ${styles.enter}`}>✓</div>
+                <div className={`${styles.icon} ${checkin.isAnomalous ? styles.alert : styles.enter}`}>
+                  {checkin.isAnomalous ? '!' : '✓'}
+                </div>
                 <div className={styles.feedContent}>
                   <strong>{checkin.student.name}</strong>
                   <span>{formatDateTime(checkin.createdAt)} • {Math.round(checkin.distance)}m • {checkin.student.class || 'N/A'}</span>
+                  {checkin.isAnomalous && (
+                    <small className={styles.anomalyText}>
+                      <FontAwesomeIcon icon={faTriangleExclamation} /> {checkin.anomalyReason || 'Nghi vấn gian lận do tốc độ di chuyển cao'}
+                    </small>
+                  )}
                 </div>
               </button>
             ))}

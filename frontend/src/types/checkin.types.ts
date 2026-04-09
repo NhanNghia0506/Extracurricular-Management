@@ -7,6 +7,9 @@ export interface CheckinEvent {
         latitude: number;
         longitude: number;
         distance: number;
+        movementSpeed?: number | null;
+        isAnomalous?: boolean;
+        anomalyReason?: string | null;
         failReason?: string;
         deviceId: string;
         createdAt: Date;
@@ -32,6 +35,9 @@ export interface CheckinResponse {
     latitude: number;
     longitude: number;
     distance: number;
+    movementSpeed?: number | null;
+    isAnomalous?: boolean;
+    anomalyReason?: string | null;
     status: 'SUCCESS' | 'LATE' | 'FAILED';
     failReason?: string | null;
     createdAt: string; // ISO date string

@@ -60,6 +60,20 @@ $border: rgba(148, 163, 184, 0.2);
     }
 }
 
+.anomalyBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .mapLegend {
     position: absolute;
     right: 16px;
@@ -342,6 +356,19 @@ $border: rgba(148, 163, 184, 0.2);
     }
 }
 
+.anomalyAlert {
+    padding: 9px 10px;
+    border-radius: 12px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #b91c1c;
+    align-items: flex-start !important;
+
+    span {
+        line-height: 1.45;
+    }
+}
+
 .feedBox {
     display: flex;
     flex-direction: column;
@@ -363,6 +390,21 @@ $border: rgba(148, 163, 184, 0.2);
         align-items: center;
         gap: 8px;
     }
+}
+
+.suspiciousBanner {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #b91c1c;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
 }
 
 .feedCount {
@@ -405,6 +447,11 @@ $border: rgba(148, 163, 184, 0.2);
         background: #dcfce7;
         color: #15803d;
     }
+
+    .alert {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
 }
 
 .activeFeedItem {
@@ -431,6 +478,19 @@ $border: rgba(148, 163, 184, 0.2);
         display: block;
         line-height: 1.4;
     }
+
+    small {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 5px;
+        line-height: 1.4;
+    }
+}
+
+.anomalyText {
+    color: #b91c1c;
+    font-weight: 600;
 }
 
 .pulse {
