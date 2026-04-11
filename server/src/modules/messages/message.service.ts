@@ -36,22 +36,51 @@ export class MessageService {
         senderId: string,
         senderName: string,
     ): Promise<MessageDocument> {
-        if (!createMessageDto.content || createMessageDto.content.trim() === '') {
+        const dtoRecord = createMessageDto as unknown as Record<string, unknown>;
+        const rawImageUrl = dtoRecord.imageUrl;
+        const normalizedContent = typeof createMessageDto.content === 'string'
+            ? createMessageDto.content.trim()
+            : '';
+        const normalizedImageUrl: string = typeof rawImageUrl === 'string'
+            ? rawImageUrl.trim()
+            : '';
+        const isImageMessage = createMessageDto.messageType === 'image';
+
+        if (!isImageMessage && normalizedContent === '') {
             throw new BadRequestException('Message content cannot be empty');
+        }
+
+        if (isImageMessage && normalizedImageUrl === '') {
+            throw new BadRequestException('Image message requires imageUrl');
         }
 
         await this.conversationService.getConversationById(createMessageDto.conversationId);
 
+        const normalizedDto: CreateMessageDto = {
+            ...createMessageDto,
+            content: isImageMessage
+                ? (normalizedContent || 'Đã gửi một hình ảnh')
+                : normalizedContent,
+            imageUrl: isImageMessage ? normalizedImageUrl : undefined,
+        };
+
         const message = await this.messageRepository.create(
-            createMessageDto,
+            normalizedDto,
             senderId,
             senderName,
         );
 
+        const imageCaption = normalizedDto.messageType === 'image'
+            ? (normalizedDto.content || '').trim()
+            : '';
+        const hasImageCaption = imageCaption !== '' && imageCaption !== 'Đã gửi một hình ảnh';
+
         const updatedConversation = await this.conversationService.updateLastMessage(
-            createMessageDto.conversationId,
+            normalizedDto.conversationId,
             {
-                content: createMessageDto.content,
+                content: normalizedDto.messageType === 'image'
+                    ? (hasImageCaption ? imageCaption : 'Đã gửi một hình ảnh')
+                    : (normalizedDto.content || ''),
                 userId: senderId,
                 userName: senderName,
             },

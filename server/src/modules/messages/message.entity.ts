@@ -25,6 +25,9 @@ export class Message {
     @Prop({ required: true })
     content: string;
 
+    @Prop()
+    imageUrl?: string;
+
     @Prop({
         enum: ['sending', 'sent', 'delivered', 'read'],
         default: 'sending',

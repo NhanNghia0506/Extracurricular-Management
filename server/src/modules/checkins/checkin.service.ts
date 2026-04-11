@@ -5,6 +5,7 @@ import { CreateCheckinDto } from './dtos/create.checkin.dto';
 import { Checkin } from './checkin.entity';
 import { CheckinSessionService } from '../checkin-sessions/checkin-session.service';
 import { calculateHaversineDistance, isLocationWithinRadius } from 'src/utils/haversine.util';
+import { calculateMovementSpeed, MovementSpeedResult } from 'src/utils/movement-speed.util';
 import { CheckinStatus, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { CheckinGateway } from 'src/events/checkin.gateway';
@@ -60,6 +61,26 @@ interface AcademicServiceFilterOptionsAdapter {
     findAllFaculties(): Promise<AcademicFacultyRow[]>;
     findClassesByFacultyId(facultyId: string): Promise<AcademicClassRow[]>;
     findAllClasses(): Promise<AcademicClassRow[]>;
+}
+
+interface SessionCheckinRecord {
+    _id?: Types.ObjectId;
+    userId: Types.ObjectId;
+    latitude: number;
+    longitude: number;
+    distance: number;
+    status: CheckinStatus;
+    failReason?: string;
+    createdAt?: Date;
+    movementSpeed?: number;
+    isAnomalous?: boolean;
+    anomalyReason?: string;
+}
+
+interface CheckinMovementSnapshot {
+    latitude: number;
+    longitude: number;
+    createdAt?: Date;
 }
 
 export interface MyAttendanceHistorySummary {
@@ -275,6 +296,25 @@ export class CheckinService {
         }
     }
 
+    private async findLatestCheckinByUserId(userId: string): Promise<CheckinMovementSnapshot | null> {
+        const repository = this.checkinRepository as {
+            findLatestByUserId: (value: string) => Promise<CheckinMovementSnapshot | null>;
+        };
+
+        return repository.findLatestByUserId(userId);
+    }
+
+    private async findSessionCheckins(
+        checkinSessionId: string,
+        status?: CheckinStatus,
+    ): Promise<SessionCheckinRecord[]> {
+        const repository = this.checkinRepository as {
+            findBySessionId: (sessionId: string, status?: CheckinStatus) => Promise<SessionCheckinRecord[]>;
+        };
+
+        return repository.findBySessionId(checkinSessionId, status);
+    }
+
     async create(
         createCheckinDto: CreateCheckinDto,
         actorUserId: string,
@@ -325,6 +365,30 @@ export class CheckinService {
             checkinSession.location.longitude,
         );
 
+        // Phát hiện gian lận dựa trên tốc độ di chuyển
+        let movementSpeedResult: MovementSpeedResult | null = null;
+        const previousCheckin = await this.findLatestCheckinByUserId(createCheckinDto.userId);
+
+        if (
+            previousCheckin
+            && typeof previousCheckin.latitude === 'number'
+            && typeof previousCheckin.longitude === 'number'
+        ) {
+            movementSpeedResult = calculateMovementSpeed(
+                {
+                    latitude: previousCheckin.latitude,
+                    longitude: previousCheckin.longitude,
+                    createdAt: previousCheckin.createdAt || new Date(),
+                },
+                {
+                    latitude: createCheckinDto.latitude,
+                    longitude: createCheckinDto.longitude,
+                    createdAt: new Date(),
+                },
+                100, // ngưỡng 100 km/h
+            );
+        }
+
         const participant = await this.activityParticipantService.findByActivityAndUserId(
             checkinSession.activityId.toString(),
             createCheckinDto.userId
@@ -353,6 +417,9 @@ export class CheckinService {
                 status: CheckinStatus.FAILED,
                 failReason: `Vị trí cách ${distance.toFixed(2)}m, giới hạn ${checkinSession.radiusMetters}m`,
                 deviceId: createCheckinDto.deviceId,
+                isAnomalous: movementSpeedResult?.isAnomalous || false,
+                anomalyReason: movementSpeedResult?.anomalyReason || null,
+                movementSpeed: movementSpeedResult?.speedKmh || null,
             } as Checkin;
         } else {
             // Xác định LATE nếu phiên có cấu hình lateAfter và thời điểm hiện tại vượt quá ngưỡng
@@ -368,6 +435,9 @@ export class CheckinService {
                 distance,
                 status: checkinStatus,
                 deviceId: createCheckinDto.deviceId,
+                isAnomalous: movementSpeedResult?.isAnomalous || false,
+                anomalyReason: movementSpeedResult?.anomalyReason || null,
+                movementSpeed: movementSpeedResult?.speedKmh || null,
             } as Checkin;
         }
 
@@ -498,7 +568,7 @@ export class CheckinService {
         }
 
         // Lấy danh sách checkin
-        const checkins = await this.checkinRepository.findBySessionId(checkinSessionId, status);
+        const checkins = await this.findSessionCheckins(checkinSessionId, status);
 
         // Populate thông tin user/student cho từng checkin
         const checkinList = await Promise.all(
@@ -515,6 +585,9 @@ export class CheckinService {
                         latitude: checkin.latitude,
                         longitude: checkin.longitude,
                         distance: checkin.distance,
+                        movementSpeed: checkin.movementSpeed,
+                        isAnomalous: Boolean(checkin.isAnomalous),
+                        anomalyReason: checkin.anomalyReason,
                         status: checkin.status,
                         failReason: checkin.failReason,
                         createdAt: checkin.createdAt,
@@ -529,6 +602,9 @@ export class CheckinService {
                         latitude: checkin.latitude,
                         longitude: checkin.longitude,
                         distance: checkin.distance,
+                        movementSpeed: checkin.movementSpeed,
+                        isAnomalous: Boolean(checkin.isAnomalous),
+                        anomalyReason: checkin.anomalyReason,
                         status: checkin.status,
                         failReason: checkin.failReason,
                         createdAt: checkin.createdAt,

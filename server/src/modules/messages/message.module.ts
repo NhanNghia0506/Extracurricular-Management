@@ -7,6 +7,7 @@ import { MessageRepository } from './message.repository';
 import { UserModule } from '../users/user.module';
 import { ConversationModule } from '../conversations/conversation.module';
 import { EventsModule } from '../../events/events.module';
+import { UploadService } from 'src/interceptors/upload.service';
 
 @Module({
     imports: [
@@ -18,7 +19,7 @@ import { EventsModule } from '../../events/events.module';
         EventsModule,
     ],
     controllers: [MessageController],
-    providers: [MessageService, MessageRepository],
+    providers: [MessageService, MessageRepository, UploadService],
     exports: [MessageService],
 })
 export class MessageModule { }

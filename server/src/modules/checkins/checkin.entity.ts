@@ -30,6 +30,15 @@ export class Checkin {
     @Prop({ required: true })
     deviceId: string;
 
+    @Prop({ required: false, default: false })
+    isAnomalous?: boolean;
+
+    @Prop({ required: false, default: null })
+    anomalyReason?: string;
+
+    @Prop({ required: false, default: null })
+    movementSpeed?: number;
+
     @Prop()
     createdAt?: Date;
 }

@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     Controller,
     Get,
     Post,
@@ -9,16 +10,37 @@ import {
     Query,
     UseGuards,
     Req,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { UpdateMessageDto } from './dtos/update-message.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
 import type { Request } from 'express';
+import { createUploadImageInterceptor } from 'src/interceptors/upload-image.interceptor';
+import { UploadService } from 'src/interceptors/upload.service';
 
 @Controller('messages')
 export class MessageController {
-    constructor(private readonly messageService: MessageService) { }
+    constructor(
+        private readonly messageService: MessageService,
+        private readonly uploadService: UploadService,
+    ) { }
+
+    @Post('upload-image')
+    @UseGuards(AuthGuard)
+    @UseInterceptors(createUploadImageInterceptor())
+    uploadMessageImage(@UploadedFile() file?: Express.Multer.File) {
+        if (!file?.filename) {
+            throw new BadRequestException('Vui lòng chọn ảnh để gửi');
+        }
+
+        return {
+            filename: file.filename,
+            imageUrl: this.uploadService.getFileUrl(file.filename),
+        };
+    }
 
     @Post()
     @UseGuards(AuthGuard) // Thêm guard để bảo vệ endpoint nếu cần

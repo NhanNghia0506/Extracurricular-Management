@@ -188,7 +188,7 @@ export class CheckinRepository {
     async findBySessionId(
         checkinSessionId: string,
         status?: CheckinStatus,
-    ) {
+    ): Promise<Checkin[]> {
         const filter: any = {
             checkinSessionId: new Types.ObjectId(checkinSessionId),
         };
@@ -199,6 +199,13 @@ export class CheckinRepository {
 
         return this.checkinModel
             .find(filter)
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
+    async findLatestByUserId(userId: string): Promise<Checkin | null> {
+        return this.checkinModel
+            .findOne({ userId: new Types.ObjectId(userId) })
             .sort({ createdAt: -1 })
             .exec();
     }

@@ -6,8 +6,12 @@ export class CreateMessageDto {
     conversationId: string;
 
     @IsString()
-    @IsNotEmpty()
-    content: string;
+    @IsOptional()
+    content?: string;
+
+    @IsString()
+    @IsOptional()
+    imageUrl?: string;
 
     @IsEnum(['text', 'image', 'file'])
     @IsOptional()
