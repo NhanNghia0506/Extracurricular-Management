@@ -29,6 +29,8 @@ const ChatWindow: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const currentUser = authService.getCurrentUser();
@@ -37,6 +39,7 @@ const ChatWindow: React.FC = () => {
   const previousMessageCountRef = useRef(0);
   const latestMessageRef = useRef<HTMLDivElement | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const scrollToLatestMessage = (behavior: ScrollBehavior = 'smooth') => {
     latestMessageRef.current?.scrollIntoView({ behavior, block: 'end' });
@@ -60,8 +63,12 @@ const ChatWindow: React.FC = () => {
       if (highlightTimeoutRef.current) {
         window.clearTimeout(highlightTimeoutRef.current);
       }
+
+      if (selectedImagePreview) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
     };
-  }, []);
+  }, [selectedImagePreview]);
 
   useEffect(() => {
     previousMessageCountRef.current = 0;
@@ -135,17 +142,23 @@ const ChatWindow: React.FC = () => {
         return;
       }
 
+      const normalizedRealtimeMessage: Message = {
+        ...incomingMessage,
+        messageType: incomingMessage.messageType
+          || (incomingMessage.imageUrl ? 'image' : 'text'),
+      };
+
       setMessages((prevMessages) => {
-        if (prevMessages.some((message) => message._id === incomingMessage._id)) {
+        if (prevMessages.some((message) => message._id === normalizedRealtimeMessage._id)) {
           return prevMessages;
         }
 
-        return [...prevMessages, incomingMessage];
+        return [...prevMessages, normalizedRealtimeMessage];
       });
 
       setConversation((prevConversation) => prevConversation ? {
         ...prevConversation,
-        lastMessageUserName: incomingMessage.senderName,
+        lastMessageUserName: normalizedRealtimeMessage.senderName,
       } : prevConversation);
     };
 
@@ -176,8 +189,9 @@ const ChatWindow: React.FC = () => {
 
   const handleSendMessage = async () => {
     const trimmedMessage = newMessage.trim();
+    const hasImage = Boolean(selectedImageFile);
 
-    if (!conversationId || !trimmedMessage || isSending || !currentUser?.id) {
+    if (!conversationId || (!trimmedMessage && !hasImage) || isSending || !currentUser?.id) {
       return;
     }
 
@@ -185,10 +199,22 @@ const ChatWindow: React.FC = () => {
       setIsSending(true);
       setSendError(null);
 
+      let messageContent = trimmedMessage;
+      let messageType: 'text' | 'image' = 'text';
+      let imageUrl: string | undefined;
+
+      if (selectedImageFile) {
+        const uploadResult = await messageService.uploadImage(selectedImageFile);
+        imageUrl = uploadResult.imageUrl;
+        messageType = 'image';
+        messageContent = trimmedMessage || 'Đã gửi một hình ảnh';
+      }
+
       const createdMessage = await messageService.createMessage({
         conversationId,
-        content: trimmedMessage,
-        messageType: 'text',
+        content: messageContent,
+        imageUrl,
+        messageType,
         senderAvatar: currentUser.avatar || undefined,
       });
 
@@ -205,10 +231,51 @@ const ChatWindow: React.FC = () => {
         lastMessageUserName: currentUser.name,
       } : prevConversation);
       setNewMessage('');
+      setSelectedImageFile(null);
+      if (selectedImagePreview) {
+        URL.revokeObjectURL(selectedImagePreview);
+      }
+      setSelectedImagePreview(null);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Lỗi khi gửi tin nhắn');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setSendError('Vui lòng chọn file hình ảnh hợp lệ');
+      event.target.value = '';
+      return;
+    }
+
+    if (selectedImagePreview) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+
+    setSelectedImageFile(file);
+    setSelectedImagePreview(URL.createObjectURL(file));
+    setSendError(null);
+  };
+
+  const handleRemoveSelectedImage = () => {
+    setSelectedImageFile(null);
+    if (selectedImagePreview) {
+      URL.revokeObjectURL(selectedImagePreview);
+    }
+    setSelectedImagePreview(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
     }
   };
 
@@ -286,34 +353,55 @@ const ChatWindow: React.FC = () => {
             const isSent = String(message.senderId) === currentUserId;
 
             return (
-            <div
-              key={message._id}
-              ref={message._id === latestMessageId ? latestMessageRef : null}
-              className={`${styles.messageItemWrapper} ${isSent ? styles.sent : ''}`}
-            >
-              <MessageItem
-                avatar={message.senderAvatar}
-                senderName={message.senderName}
-                content={message.content}
-                time={new Date(message.createdAt).toLocaleTimeString('vi-VN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-                isSent={isSent}
-                isNew={message._id === highlightedMessageId}
-              />
-            </div>
-          );})
+              <div
+                key={message._id}
+                ref={message._id === latestMessageId ? latestMessageRef : null}
+                className={`${styles.messageItemWrapper} ${isSent ? styles.sent : ''}`}
+              >
+                <MessageItem
+                  avatar={message.senderAvatar}
+                  senderName={message.senderName}
+                  content={message.content}
+                  imageUrl={message.imageUrl}
+                  messageType={message.messageType}
+                  time={new Date(message.createdAt).toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  isSent={isSent}
+                  isNew={message._id === highlightedMessageId}
+                />
+              </div>
+            );
+          })
         )}
       </div>
 
       {/* Input Area */}
       <footer className={styles.inputArea}>
         {sendError && <div className={styles.sendError}>{sendError}</div>}
+        {selectedImagePreview && (
+          <div className={styles.imagePreviewBox}>
+            <img src={selectedImagePreview} alt="Ảnh sắp gửi" className={styles.imagePreview} />
+            <button type="button" onClick={handleRemoveSelectedImage} className={styles.removePreviewBtn}>
+              Bỏ ảnh
+            </button>
+          </div>
+        )}
         <div className={styles.tools}>
-          <button><FontAwesomeIcon icon={faPlus} /></button>
-          <button><FontAwesomeIcon icon={faImage} /></button>
-          <button><FontAwesomeIcon icon={faPaperclip} /></button>
+          <button type="button"><FontAwesomeIcon icon={faPlus} /></button>
+          <label htmlFor="chat-image-input" className={styles.imageToolBtn} aria-label="Chọn hình ảnh">
+            <FontAwesomeIcon icon={faImage} />
+          </label>
+          <button type="button"><FontAwesomeIcon icon={faPaperclip} /></button>
+          <input
+            id="chat-image-input"
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className={styles.hiddenImageInput}
+            onChange={handleImageFileChange}
+          />
         </div>
         <div className={styles.inputWrapper}>
           <input
@@ -334,7 +422,7 @@ const ChatWindow: React.FC = () => {
         <button
           className={styles.sendBtn}
           onClick={handleSendMessage}
-          disabled={isSending || !newMessage.trim()}
+          disabled={isSending || (!newMessage.trim() && !selectedImageFile)}
         >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>

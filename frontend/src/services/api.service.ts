@@ -1,11 +1,13 @@
 import axios from "axios";
 
+const apiBaseUrl = (process.env.REACT_APP_API_BASE_URL || '').trim();
+const normalizedApiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+
 const apiService = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL,
+    baseURL: normalizedApiBaseUrl || undefined,
     timeout: 10000,
 })
 
-const apiBaseUrl = (process.env.REACT_APP_API_BASE_URL || '').trim();
 const isNgrokUrl = /https:\/\/.+\.ngrok[\w-]*\.dev$/i.test(apiBaseUrl);
 
 // Tự động gửi token nếu có 

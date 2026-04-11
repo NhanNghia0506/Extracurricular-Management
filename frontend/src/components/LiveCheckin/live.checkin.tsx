@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowsRotate,
-  faCircle,
   faTableColumns,
   faClock,
   faCrosshairs,
@@ -12,7 +11,6 @@ import {
   faMapLocationDot,
   faSignal,
   faTriangleExclamation,
-  faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Circle, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
@@ -192,7 +190,6 @@ const LiveCheckin: React.FC = () => {
 
   const sessionStatus = getSessionStatus(checkinSession);
   const latestCheckin = selectedCheckin || checkins[0] || null;
-  const suspiciousCheckins = useMemo(() => checkins.filter((item) => item.isAnomalous), [checkins]);
 
   const goToDashboard = () => {
     if (!sessionId) {
@@ -417,10 +414,6 @@ const LiveCheckin: React.FC = () => {
               <strong>{latestCheckin ? 'Live' : '--'}</strong>
               <small>Tín hiệu</small>
             </div>
-            <div>
-              <strong>{suspiciousCheckins.length}</strong>
-              <small>Nghi vấn</small>
-            </div>
           </div>
 
           <div className={styles.actionRow}>
@@ -444,62 +437,39 @@ const LiveCheckin: React.FC = () => {
           </div>
 
           {latestCheckin ? (
-            <>
-              <div className={styles.userIdentity}>
-                <img src={buildAssetUrl(latestCheckin.student.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(latestCheckin.student.name)}`} alt={latestCheckin.student.name} />
-                <div>
-                  <strong>{latestCheckin.student.name}</strong>
-                  <span>MSSV: {latestCheckin.student.mssv}</span>
-                  <small>{latestCheckin.student.class || 'Chưa có lớp'} • {latestCheckin.student.faculty || 'Chưa có khoa'}</small>
-                </div>
+            <div className={styles.userIdentity}>
+              <img src={buildAssetUrl(latestCheckin.student.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(latestCheckin.student.name)}`} alt={latestCheckin.student.name} />
+              <div>
+                <strong>{latestCheckin.student.name}</strong>
+                <span>MSSV: {latestCheckin.student.mssv}</span>
+                <small>{latestCheckin.student.class || 'Chưa có lớp'} • {latestCheckin.student.faculty || 'Chưa có khoa'}</small>
               </div>
-
-              <div className={styles.userFacts}>
-                <div><FontAwesomeIcon icon={faCrosshairs} /> {latestCheckin.latitude.toFixed(6)}, {latestCheckin.longitude.toFixed(6)}</div>
-                <div><FontAwesomeIcon icon={faSignal} /> Khoảng cách tới tâm: {Math.round(latestCheckin.distance)}m</div>
-                <div><FontAwesomeIcon icon={faClock} /> Check-in lúc: {formatDateTime(latestCheckin.createdAt)}</div>
-              </div>
-            </>
-          ) : (
-            <div className={styles.emptyText}>Chưa có ai check-in thành công trong session này.</div>
-          )}
-        </div>
-
-        <div className={styles.feedBox}>
-          <div className={styles.feedHeader}>
-            <span><FontAwesomeIcon icon={faCircle} className={styles.pulse} /> Danh sách check-in trực tuyến</span>
-            <span className={styles.feedCount}><FontAwesomeIcon icon={faUsers} /> {checkins.length}</span>
-          </div>
-          {suspiciousCheckins.length > 0 && (
-            <div className={styles.suspiciousBanner}>
-              <FontAwesomeIcon icon={faTriangleExclamation} />
-              <span>Có {suspiciousCheckins.length} check-in nghi vấn gian lận đang được tô đỏ.</span>
             </div>
+          ) : (
+            <div className={styles.emptyText}>Chưa có dữ liệu check-in trong session này.</div>
           )}
-          <div className={styles.feedList}>
-            {checkins.length === 0 && <div className={styles.emptyText}>Chưa có dữ liệu check-in.</div>}
 
-            {checkins.map((checkin) => (
-              <button
-                key={checkin._id}
-                type="button"
-                className={`${styles.feedItem} ${latestCheckin?._id === checkin._id ? styles.activeFeedItem : ''}`}
-                onClick={() => setSelectedCheckin(checkin)}
-              >
-                <div className={`${styles.icon} ${checkin.isAnomalous ? styles.alert : styles.enter}`}>
-                  {checkin.isAnomalous ? '!' : '✓'}
-                </div>
-                <div className={styles.feedContent}>
-                  <strong>{checkin.student.name}</strong>
-                  <span>{formatDateTime(checkin.createdAt)} • {Math.round(checkin.distance)}m • {checkin.student.class || 'N/A'}</span>
-                  {checkin.isAnomalous && (
-                    <small className={styles.anomalyText}>
-                      <FontAwesomeIcon icon={faTriangleExclamation} /> {checkin.anomalyReason || 'Nghi vấn gian lận do tốc độ di chuyển cao'}
-                    </small>
-                  )}
-                </div>
-              </button>
-            ))}
+          <div className={styles.userFacts}>
+            <div>
+              <FontAwesomeIcon icon={faCrosshairs} />{' '}
+              {latestCheckin
+                ? `${latestCheckin.latitude.toFixed(6)}, ${latestCheckin.longitude.toFixed(6)}`
+                : '--'}
+            </div>
+            <div>
+              <FontAwesomeIcon icon={faSignal} /> Khoảng cách tới tâm:{' '}
+              {latestCheckin ? `${Math.round(latestCheckin.distance)}m` : '--'}
+            </div>
+            <div>
+              <FontAwesomeIcon icon={faClock} /> Check-in lúc:{' '}
+              {latestCheckin ? formatDateTime(latestCheckin.createdAt) : '--'}
+            </div>
+            {latestCheckin?.isAnomalous && (
+              <div className={styles.anomalyAlert}>
+                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <span>{latestCheckin.anomalyReason || 'Nghi vấn gian lận do tốc độ di chuyển cao'}</span>
+              </div>
+            )}
           </div>
         </div>
       </aside>

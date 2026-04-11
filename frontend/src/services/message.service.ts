@@ -1,9 +1,17 @@
 import apiService from './api.service';
-import { Message, CreateMessagePayload, UpdateMessagePayload } from '../types/message.types';
+import { Message, CreateMessagePayload, UpdateMessagePayload, UploadedMessageImage } from '../types/message.types';
 
 const BASE_URL = '/messages';
 
 export const messageService = {
+    async uploadImage(file: File): Promise<UploadedMessageImage> {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await apiService.post(`${BASE_URL}/upload-image`, formData);
+        return response.data.data;
+    },
+
     // Tạo tin nhắn mới
     async createMessage(payload: CreateMessagePayload): Promise<Message> {
         const response = await apiService.post(`${BASE_URL}`, payload);

@@ -6,19 +6,60 @@ interface MessageItemProps {
     avatar?: string;
     senderName?: string;
     content: string;
+    imageUrl?: string;
+    messageType?: 'text' | 'image' | 'file';
     time: string;
     isSent?: boolean;
     isNew?: boolean;
 }
 
+const resolveMessageImageUrl = (value?: string): string => {
+    const normalized = (value || '').trim();
+    if (!normalized) {
+        return '';
+    }
+
+    if (/^(https?:|data:|blob:)/i.test(normalized)) {
+        return normalized;
+    }
+
+    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
+    const normalizedPath = normalized.startsWith('/')
+        ? normalized
+        : normalized.startsWith('uploads/')
+            ? `/${normalized}`
+            : `/uploads/${normalized}`;
+
+    return `${baseUrl}${normalizedPath}`;
+};
+
+const isImagePathLikeContent = (value: string): boolean => {
+    const normalized = value.trim();
+    return /^(https?:\/\/|\/uploads\/|uploads\/)/i.test(normalized);
+};
+
 const MessageItem: React.FC<MessageItemProps> = ({
     avatar,
     senderName,
     content,
+    imageUrl,
+    messageType = 'text',
     time,
     isSent = false,
     isNew = false,
 }) => {
+    const isImageMessage = messageType === 'image'
+        || Boolean((imageUrl || '').trim())
+        || isImagePathLikeContent(content || '');
+    const normalizedContent = (content || '').trim();
+    const resolvedImageUrl = isImageMessage
+        ? resolveMessageImageUrl(imageUrl) || resolveMessageImageUrl(content)
+        : '';
+    const hasImageCaption = isImageMessage
+        && normalizedContent !== ''
+        && normalizedContent !== 'Đã gửi một hình ảnh'
+        && !isImagePathLikeContent(normalizedContent);
+
     return (
         <div className={`${styles.messageRow} ${isSent ? styles.sent : ''} ${isNew ? styles.newMessage : ''}`}>
             {!isSent && (
@@ -28,7 +69,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 {senderName && !isSent && (
                     <span className={styles.senderName}>{senderName}</span>
                 )}
-                <div className={styles.bubble}>{content}</div>
+                <div className={`${styles.bubble} ${isImageMessage ? styles.imageBubble : ''}`}>
+                    {isImageMessage ? (
+                        <>
+                            <img src={resolvedImageUrl} alt="Hình ảnh đã gửi" className={styles.messageImage} loading="lazy" />
+                            {hasImageCaption && <div className={styles.imageCaption}>{normalizedContent}</div>}
+                        </>
+                    ) : (
+                        content
+                    )}
+                </div>
                 <span className={styles.time}>{time}</span>
             </div>
             {isSent && (
