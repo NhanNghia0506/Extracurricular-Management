@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faSearch, faDownload, faEye, faCertificate,
+    faSearch, faDownload, faCertificate,
     faCheckCircle, faFilter, faChevronDown, faCode
 } from '@fortawesome/free-solid-svg-icons';
 import certificateService from '../../services/certificate.service';
@@ -186,32 +186,31 @@ const MyCertificates: React.FC = () => {
                         <div className={styles.certMain}>
                             <div className={styles.certIcon}><FontAwesomeIcon icon={faCode} /></div>
                             <div className={styles.certInfo}>
-                                <h3>{String(cert.meta?.activityTitle || cert.certificateCode)}</h3>
-                                <div className={styles.certMeta}>
-                                    <span>🗓️ {formatDate(cert.issuedAt)}</span>
-                                    <span>💠 {cert.certificateCode}</span>
+                                <div className={styles.topLine}>
+                                    <div>
+                                        <h3>{String(cert.meta?.activityTitle || cert.certificateCode)}</h3>
+                                        <div className={styles.activityCode}>
+                                            Mã hoạt động: {String(cert.meta?.activityCode || cert.activityId || 'N/A')}
+                                        </div>
+                                    </div>
+                                    <div className={styles.statusCol}>
+                                        <small>TRẠNG THÁI</small>
+                                        {renderStatus(cert.status)}
+                                    </div>
+                                </div>
+                                <div className={styles.bottomLine}>
+                                    <div className={styles.attendanceCol}>
+                                        <small>THAM DỰ</small>
+                                        <span className={styles.scoreTag}>{cert.attendanceRate}%</span>
+                                    </div>
+                                    <div className={styles.bottomActions}>
+                                        <span className={styles.issueDate}>🗓️ {formatDate(cert.issuedAt)}</span>
+                                        <button type="button" className={styles.btnDownload} onClick={() => handleDownload(cert)}>
+                                            <FontAwesomeIcon icon={faDownload} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div className={styles.certStats}>
-                            <div className={styles.scoreCol}>
-                                <small>THAM DỰ</small>
-                                <span className={styles.scoreTag}>{cert.attendanceRate}%</span>
-                            </div>
-                            <div className={styles.statusCol}>
-                                <small>TRẠNG THÁI</small>
-                                {renderStatus(cert.status)}
-                            </div>
-                        </div>
-
-                        <div className={styles.certActions}>
-                            <button type="button" className={styles.btnView}>
-                                <FontAwesomeIcon icon={faEye} /> Xem chứng nhận
-                            </button>
-                            <button type="button" className={styles.btnDownload} onClick={() => handleDownload(cert)}>
-                                <FontAwesomeIcon icon={faDownload} />
-                            </button>
                         </div>
                     </div>
                 ))}

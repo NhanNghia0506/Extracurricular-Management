@@ -1,7 +1,9 @@
-import { Controller, Post, Body, Get, Query, BadRequestException, Param, ForbiddenException, Req, UseGuards } from "@nestjs/common";
+import { Controller, Post, Body, Get, Query, BadRequestException, Param, ForbiddenException, Req, UseGuards, Put } from "@nestjs/common";
 import { AcademicService } from "./academic.services";
 import { CreateFacultyDto } from "./dtos/create.faculty.dto";
 import { CreateClassDto } from "./dtos/create.class.dto";
+import { UpdateFacultyDto } from "./dtos/update.faculty.dto";
+import { UpdateClassDto } from "./dtos/update.class.dto";
 import { AuthGuard } from "src/guards/auth.guard";
 import { UserRole } from "src/global/globalEnum";
 import type { Request } from "express";
@@ -30,6 +32,20 @@ export class AcademicController {
     createClass(@Body() createClassDto: CreateClassDto, @Req() req: Request) {
         this.ensureAdmin(req);
         return this.academicService.createClass(createClassDto);
+    }
+
+    @UseGuards(AuthGuard)
+    @Put("faculty/:id")
+    updateFaculty(@Param("id") facultyId: string, @Body() updateFacultyDto: UpdateFacultyDto, @Req() req: Request) {
+        this.ensureAdmin(req);
+        return this.academicService.updateFaculty(facultyId, updateFacultyDto);
+    }
+
+    @UseGuards(AuthGuard)
+    @Put("class/:id")
+    updateClass(@Param("id") classId: string, @Body() updateClassDto: UpdateClassDto, @Req() req: Request) {
+        this.ensureAdmin(req);
+        return this.academicService.updateClass(classId, updateClassDto);
     }
 
     @Get("faculties")

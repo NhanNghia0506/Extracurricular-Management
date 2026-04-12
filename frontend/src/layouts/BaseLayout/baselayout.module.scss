@@ -22,3 +22,73 @@
     padding: 1.5rem;
     background-color: var(--color-bg-light);
 }
+
+.mobileNavToggle {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .mobileNavToggle {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 1200;
+        border: none;
+        border-radius: 999px;
+        background: var(--color-primary-blue);
+        color: #fff;
+        padding: 10px 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+    }
+
+    .mobileNavOverlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.48);
+        z-index: 1300;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .mobileNavPanel {
+        width: min(86vw, 320px);
+        height: 100%;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--color-border-lighter);
+    }
+
+    .mobileNavHeader {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--color-border-lighter);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+    }
+
+    .mobileNavClose {
+        border: none;
+        background: transparent;
+        font-size: 28px;
+        line-height: 1;
+        color: #64748b;
+        cursor: pointer;
+    }
+
+    .mobileSidebarContent {
+        width: 100%;
+        border-right: none;
+        padding: 0.75rem;
+    }
+}

@@ -25,3 +25,16 @@ export interface CreateClassPayload {
     code: string;
     facultyId: string;
 }
+
+export interface UpdateFacultyPayload {
+    name: string;
+    email: string;
+    facultyCode: string;
+    phone: string;
+}
+
+export interface UpdateClassPayload {
+    name: string;
+    code: string;
+    facultyId: string;
+}

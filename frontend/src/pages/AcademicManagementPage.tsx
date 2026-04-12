@@ -25,8 +25,25 @@ const AcademicManagementPage: React.FC = () => {
         facultyId: '',
     });
 
+    const [editingFacultyId, setEditingFacultyId] = useState<string>('');
+    const [editFacultyForm, setEditFacultyForm] = useState({
+        name: '',
+        email: '',
+        facultyCode: '',
+        phone: '',
+    });
+
+    const [editingClassId, setEditingClassId] = useState<string>('');
+    const [editClassForm, setEditClassForm] = useState({
+        name: '',
+        code: '',
+        facultyId: '',
+    });
+
     const [submittingFaculty, setSubmittingFaculty] = useState(false);
     const [submittingClass, setSubmittingClass] = useState(false);
+    const [updatingFaculty, setUpdatingFaculty] = useState(false);
+    const [updatingClass, setUpdatingClass] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -149,6 +166,115 @@ const AcademicManagementPage: React.FC = () => {
             setError(messageText);
         } finally {
             setSubmittingClass(false);
+        }
+    };
+
+    const startEditFaculty = (faculty: Faculty) => {
+        setError(null);
+        setMessage(null);
+        setEditingFacultyId(faculty._id);
+        setEditFacultyForm({
+            name: faculty.name || '',
+            email: faculty.email || '',
+            facultyCode: faculty.facultyCode || '',
+            phone: faculty.phone || '',
+        });
+    };
+
+    const cancelEditFaculty = () => {
+        setEditingFacultyId('');
+        setEditFacultyForm({ name: '', email: '', facultyCode: '', phone: '' });
+    };
+
+    const handleUpdateFaculty = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!editingFacultyId) {
+            return;
+        }
+
+        setMessage(null);
+        setError(null);
+        setUpdatingFaculty(true);
+        try {
+            const response = await academicService.updateFaculty(editingFacultyId, {
+                name: editFacultyForm.name.trim(),
+                email: editFacultyForm.email.trim(),
+                facultyCode: editFacultyForm.facultyCode.trim(),
+                phone: editFacultyForm.phone.trim(),
+            });
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Không thể cập nhật khoa');
+            }
+
+            setMessage('Cập nhật khoa thành công');
+            cancelEditFaculty();
+            await loadFaculties();
+            if (selectedFacultyId) {
+                await loadClasses(selectedFacultyId);
+            }
+        } catch (e) {
+            const messageText = e instanceof Error ? e.message : 'Không thể cập nhật khoa';
+            setError(messageText);
+        } finally {
+            setUpdatingFaculty(false);
+        }
+    };
+
+    const startEditClass = (item: ClassItem) => {
+        setError(null);
+        setMessage(null);
+        setEditingClassId(item._id);
+        setEditClassForm({
+            name: item.name || '',
+            code: item.code || '',
+            facultyId: item.facultyId || selectedFacultyId,
+        });
+    };
+
+    const cancelEditClass = () => {
+        setEditingClassId('');
+        setEditClassForm({ name: '', code: '', facultyId: '' });
+    };
+
+    const handleUpdateClass = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!editingClassId) {
+            return;
+        }
+
+        const facultyId = editClassForm.facultyId || selectedFacultyId;
+        if (!facultyId) {
+            setError('Vui lòng chọn khoa cho lớp');
+            return;
+        }
+
+        setMessage(null);
+        setError(null);
+        setUpdatingClass(true);
+        try {
+            const response = await academicService.updateClass(editingClassId, {
+                name: editClassForm.name.trim(),
+                code: editClassForm.code.trim(),
+                facultyId,
+            });
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Không thể cập nhật lớp');
+            }
+
+            setMessage('Cập nhật lớp thành công');
+            cancelEditClass();
+            if (selectedFacultyId === facultyId) {
+                await loadClasses(facultyId);
+            } else {
+                setSelectedFacultyId(facultyId);
+            }
+        } catch (e) {
+            const messageText = e instanceof Error ? e.message : 'Không thể cập nhật lớp';
+            setError(messageText);
+        } finally {
+            setUpdatingClass(false);
         }
     };
 
@@ -286,12 +412,20 @@ const AcademicManagementPage: React.FC = () => {
                                                 <strong>{faculty.name}</strong>
                                                 <div className="small text-muted">{faculty.facultyCode || 'Không có mã khoa'}</div>
                                             </div>
-                                            <button
-                                                className="btn btn-sm btn-outline-primary"
-                                                onClick={() => setSelectedFacultyId(faculty._id)}
-                                            >
-                                                Xem lớp
-                                            </button>
+                                            <div className="d-flex gap-2">
+                                                <button
+                                                    className="btn btn-sm btn-outline-primary"
+                                                    onClick={() => setSelectedFacultyId(faculty._id)}
+                                                >
+                                                    Xem lớp
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-outline-warning"
+                                                    onClick={() => startEditFaculty(faculty)}
+                                                >
+                                                    Sửa
+                                                </button>
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>
@@ -315,9 +449,14 @@ const AcademicManagementPage: React.FC = () => {
                             ) : (
                                 <ul className="list-group list-group-flush">
                                     {classes.map((item) => (
-                                        <li key={item._id} className="list-group-item px-0">
-                                            <strong>{item.name}</strong>
-                                            <div className="small text-muted">{item.code || 'Không có mã lớp'}</div>
+                                        <li key={item._id} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                                            <div>
+                                                <strong>{item.name}</strong>
+                                                <div className="small text-muted">{item.code || 'Không có mã lớp'}</div>
+                                            </div>
+                                            <button className="btn btn-sm btn-outline-warning" onClick={() => startEditClass(item)}>
+                                                Sửa
+                                            </button>
                                         </li>
                                     ))}
                                 </ul>
@@ -326,6 +465,125 @@ const AcademicManagementPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {(editingFacultyId || editingClassId) && (
+                <div className="row g-4 mt-1">
+                    <div className="col-12 col-lg-6">
+                        <div className="card shadow-sm border-0 h-100">
+                            <div className="card-body">
+                                <h5 className="card-title mb-3">Chỉnh sửa khoa</h5>
+                                {!editingFacultyId ? (
+                                    <p className="text-muted mb-0">Chọn nút Sửa trong danh sách khoa để cập nhật thông tin.</p>
+                                ) : (
+                                    <form onSubmit={handleUpdateFaculty}>
+                                        <div className="mb-3">
+                                            <label className="form-label">Tên khoa</label>
+                                            <input
+                                                className="form-control"
+                                                value={editFacultyForm.name}
+                                                onChange={(e) => setEditFacultyForm((prev) => ({ ...prev, name: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="form-label">Email khoa</label>
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                value={editFacultyForm.email}
+                                                onChange={(e) => setEditFacultyForm((prev) => ({ ...prev, email: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="form-label">Mã khoa</label>
+                                            <input
+                                                className="form-control"
+                                                value={editFacultyForm.facultyCode}
+                                                onChange={(e) => setEditFacultyForm((prev) => ({ ...prev, facultyCode: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="form-label">Số điện thoại</label>
+                                            <input
+                                                className="form-control"
+                                                value={editFacultyForm.phone}
+                                                onChange={(e) => setEditFacultyForm((prev) => ({ ...prev, phone: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="d-flex gap-2">
+                                            <button className="btn btn-warning" type="submit" disabled={updatingFaculty}>
+                                                {updatingFaculty ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                            </button>
+                                            <button className="btn btn-outline-secondary" type="button" onClick={cancelEditFaculty}>
+                                                Hủy
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="col-12 col-lg-6">
+                        <div className="card shadow-sm border-0 h-100">
+                            <div className="card-body">
+                                <h5 className="card-title mb-3">Chỉnh sửa lớp</h5>
+                                {!editingClassId ? (
+                                    <p className="text-muted mb-0">Chọn nút Sửa trong danh sách lớp để cập nhật thông tin.</p>
+                                ) : (
+                                    <form onSubmit={handleUpdateClass}>
+                                        <div className="mb-3">
+                                            <label className="form-label">Khoa</label>
+                                            <select
+                                                className="form-select"
+                                                value={editClassForm.facultyId}
+                                                onChange={(e) => setEditClassForm((prev) => ({ ...prev, facultyId: e.target.value }))}
+                                                required
+                                            >
+                                                <option value="">Chọn khoa</option>
+                                                {faculties.map((faculty) => (
+                                                    <option key={faculty._id} value={faculty._id}>
+                                                        {faculty.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="form-label">Tên lớp</label>
+                                            <input
+                                                className="form-control"
+                                                value={editClassForm.name}
+                                                onChange={(e) => setEditClassForm((prev) => ({ ...prev, name: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="form-label">Mã lớp</label>
+                                            <input
+                                                className="form-control"
+                                                value={editClassForm.code}
+                                                onChange={(e) => setEditClassForm((prev) => ({ ...prev, code: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
+                                        <div className="d-flex gap-2">
+                                            <button className="btn btn-warning" type="submit" disabled={updatingClass}>
+                                                {updatingClass ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                            </button>
+                                            <button className="btn btn-outline-secondary" type="button" onClick={cancelEditClass}>
+                                                Hủy
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

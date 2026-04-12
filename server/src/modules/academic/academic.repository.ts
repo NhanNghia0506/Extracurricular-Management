@@ -57,11 +57,26 @@ export class AcademicRepository {
         return this.facultyModel.findById(id).lean();
     }
 
+    updateFacultyById(facultyId: string, updateData: Partial<Faculty>) {
+        const id = new Types.ObjectId(facultyId);
+        return this.facultyModel.findByIdAndUpdate(id, updateData, { new: true }).lean();
+    }
+
+    findClassEntityById(classId: string) {
+        const id = new Types.ObjectId(classId);
+        return this.classModel.findById(id).lean();
+    }
+
     findClassById(classId: string) {
         const id = new Types.ObjectId(classId);
         return this.classModel.findById(id).populate({
             path: 'facultyId',
             select: 'name',
         }).lean();
+    }
+
+    updateClassById(classId: string, updateData: Partial<Class>) {
+        const id = new Types.ObjectId(classId);
+        return this.classModel.findByIdAndUpdate(id, updateData, { new: true }).lean();
     }
 }

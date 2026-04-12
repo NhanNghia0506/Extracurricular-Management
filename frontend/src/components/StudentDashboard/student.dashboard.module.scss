@@ -382,6 +382,127 @@ $success-green: #4ade80;
         }
     }
 
+    @media (max-width: 768px) {
+        padding: 16px;
+
+        .header {
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+
+            .profileSection {
+                width: 100%;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 14px;
+
+                .avatarWrapper {
+                    width: 84px;
+                    height: 84px;
+                }
+
+                .nameInfo {
+                    width: 100%;
+
+                    h1 {
+                        font-size: 28px;
+                        line-height: 1.15;
+                    }
+
+                    .meta {
+                        flex-direction: column;
+                        gap: 6px;
+                        font-size: 13px;
+                    }
+                }
+            }
+
+            .headerActions {
+                width: 100%;
+                flex-direction: column;
+
+                .btnEdit {
+                    width: 100%;
+                }
+            }
+        }
+
+        .editProfileCard {
+            padding: 20px;
+
+            .formActions {
+                flex-direction: column;
+
+                button {
+                    width: 100%;
+                }
+            }
+        }
+
+        .contentGrid {
+            grid-template-columns: 1fr;
+        }
+
+        .card {
+            padding: 20px;
+            border-radius: 16px;
+        }
+
+        .personalInfo {
+            h2 {
+                margin-bottom: 20px;
+            }
+
+            .infoGrid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+
+        .trainingSummary {
+            order: -1;
+
+            .gpaArea {
+                .gpaValue {
+                    font-size: 44px;
+                }
+            }
+
+            .stats {
+                flex-direction: column;
+            }
+
+            .viewFullBtn {
+                margin-top: 20px;
+            }
+        }
+
+        .recentActivity {
+            margin-top: 20px;
+
+            .activityItem {
+                align-items: flex-start;
+            }
+        }
+
+        .confirmDialog {
+            width: calc(100vw - 32px);
+            padding: 24px;
+
+            h3 {
+                font-size: 16px;
+            }
+        }
+
+        .confirmDialogActions {
+            flex-direction: column;
+
+            button {
+                width: 100%;
+            }
+        }
+    }
+
     // Avatar Confirmation Dialog
     .confirmDialogOverlay {
         position: fixed;

@@ -11,6 +11,9 @@ export class Faculty {
 
     @Prop({ required: true, unique: true })
     email: string;
+
+    @Prop()
+    phone?: string;
 }
 
 export const FacultySchema = SchemaFactory.createForClass(Faculty);

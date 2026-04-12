@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { AcademicRepository } from "./academic.repository";
 import { CreateFacultyDto } from "./dtos/create.faculty.dto";
 import { CreateClassDto } from "./dtos/create.class.dto";
+import { UpdateFacultyDto } from "./dtos/update.faculty.dto";
+import { UpdateClassDto } from "./dtos/update.class.dto";
 import { Types } from "mongoose";
 
 export type Academic = {
@@ -91,6 +93,99 @@ export class AcademicService {
             facultyId: facultyObjectId,
         };
         return this.academicRepository.createClass(classEntity);
+    }
+
+    async updateFaculty(facultyId: string, updateData: UpdateFacultyDto) {
+        if (!Types.ObjectId.isValid(facultyId)) {
+            throw new BadRequestException('facultyId không hợp lệ');
+        }
+
+        const faculty = await this.academicRepository.findFacultyById(facultyId);
+        if (!faculty) {
+            throw new NotFoundException('Không tìm thấy khoa cần cập nhật');
+        }
+
+        const name = (updateData.name ?? faculty.name ?? '').trim();
+        const email = (updateData.email ?? faculty.email ?? '').trim().toLowerCase();
+        const facultyCode = (updateData.facultyCode ?? faculty.facultyCode ?? '').trim().toUpperCase();
+        const phone = (updateData.phone ?? faculty.phone ?? '').trim();
+
+        if (!name || !email || !facultyCode || !phone) {
+            throw new BadRequestException('Thông tin khoa không hợp lệ');
+        }
+
+        const [existingByCode, existingByEmail, existingByName] = await Promise.all([
+            this.academicRepository.findFacultyByCode(facultyCode),
+            this.academicRepository.findFacultyByEmail(email),
+            this.academicRepository.findFacultyByName(name),
+        ]);
+
+        if (existingByCode && String(existingByCode._id) !== facultyId) {
+            throw new BadRequestException('Mã khoa đã tồn tại');
+        }
+
+        if (existingByEmail && String(existingByEmail._id) !== facultyId) {
+            throw new BadRequestException('Email khoa đã tồn tại');
+        }
+
+        if (existingByName && String(existingByName._id) !== facultyId) {
+            throw new BadRequestException('Tên khoa đã tồn tại');
+        }
+
+        return this.academicRepository.updateFacultyById(facultyId, {
+            name,
+            email,
+            facultyCode,
+            phone,
+        });
+    }
+
+    async updateClass(classId: string, updateData: UpdateClassDto) {
+        if (!Types.ObjectId.isValid(classId)) {
+            throw new BadRequestException('classId không hợp lệ');
+        }
+
+        const currentClass = await this.academicRepository.findClassEntityById(classId);
+        if (!currentClass) {
+            throw new NotFoundException('Không tìm thấy lớp cần cập nhật');
+        }
+
+        const nextName = (updateData.name ?? currentClass.name ?? '').trim();
+        const nextCode = (updateData.code ?? currentClass.code ?? '').trim().toUpperCase();
+        const nextFacultyId = (updateData.facultyId ?? String(currentClass.facultyId ?? '')).trim();
+
+        if (!nextName || !nextCode || !nextFacultyId) {
+            throw new BadRequestException('Thông tin lớp không hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(nextFacultyId)) {
+            throw new BadRequestException('facultyId không hợp lệ');
+        }
+
+        const faculty = await this.academicRepository.findFacultyById(nextFacultyId);
+        if (!faculty) {
+            throw new NotFoundException('Không tìm thấy khoa tương ứng');
+        }
+
+        const nextFacultyObjectId = new Types.ObjectId(nextFacultyId);
+        const [existingByCode, existingByName] = await Promise.all([
+            this.academicRepository.findClassByCode(nextCode),
+            this.academicRepository.findClassByNameAndFaculty(nextName, nextFacultyObjectId),
+        ]);
+
+        if (existingByCode && String(existingByCode._id) !== classId) {
+            throw new BadRequestException('Mã lớp đã tồn tại');
+        }
+
+        if (existingByName && String(existingByName._id) !== classId) {
+            throw new BadRequestException('Tên lớp đã tồn tại trong khoa này');
+        }
+
+        return this.academicRepository.updateClassById(classId, {
+            name: nextName,
+            code: nextCode,
+            facultyId: nextFacultyObjectId,
+        });
     }
 
     findAllFaculties() {

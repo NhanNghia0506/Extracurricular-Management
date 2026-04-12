@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from '../ChatWindow/chat.window.module.scss';
 import UserAvatar from '../UserAvatar/user.avatar';
 
@@ -48,6 +48,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     isSent = false,
     isNew = false,
 }) => {
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const isImageMessage = messageType === 'image'
         || Boolean((imageUrl || '').trim())
         || isImagePathLikeContent(content || '');
@@ -60,31 +61,73 @@ const MessageItem: React.FC<MessageItemProps> = ({
         && normalizedContent !== 'Đã gửi một hình ảnh'
         && !isImagePathLikeContent(normalizedContent);
 
+    useEffect(() => {
+        if (!isImageViewerOpen) {
+            return;
+        }
+
+        const handleEsc = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsImageViewerOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isImageViewerOpen]);
+
     return (
-        <div className={`${styles.messageRow} ${isSent ? styles.sent : ''} ${isNew ? styles.newMessage : ''}`}>
-            {!isSent && (
-                <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName} />
-            )}
-            <div className={styles.msgBody}>
-                {senderName && !isSent && (
-                    <span className={styles.senderName}>{senderName}</span>
+        <>
+            <div className={`${styles.messageRow} ${isSent ? styles.sent : ''} ${isNew ? styles.newMessage : ''}`}>
+                {!isSent && (
+                    <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName} />
                 )}
-                <div className={`${styles.bubble} ${isImageMessage ? styles.imageBubble : ''}`}>
-                    {isImageMessage ? (
-                        <>
-                            <img src={resolvedImageUrl} alt="Hình ảnh đã gửi" className={styles.messageImage} loading="lazy" />
-                            {hasImageCaption && <div className={styles.imageCaption}>{normalizedContent}</div>}
-                        </>
-                    ) : (
-                        content
+                <div className={styles.msgBody}>
+                    {senderName && !isSent && (
+                        <span className={styles.senderName}>{senderName}</span>
                     )}
+                    <div className={`${styles.bubble} ${isImageMessage ? styles.imageBubble : ''}`}>
+                        {isImageMessage ? (
+                            <>
+                                <img
+                                    src={resolvedImageUrl}
+                                    alt="Hình ảnh đã gửi"
+                                    className={styles.messageImage}
+                                    loading="lazy"
+                                    onClick={() => setIsImageViewerOpen(true)}
+                                />
+                                {hasImageCaption && <div className={styles.imageCaption}>{normalizedContent}</div>}
+                            </>
+                        ) : (
+                            content
+                        )}
+                    </div>
+                    <span className={styles.time}>{time}</span>
                 </div>
-                <span className={styles.time}>{time}</span>
+                {isSent && (
+                    <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName || 'You'} />
+                )}
             </div>
-            {isSent && (
-                <UserAvatar src={avatar} name={senderName} className={styles.msgAvatar} alt={senderName || 'You'} />
+
+            {isImageViewerOpen && resolvedImageUrl && (
+                <div className={styles.imageViewerOverlay} onClick={() => setIsImageViewerOpen(false)}>
+                    <button
+                        type="button"
+                        className={styles.imageViewerClose}
+                        onClick={() => setIsImageViewerOpen(false)}
+                        aria-label="Đóng xem ảnh"
+                    >
+                        ×
+                    </button>
+                    <img
+                        src={resolvedImageUrl}
+                        alt="Xem ảnh phóng to"
+                        className={styles.imageViewerContent}
+                        onClick={(event) => event.stopPropagation()}
+                    />
+                </div>
             )}
-        </div>
+        </>
     );
 };
 

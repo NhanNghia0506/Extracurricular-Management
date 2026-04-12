@@ -211,9 +211,6 @@ $border-color: #f1f5f9;
 
 // Certificate Row
 .certRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     padding: 20px 24px;
     background: white;
     border-radius: 12px;
@@ -229,7 +226,7 @@ $border-color: #f1f5f9;
     .certMain {
         display: flex;
         gap: 20px;
-        align-items: center;
+        align-items: flex-start;
         flex: 1;
 
         .certIcon {
@@ -244,40 +241,66 @@ $border-color: #f1f5f9;
         }
 
         .certInfo {
+            flex: 1;
+
+            .topLine {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 16px;
+            }
+
             h3 {
                 font-size: 16px;
-                margin: 0 0 6px;
+                margin: 0 0 4px;
                 color: $text-dark;
             }
 
-            .certMeta {
-                display: flex;
-                gap: 20px;
+            .activityCode {
                 font-size: 13px;
                 color: $text-muted;
+                margin-bottom: 10px;
+            }
+
+            .bottomLine {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+            }
+
+            .bottomActions {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .issueDate {
+                color: $text-muted;
+                font-size: 13px;
             }
         }
     }
 
-    .certStats {
-        display: flex;
-        gap: 40px;
-        padding: 0 40px;
+    small {
+        display: block;
+        font-size: 10px;
+        font-weight: 800;
+        color: #94a3b8;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
 
-        small {
-            display: block;
-            font-size: 10px;
-            font-weight: 800;
-            color: #94a3b8;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-
+    .attendanceCol {
         .scoreTag {
             color: #22c55e;
             font-weight: 700;
             font-size: 13px;
         }
+    }
+
+    .statusCol {
+        text-align: right;
 
         .statusTag {
             color: #15803d;
@@ -293,35 +316,44 @@ $border-color: #f1f5f9;
         }
     }
 
-    .certActions {
-        display: flex;
-        gap: 12px;
+    .btnDownload {
+        background: #f8fafc;
+        border: 1px solid #f1f5f9;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        color: $text-dark;
+        cursor: pointer;
 
-        .btnView {
-            background: transparent;
-            border: none;
-            color: $primary-blue;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        &:hover {
+            background: #e2e8f0;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 20px 14px;
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .filterBar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+
+        .searchBox {
+            width: 100%;
         }
 
-        .btnDownload {
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            color: $text-dark;
-            cursor: pointer;
-
-            &:hover {
-                background: #e2e8f0;
-            }
+        .dropdowns {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 4px;
         }
     }
 }

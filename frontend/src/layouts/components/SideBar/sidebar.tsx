@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './sidebar.module.scss';
 import authService from '../../../services/auth.service';
 
@@ -42,14 +42,26 @@ const ROUTE_MAP: { [key: string]: string } = {
     'settings': '/settings',
 };
 
-const Sidebar: React.FC = () => {
+const getActiveMenuIdFromPath = (pathname: string): string => {
+    const entry = Object.entries(ROUTE_MAP).find(([, route]) => route === pathname);
+    return entry?.[0] || 'explore';
+};
+
+interface SidebarProps {
+    className?: string;
+    onItemSelected?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ className, onItemSelected }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     // State để lưu mục đang được chọn (Mặc định là 'explore')
-    const [activeId, setActiveId] = useState<string>('explore');
+    const [activeId, setActiveId] = useState<string>(getActiveMenuIdFromPath(location.pathname));
 
     const handleItemClick = (item: MenuItem) => {
         if (item.id === 'sign-out') {
             authService.logout();
+            onItemSelected?.();
             return;
         }
 
@@ -59,6 +71,7 @@ const Sidebar: React.FC = () => {
         if (targetRoute) {
             navigate(targetRoute);
         }
+        onItemSelected?.();
     };
 
     // Hàm render item để tái sử dụng
@@ -86,7 +99,7 @@ const Sidebar: React.FC = () => {
     };
 
     return (
-        <aside className={styles.sidebarWrapper}>
+        <aside className={`${styles.sidebarWrapper} ${className || ''}`.trim()}>
             {/* --- Phần Menu Chính --- */}
             <nav className="d-flex flex-column gap-1">
                 {MAIN_MENU.map((item) => renderMenuItem(item))}
