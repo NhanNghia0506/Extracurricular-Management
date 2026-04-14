@@ -8,6 +8,7 @@ import {
 import jsQR from 'jsqr';
 import certificateService from '../../services/certificate.service';
 import { CertificateVerificationStatus, CertificateVerifyResponse } from '../../types/certificate.types';
+import { resolveImageSrc } from '../../utils/image-url';
 import styles from './verify.certificate.module.scss';
 
 type VerifyUiStatus = 'IDLE' | 'LOADING' | CertificateVerificationStatus;
@@ -109,24 +110,7 @@ const getCertificateStateLabel = (status?: string): string => {
     }
 };
 
-const buildOrganizerImageUrl = (image?: string): string => {
-    if (!image) {
-        return '';
-    }
-
-    if (/^https?:\/\//i.test(image)) {
-        return image;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    const normalizedImage = image.replace(/^\/+/, '');
-
-    if (normalizedImage.startsWith('uploads/')) {
-        return `${baseUrl}/${normalizedImage}`;
-    }
-
-    return `${baseUrl}/uploads/${normalizedImage}`;
-};
+const buildOrganizerImageUrl = resolveImageSrc;
 
 const VerifyCertificate = () => {
     const [searchParams, setSearchParams] = useSearchParams();

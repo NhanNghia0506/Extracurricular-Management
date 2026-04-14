@@ -40,6 +40,8 @@ import AcademicManagementPage from '../pages/AcademicManagementPage';
 import AttendanceReportPage from '../pages/AttendanceReportPage';
 import ActivityFinalizedParticipantsPage from '../pages/ActivityFinalizedParticipantsPage';
 import ActivityStatsPage from '../pages/ActivityStatsPage';
+import ComplaintsPage from '../pages/ComplaintsPage';
+import AdminComplaintsPage from '../pages/AdminComplaintsPage';
 const AppRoutes: React.FC = () => {
     return (
         <Routes>
@@ -87,6 +89,7 @@ const AppRoutes: React.FC = () => {
                     }
                 />
                 <Route path="/student-dashboard" element={<StudentDashboardPage />} />
+                <Route path="/complaints" element={<ComplaintsPage />} />
                 <Route
                     path="/admin/student-stats"
                     element={
@@ -133,6 +136,14 @@ const AppRoutes: React.FC = () => {
                     element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <OrganizerApprovalPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/admin/complaints"
+                    element={
+                        <ProtectedRoute>
+                            <AdminComplaintsPage />
                         </ProtectedRoute>
                     }
                 />

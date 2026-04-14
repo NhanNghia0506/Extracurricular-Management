@@ -7,6 +7,7 @@ import { ActivityApprovalStatus, ActivityStatus } from "src/global/globalEnum";
 export interface ActivityNamedReference {
     _id?: Types.ObjectId;
     name?: string;
+    image?: string;
 }
 
 export interface ActivityUserReference extends ActivityNamedReference {
@@ -33,7 +34,7 @@ export interface RecommendationCandidateRecord {
     trainingScore: number;
     participantCount: number;
     isPriority: boolean;
-    organizerId: { _id?: Types.ObjectId; name?: string } | null;
+    organizerId: { _id?: Types.ObjectId; name?: string; image?: string } | null;
     categoryId: { _id?: Types.ObjectId; name?: string } | null;
     averageRating: number;
     ratingCount: number;
@@ -84,7 +85,7 @@ export class ActivityRepository {
     findAll(): Promise<Array<Activity & { _id: any }>> {
         return this.activityModel
             .find({ approvalStatus: ActivityApprovalStatus.APPROVED })
-            .populate('organizerId', 'name')
+            .populate('organizerId', 'name image')
             .populate('categoryId', 'name')
             .sort({ createdAt: -1 })
             .lean<Array<Activity & { _id: Types.ObjectId }>>()
@@ -111,10 +112,24 @@ export class ActivityRepository {
             .exec();
     }
 
+    async findIdsByOrganizerId(organizerId: string): Promise<string[]> {
+        if (!Types.ObjectId.isValid(organizerId)) {
+            return [];
+        }
+
+        const rows = await this.activityModel
+            .find({ organizerId: new Types.ObjectId(organizerId) })
+            .select('_id')
+            .lean<{ _id: Types.ObjectId }[]>()
+            .exec();
+
+        return rows.map((row) => row._id.toString());
+    }
+
     findByUserId(userId: string): Promise<Array<Activity & { _id: any }>> {
         return this.activityModel
             .find({ createdBy: new Types.ObjectId(userId) })
-            .populate('organizerId', 'name')
+            .populate('organizerId', 'name image')
             .populate('categoryId', 'name')
             .sort({ createdAt: -1 })
             .lean<Array<Activity & { _id: Types.ObjectId }>>()
@@ -552,6 +567,7 @@ export class ActivityRepository {
                     organizerId: {
                         _id: '$organizer._id',
                         name: '$organizer.name',
+                        image: '$organizer.image',
                     },
                     categoryId: {
                         _id: '$category._id',

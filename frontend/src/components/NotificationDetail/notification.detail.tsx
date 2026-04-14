@@ -35,6 +35,39 @@ const formatNotificationTime = (value?: string) => {
     }).format(date);
 };
 
+const notificationTypeLabel: Record<string, string> = {
+    ACTIVITY: 'Hoạt động',
+    ORGANIZER: 'Ban tổ chức',
+    ALERT: 'Cảnh báo',
+    SYSTEM: 'Hệ thống',
+};
+
+const senderTypeLabel: Record<string, string> = {
+    system: 'Hệ thống',
+    complaint: 'Khiếu nại',
+    'complaint-system': 'Hệ thống khiếu nại',
+    'complaint-review': 'Quản trị viên xử lý khiếu nại',
+    organizer: 'Ban tổ chức',
+    activity: 'Hoạt động',
+    admin: 'Quản trị viên',
+};
+
+const getNotificationTypeLabel = (type?: string) => {
+    if (!type) {
+        return 'Không xác định';
+    }
+
+    return notificationTypeLabel[type] || type;
+};
+
+const getSenderTypeLabel = (senderType?: string) => {
+    if (!senderType) {
+        return 'Không xác định';
+    }
+
+    return senderTypeLabel[senderType] || senderType;
+};
+
 const getNotificationMeta = (notification: NotificationItem | null) => {
     if (!notification) {
         return {
@@ -175,11 +208,11 @@ const NotificationDetail: React.FC = () => {
                     <div className={styles.metaPanel}>
                         <div>
                             <span className={styles.metaLabel}>Loại</span>
-                            <strong>{notification.type}</strong>
+                            <strong>{getNotificationTypeLabel(notification.type)}</strong>
                         </div>
                         <div>
                             <span className={styles.metaLabel}>Nguồn gửi</span>
-                            <strong>{notification.senderType || 'Không xác định'}</strong>
+                            <strong>{getSenderTypeLabel(notification.senderType)}</strong>
                         </div>
                         <div>
                             <span className={styles.metaLabel}>Trạng thái</span>
@@ -196,7 +229,7 @@ const NotificationDetail: React.FC = () => {
                             </div>
                             <div className={styles.relatedContent}>
                                 <h4>{activityTitle}</h4>
-                                <p>Thông báo này gắn với một hoạt động cụ thể. Bạn có thể mở activity để xem thêm chi tiết.</p>
+                                <p>Thông báo này gắn với một hoạt động cụ thể. Bạn có thể mở hoạt động để xem thêm chi tiết.</p>
                             </div>
                             {notificationLinkUrl ? (
                                 <button type="button" className={styles.primaryBtn} onClick={() => navigate(notificationLinkUrl)}>

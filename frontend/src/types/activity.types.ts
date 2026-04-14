@@ -26,6 +26,7 @@ export interface ActivityListItem {
     organizerId?: {
         _id?: string;
         name?: string;
+        image?: string;
     } | string;
     categoryId?: {
         _id?: string;

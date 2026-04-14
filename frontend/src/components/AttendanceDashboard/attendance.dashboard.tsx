@@ -32,12 +32,6 @@ import activityService from '../../services/activity.service';
 import { formatTime } from '../../utils/date-time';
 import styles from './attendance.dashboard.module.scss';
 
-const methodData = [
-    { name: 'QR Code', value: 142 },
-    { name: 'Vân tay', value: 29 },
-    { name: 'Thủ công', value: 14 },
-];
-
 const completionColors = ['#2563eb', '#e2e8f0'];
 
 interface AttendanceDashboardProps {
@@ -60,14 +54,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     const [manualError, setManualError] = useState<string | null>(null);
     const [manualSuccess, setManualSuccess] = useState<string | null>(null);
 
-    const fetchSuccessfulCheckins = useCallback(async () => {
+    const fetchCheckins = useCallback(async () => {
         if (!sessionId) {
             return;
         }
 
         try {
             setLoading(true);
-            const response = await checkinService.getCheckinsBySessionId(sessionId, 'SUCCESS');
+            const response = await checkinService.getCheckinsBySessionId(sessionId);
             setCheckins(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error('Không lấy được danh sách checkin:', error);
@@ -79,8 +73,8 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
 
     // Fetch danh sách checkin ban đầu khi load trang
     useEffect(() => {
-        void fetchSuccessfulCheckins();
-    }, [fetchSuccessfulCheckins]);
+        void fetchCheckins();
+    }, [fetchCheckins]);
 
     // Realtime socket connection cho checkin mới
     useEffect(() => {
@@ -105,9 +99,9 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
 
         const handleNewCheckin = (payload: CheckinEvent) => {
             setCheckins((prev) => {
-                // Kiểm tra xem user này đã checkin chưa (dựa vào student.id)
+                // Kiểm tra duplicate theo checkin id để vẫn giữ nhiều event của cùng một user.
                 const existingIndex = prev.findIndex(
-                    (item) => item.student.id === payload.student.id
+                    (item) => item._id === payload.checkin._id
                 );
 
                 // Nếu đã tồn tại, không thêm vào (tránh duplicate)
@@ -239,13 +233,22 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         return formatTime(date);
     };
 
+    const successfulCheckinsCount = checkins.filter(
+        (item) => item.status === 'SUCCESS' || item.status === 'LATE',
+    ).length;
+
     const attendancePercent = totalRegistered > 0
-        ? Math.round((checkins.length / totalRegistered) * 100)
+        ? Math.round((successfulCheckinsCount / totalRegistered) * 100)
         : 0;
 
     const attendanceProgress = totalRegistered > 0
-        ? Math.min((checkins.length / totalRegistered) * 100, 100)
+        ? Math.min((successfulCheckinsCount / totalRegistered) * 100, 100)
         : 0;
+
+    const methodData = [
+        { name: 'GPS', value: checkins.filter((item) => item.distance > 0).length },
+        { name: 'Thủ công', value: checkins.filter((item) => item.distance === 0).length },
+    ];
 
     const generateVelocityData = () => {
         if (!checkinSession?.startTime || !checkinSession?.endTime || checkins.length === 0) return [];
@@ -366,7 +369,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
             setManualError(null);
             await checkinService.manualCheckin(sessionId, selectedParticipantId);
 
-            await fetchSuccessfulCheckins();
+            await fetchCheckins();
             setManualSuccess('Điểm danh thủ công thành công');
             setIsManualModalOpen(false);
         } catch (error: any) {
@@ -461,7 +464,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                             {attendancePercent}%
                         </span>
                     </div>
-                    <div className={styles.statValue}>{checkins.length}</div>
+                    <div className={styles.statValue}>{successfulCheckinsCount}</div>
                     <progress className={styles.progressBarNative} value={attendanceProgress} max={100} />
                 </div>
                 {/* Tương tự cho Not Checked-in và Late Check-ins... */}
@@ -487,7 +490,7 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
                             </div>
                         )}
                         {!loading && checkins.map((item, index) => (
-                            <div className={styles.feedItem} key={`${item.student.id}-${index}`}>
+                            <div className={styles.feedItem} key={`${item._id}-${index}`}>
                                 <div className={styles.avatar}>
                                     {item.student.name?.slice(0, 2).toUpperCase()}
                                 </div>

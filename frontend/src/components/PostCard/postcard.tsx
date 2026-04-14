@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Modal } from 'react-bootstrap';
 import styles from './postcard.module.scss';
 import CommentSection from '../Comments/comment.section';
+import activityService from '../../services/activity.service';
 
 // Định nghĩa kiểu dữ liệu cho một bài viết
 export interface PostData {
     id: string;
     title: string;
     organization: string;
+    organizationImage?: string;
     orgIcon: string; // FontAwesome class
     orgColor: 'blue' | 'orange'; // Theme màu logo
     status: string;
@@ -20,6 +22,7 @@ export interface PostData {
     participants: string[]; // Mảng chứa URL ảnh avatar
     participantCount: number; // Tổng số người tham gia (để hiện +42)
     isMine?: boolean;
+    showRegisterButton?: boolean;
 }
 
 interface PostCardProps {
@@ -30,6 +33,8 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
     const navigate = useNavigate();
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [isRegistered, setIsRegistered] = useState(false);
 
     // Kiểm tra description có dài hơn 150 ký tự không
     const isLongDescription = data.description.length > 150;
@@ -49,6 +54,29 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
         navigate(`/update-activity?activityId=${data.id}`);
     };
 
+    const handleRegisterClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (isRegistered || isRegistering) {
+            return;
+        }
+
+        try {
+            setIsRegistering(true);
+            await activityService.register(data.id);
+            setIsRegistered(true);
+            alert('Đăng ký tham gia thành công!');
+        } catch (err: any) {
+            const rawMessage = err?.response?.data?.message;
+            const message = Array.isArray(rawMessage)
+                ? rawMessage.join(', ')
+                : (rawMessage || 'Không thể đăng ký. Vui lòng thử lại!');
+            alert(message);
+        } finally {
+            setIsRegistering(false);
+        }
+    };
+
     return (
         <div
             className={styles.cardWrapper}
@@ -56,9 +84,17 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
             {/* 1. Header: Logo, Tên tổ chức, Trạng thái */}
             <div className={styles.header}>
                 <div className={`d-flex gap-3 align-items-center ${styles.headerMain}`}>
-                    <div className={`${styles.orgIconBox} ${styles[data.orgColor]}`}>
-                        <i className={data.orgIcon}></i>
-                    </div>
+                    {data.organizationImage ? (
+                        <img
+                            src={data.organizationImage}
+                            alt={data.organization}
+                            className={styles.orgAvatar}
+                        />
+                    ) : (
+                        <div className={`${styles.orgIconBox} ${styles[data.orgColor]}`}>
+                            <i className={data.orgIcon}></i>
+                        </div>
+                    )}
                     <div className={styles.titleSection}>
                         <h5>{data.title}</h5>
                         <small>{data.organization}</small>
@@ -112,15 +148,22 @@ const PostCard: React.FC<PostCardProps> = ({ data }) => {
 
             <hr style={{ borderColor: '#f1f5f9', margin: '0 0 1.5rem 0' }} />
 
-            {/* 5. Footer: Avatar & Icon bình luận */}
+            {/* 5. Footer: Đăng ký & Icon hành động */}
             <div className={styles.footer}>
-                {/* Nhóm Avatar */}
-                <div className={styles.participantGroup}>
-                    {data.participants.map((url, index) => (
-                        <img key={index} src={url} alt="User" className={styles.avatar} />
-                    ))}
-                    <span className={styles.moreCount}>+{data.participantCount}</span>
-                </div>
+                {data.showRegisterButton !== false && !isRegistered && (
+                    <button
+                        className={styles.registerBtn}
+                        onClick={handleRegisterClick}
+                        disabled={isRegistering || Boolean(data.isMine)}
+                        title={data.isMine ? 'Không thể tự đăng ký hoạt động của bạn' : 'Đăng ký tham gia'}
+                    >
+                        {data.isMine
+                            ? 'Hoạt động của bạn'
+                            : isRegistering
+                                ? 'Đang đăng ký...'
+                                : 'Đăng ký'}
+                    </button>
+                )}
 
                 <div className={styles.actionGroup}>
                     {data.isMine && (

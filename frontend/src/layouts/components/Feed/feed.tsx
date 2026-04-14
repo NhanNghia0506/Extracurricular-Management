@@ -3,6 +3,8 @@ import PostCard, { PostData } from '../../../components/PostCard/postcard';
 import activityService, { RecommendedActivityItem } from '../../../services/activity.service';
 import { ActivityListItem } from '../../../types/activity.types';
 import { ApiResponse } from '../../../types/response.types';
+import { resolveAvatarSrc } from '../../../utils/avatar';
+import { resolveImageSrc } from '../../../utils/image-url';
 
 interface FeedProps {
     searchTerm?: string;
@@ -25,9 +27,20 @@ const getStatusPresentation = (status?: string): { label: string; tone: 'open' |
     }
 };
 
+const getActivitySortTimestamp = (activity: ActivityListItem): number => {
+    const dateValue = activity.startAt || activity.createdAt || activity.updatedAt;
+    if (!dateValue) {
+        return 0;
+    }
+
+    const parsed = new Date(dateValue).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+};
+
 const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
     const [activities, setActivities] = useState<ActivityListItem[]>([]);
     const [recommendedActivities, setRecommendedActivities] = useState<RecommendedActivityItem[]>([]);
+    const [registeredActivityIds, setRegisteredActivityIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +64,31 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 } else {
                     setRecommendedActivities([]);
                 }
+
+                const myActivitiesResponse = await activityService.myActivities().catch(() => null);
+                const myActivitiesData = myActivitiesResponse?.data?.data;
+                const myItems = Array.isArray(myActivitiesData)
+                    ? myActivitiesData
+                    : [];
+                const registeredIds = new Set<string>();
+
+                myItems.forEach((item: any) => {
+                    const relation = item?.relation;
+                    const participantStatus = item?.participantStatus;
+                    const isRegistered =
+                        relation === 'participated'
+                        && participantStatus !== 'CANCELLED'
+                        && participantStatus !== 'REJECTED';
+
+                    if (isRegistered) {
+                        const id = String(item?.activityId || item?._id || '').trim();
+                        if (id) {
+                            registeredIds.add(id);
+                        }
+                    }
+                });
+
+                setRegisteredActivityIds(registeredIds);
             } catch (err) {
                 console.error('Lỗi fetch activities:', err);
                 setError('Không thể tải hoạt động');
@@ -61,11 +99,6 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
 
         fetchActivities();
     }, []);
-
-    const baseUrl = useMemo(
-        () => process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001',
-        []
-    );
 
     const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
@@ -90,16 +123,36 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
         });
     }, [activities, normalizedSearchTerm]);
 
+    const sortedActivities = useMemo(() => {
+        return [...filteredActivities].sort((a, b) => {
+            const aIsOngoing = a.status === 'ONGOING';
+            const bIsOngoing = b.status === 'ONGOING';
+            if (aIsOngoing !== bIsOngoing) {
+                return aIsOngoing ? -1 : 1;
+            }
+
+            const aIsCompleted = a.status === 'COMPLETED';
+            const bIsCompleted = b.status === 'COMPLETED';
+            if (aIsCompleted !== bIsCompleted) {
+                return aIsCompleted ? 1 : -1;
+            }
+
+            return getActivitySortTimestamp(b) - getActivitySortTimestamp(a);
+        });
+    }, [filteredActivities]);
+
     const posts: PostData[] = useMemo(() => {
-        return filteredActivities.map((activity, index) => {
+        return sortedActivities.map((activity, index) => {
             const organizerName = typeof activity.organizerId === 'string'
                 ? 'Unknown Organizer'
                 : activity.organizerId?.name || 'Unknown Organizer';
+            const organizerAvatar = typeof activity.organizerId === 'string'
+                ? undefined
+                : resolveAvatarSrc(activity.organizerId?.image);
 
             const locationText = activity.location?.address || 'Unknown location';
-            const imageUrl = activity.image
-                ? `${baseUrl}/uploads/${activity.image}`
-                : 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
+            const imageUrl = resolveImageSrc(activity.image)
+                || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
 
             const statusPresentation = getStatusPresentation(activity.status);
 
@@ -107,6 +160,7 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 id: activity._id,
                 title: activity.title,
                 organization: organizerName,
+                organizationImage: organizerAvatar,
                 orgIcon: 'fa-solid fa-building',
                 orgColor: index % 2 === 0 ? 'blue' : 'orange',
                 status: statusPresentation.label,
@@ -118,9 +172,10 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                 participants: [],
                 participantCount: 0,
                 isMine: Boolean(activity.isMine),
+                showRegisterButton: !registeredActivityIds.has(activity._id) && activity.status !== 'COMPLETED',
             };
         });
-    }, [filteredActivities, baseUrl]);
+    }, [sortedActivities, registeredActivityIds]);
 
     const recommendedPosts: Array<{ post: PostData; reason: string }> = useMemo(() => {
         return recommendedActivities.map((activity, index) => {
@@ -128,11 +183,13 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
             const organizerName = typeof activity.organizerId === 'string'
                 ? 'Unknown Organizer'
                 : activity.organizerId?.name || 'Unknown Organizer';
+            const organizerAvatar = typeof activity.organizerId === 'string'
+                ? undefined
+                : resolveAvatarSrc(activity.organizerId?.image);
 
             const locationText = activity.location?.address || 'Unknown location';
-            const imageUrl = activity.image
-                ? `${baseUrl}/uploads/${activity.image}`
-                : 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
+            const imageUrl = resolveImageSrc(activity.image)
+                || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2071&auto=format&fit=crop';
 
             const statusPresentation = getStatusPresentation(activity.status);
 
@@ -141,6 +198,7 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                     id: activityId,
                     title: activity.title,
                     organization: organizerName,
+                    organizationImage: organizerAvatar,
                     orgIcon: 'fa-solid fa-building',
                     orgColor: index % 2 === 0 ? 'blue' : 'orange',
                     status: statusPresentation.label,
@@ -152,11 +210,12 @@ const Feed: React.FC<FeedProps> = ({ searchTerm = '' }) => {
                     participants: [],
                     participantCount: activity.participantCount || 0,
                     isMine: Boolean(activity.isMine),
+                    showRegisterButton: !registeredActivityIds.has(activityId) && activity.status !== 'COMPLETED',
                 },
                 reason: activity.reason,
             };
         });
-    }, [recommendedActivities, baseUrl]);
+    }, [recommendedActivities, registeredActivityIds]);
 
     return (
         <div className="container-fluid p-0" style={{ maxWidth: '800px', margin: '0 auto' }}>

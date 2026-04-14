@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import styles from './feed.module.scss';
 
 import activityService from '../../services/activity.service';
+import { resolveImageSrc } from '../../utils/image-url';
 import { LocationData } from '@/types/activity.types';
 
 interface MyActivityItem {
@@ -68,30 +69,6 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
 
         fetchMyActivities();
     }, []);
-
-    const handleCancelRegistration = async (participantId?: string) => {
-        if (!participantId) {
-            alert('Không tìm thấy thông tin đăng ký để hủy.');
-            return;
-        }
-
-        const confirmed = window.confirm('Bạn có chắc muốn hủy đăng ký hoạt động này?');
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            await activityService.cancelRegistration(participantId);
-            setActivities((prev) => prev.map((item) => (
-                item.participantId === participantId
-                    ? { ...item, participantStatus: 'CANCELLED' }
-                    : item
-            )));
-            alert('Đã hủy đăng ký thành công');
-        } catch (err: any) {
-            alert(err?.response?.data?.message || 'Không thể hủy đăng ký. Vui lòng thử lại!');
-        }
-    };
 
     const activityStatusPresentationMap = useMemo(() => ({
         OPEN: { label: 'Đang mở đăng ký', color: '#10b981' },
@@ -165,14 +142,8 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
         }).format(date);
     };
 
-    const getImageUrl = (image?: string) => {
-        if (!image) {
-            return 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1974';
-        }
-        if (image.startsWith('http')) return image;
-        const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-        return `${baseUrl}/uploads/${image}`;
-    };
+    const getImageUrl = (image?: string) => resolveImageSrc(image)
+        || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1974';
 
     const mapParticipantStatus = (status?: string) => {
         switch (status) {
@@ -290,14 +261,11 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                     const runtimeStatusPresentation = activityStatusPresentationMap[runtimeStatus];
                     const participantStatus = mapParticipantStatus(act.participantStatus);
                     const activityId = getActivityId(act);
-                    const canOpenFeedback = getActivityStatusKey(act) !== 'COMPLETED';
-                    const canCancelRegistration = act.participantStatus === 'REGISTERED' || act.participantStatus === 'PENDING' || act.participantStatus === 'APPROVED';
                     return (
                         <div key={activityId} className={styles.activityCard}>
                             <div className={`${styles.imageWrapper} ${runtimeStatus === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
                                 <span className={styles.statusTag} style={{ background: runtimeStatusPresentation.color }}>{runtimeStatusPresentation.label}</span>
-                                <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 
                             <div className={styles.cardBody}>
@@ -311,21 +279,7 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                                 <span className={styles.statePill}>
                                     {participantStatus.label}
                                 </span>
-                                <div className="d-flex align-items-center gap-2">
-                                    {canCancelRegistration && (
-                                        <button
-                                            type="button"
-                                            className={styles.cancelActionBtn}
-                                            onClick={() => handleCancelRegistration(act.participantId)}
-                                        >
-                                            Hủy đăng ký
-                                        </button>
-                                    )}
-                                    {canOpenFeedback && (
-                                        <Link to={`/activity-detail?id=${activityId}#feedback`} className={styles.actionLink}>Đánh giá</Link>
-                                    )}
-                                    <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
-                                </div>
+                                <Link to={`/activity-detail?id=${activityId}`} className={styles.actionLink}>Xem chi tiết</Link>
                             </div>
                         </div>
                     );
@@ -361,7 +315,6 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                             <div className={`${styles.imageWrapper} ${runtimeStatus === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
                                 <span className={styles.statusTag} style={{ background: runtimeStatusPresentation.color }}>{runtimeStatusPresentation.label}</span>
-                                <button className={styles.saveBtn}><i className="fa-solid fa-bookmark"></i></button>
                             </div>
 
                             <div className={styles.cardBody}>

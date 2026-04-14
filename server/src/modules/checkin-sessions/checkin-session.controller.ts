@@ -13,8 +13,16 @@ export class CheckinSessionController {
     @ResponseMessage('Tạo phiên điểm danh thành công')
     @UseGuards(AuthGuard)
     @Post()
-    create(@Body() createCheckinSessionDto: CreateCheckinSessionDto) {
-        return this.checkinSessionService.create(createCheckinSessionDto);
+    create(
+        @Body() createCheckinSessionDto: CreateCheckinSessionDto,
+        @Req() req: Request,
+    ) {
+        const actorUserId = req.user?.id;
+        if (!actorUserId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.checkinSessionService.create(createCheckinSessionDto, actorUserId);
     }
 
     @ResponseMessage('Lấy phiên điểm danh thành công')

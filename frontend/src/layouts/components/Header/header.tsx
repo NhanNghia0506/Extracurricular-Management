@@ -14,6 +14,7 @@ import activityService from 'services/activity.service';
 import { ActivityListItem } from '../../../types/activity.types';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
 import { NOTIFICATION_UNREAD_COUNT_EVENT } from '../../../utils/notification-realtime';
+import { resolveImageSrc } from '../../../utils/image-url';
 
 interface HeaderProps {
     onSearch?: (value: string) => void;
@@ -149,18 +150,8 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
         : [];
     const showSearchDropdown = searchFocused && normalizedKeyword.length > 0;
 
-    const resolveActivityImage = (activity: ActivityListItem): string => {
-        const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-        if (!activity.image) {
-            return 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400&auto=format&fit=crop';
-        }
-
-        if (activity.image.startsWith('http://') || activity.image.startsWith('https://')) {
-            return activity.image;
-        }
-
-        return `${baseUrl}/uploads/${activity.image}`;
-    };
+    const resolveActivityImage = (activity: ActivityListItem): string => resolveImageSrc(activity.image)
+        || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400&auto=format&fit=crop';
 
     const handleSelectActivity = (activityId: string) => {
         setSearchFocused(false);
@@ -338,6 +329,16 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                                                 >
                                                     <i className="fa-solid fa-school"></i>
                                                     <span>Quản lý khoa lớp</span>
+                                                </button>
+                                                <button
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        navigate('/admin/complaints');
+                                                        setAdminDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-triangle-exclamation"></i>
+                                                    <span>Xử lý khiếu nại</span>
                                                 </button>
                                             </div>
                                         )}

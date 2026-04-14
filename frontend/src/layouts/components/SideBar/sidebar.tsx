@@ -13,20 +13,18 @@ interface MenuItem {
     isSubmenuParent?: boolean;
 }
 
-// 2. Khởi tạo mảng dữ liệu (như bạn yêu cầu)
-const MAIN_MENU: MenuItem[] = [
+const USER_MENU: MenuItem[] = [
     { id: 'explore', icon: 'fa-regular fa-compass', label: 'Khám phá' },
     { id: 'my-activities', icon: 'fa-regular fa-calendar-check', label: 'Hoạt động của tôi' },
     { id: 'my-attendance', icon: 'fa-solid fa-clipboard-check', label: 'Lịch sử điểm danh' },
     { id: 'my-certificates', icon: 'fa-solid fa-certificate', label: 'Chứng nhận' },
+    { id: 'complaints', icon: 'fa-solid fa-triangle-exclamation', label: 'Khiếu nại' },
     { id: 'organizations', icon: 'fa-solid fa-users-line', label: 'Tổ chức' }, // Hoặc fa-user-group
     { id: 'create-activity', icon: 'fa-solid fa-plus', label: 'Tạo hoạt động mới' },
 ];
 
-
-
 const BOTTOM_MENU: MenuItem[] = [
-    { id: 'settings', icon: 'fa-solid fa-gear', label: 'Cài đặt' },
+    // { id: 'settings', icon: 'fa-solid fa-gear', label: 'Cài đặt' },
     { id: 'sign-out', icon: 'fa-solid fa-arrow-right-from-bracket', label: 'Đăng xuất', isDanger: true },
 ];
 
@@ -36,14 +34,34 @@ const ROUTE_MAP: { [key: string]: string } = {
     'my-activities': '/my-activities',
     'my-attendance': '/my-attendance',
     'my-certificates': '/my-certificates',
+    'complaints': '/complaints',
     'organizations': '/organizations',
     'create-activity': '/create-activity',
 
     'settings': '/settings',
+
+    'admin-student-stats': '/admin/student-stats',
+    'admin-organizer-stats': '/admin/organizer-stats',
+    'admin-activity-stats': '/admin/activity-stats',
+    'activity-approval': '/activity-approval',
+    'organizer-approval': '/organizer-approval',
+    'admin-activity-categories': '/admin/activity-categories',
+    'verify-certificate': '/verify-certificate',
+    'admin-training-score-report': '/admin/training-score-report',
+    'admin-attendance-report': '/admin/attendance-report',
+    'admin-academic': '/admin/academic',
+    'admin-complaints': '/admin/complaints',
 };
 
 const getActiveMenuIdFromPath = (pathname: string): string => {
-    const entry = Object.entries(ROUTE_MAP).find(([, route]) => route === pathname);
+    const entry = Object.entries(ROUTE_MAP).find(([, route]) => {
+        if (route === '/') {
+            return pathname === '/';
+        }
+
+        return pathname === route || pathname.startsWith(`${route}/`);
+    });
+
     return entry?.[0] || 'explore';
 };
 
@@ -57,6 +75,10 @@ const Sidebar: React.FC<SidebarProps> = ({ className, onItemSelected }) => {
     const location = useLocation();
     // State để lưu mục đang được chọn (Mặc định là 'explore')
     const [activeId, setActiveId] = useState<string>(getActiveMenuIdFromPath(location.pathname));
+
+    React.useEffect(() => {
+        setActiveId(getActiveMenuIdFromPath(location.pathname));
+    }, [location.pathname]);
 
     const handleItemClick = (item: MenuItem) => {
         if (item.id === 'sign-out') {
@@ -101,8 +123,13 @@ const Sidebar: React.FC<SidebarProps> = ({ className, onItemSelected }) => {
     return (
         <aside className={`${styles.sidebarWrapper} ${className || ''}`.trim()}>
             {/* --- Phần Menu Chính --- */}
-            <nav className="d-flex flex-column gap-1">
-                {MAIN_MENU.map((item) => renderMenuItem(item))}
+            <nav className={styles.menuStack}>
+                <section className={styles.menuGroup}>
+                    <div className={styles.sectionTitle}>Điều hướng</div>
+                    <div className={styles.menuItems}>
+                        {USER_MENU.map((item) => renderMenuItem(item))}
+                    </div>
+                </section>
             </nav>
 
             {/* --- Phần Menu Đáy (Settings & Logout) --- */}

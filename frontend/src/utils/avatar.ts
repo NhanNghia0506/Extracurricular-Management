@@ -1,3 +1,5 @@
+import { resolveImageSrc } from './image-url';
+
 const AVATAR_PALETTE = [
     '#2563eb',
     '#0891b2',
@@ -32,24 +34,5 @@ export const buildAvatarBackgroundColor = (name?: string) => {
 };
 
 export const resolveAvatarSrc = (avatar?: string | null): string | undefined => {
-    if (!avatar || !avatar.trim()) {
-        return undefined;
-    }
-
-    const normalized = avatar.trim();
-    const apiBaseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-
-    if (/^(https?:|data:|blob:)/i.test(normalized)) {
-        return normalized;
-    }
-
-    if (normalized.startsWith('/')) {
-        return `${apiBaseUrl}${normalized}`;
-    }
-
-    if (normalized.startsWith('uploads/')) {
-        return `${apiBaseUrl}/${normalized}`;
-    }
-
-    return `${apiBaseUrl}/uploads/${normalized}`;
+    return resolveImageSrc(avatar);
 };

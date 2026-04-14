@@ -3,6 +3,7 @@ import {
     OrganizerApprovalListItemResponse,
     OrganizerApprovalStatsResponse,
 } from '@/types/organizer.types';
+import { resolveImageSrc } from '../../utils/image-url';
 
 export type OrganizerApprovalState = 'pending' | 'needsEdit' | 'approved';
 export type OrganizerApprovalDecision = 'APPROVED' | 'NEEDS_EDIT' | 'REJECTED';
@@ -77,18 +78,7 @@ const formatDateLabel = (value?: string | Date | null): string => {
     }).format(date);
 };
 
-const toImageUrl = (image?: string): string | undefined => {
-    if (!image) {
-        return undefined;
-    }
-
-    if (/^https?:\/\//i.test(image)) {
-        return image;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    return `${baseUrl}/uploads/${image}`;
-};
+const toImageUrl = resolveImageSrc;
 
 const buildChecklist = (item: {
     approvalState: OrganizerApprovalState;

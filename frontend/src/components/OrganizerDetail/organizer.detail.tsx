@@ -17,19 +17,7 @@ import authService from '../../services/auth.service';
 import type { OrganizerOverviewResponse } from '@/types/organizer.types';
 import { formatTime } from '../../utils/date-time';
 import styles from './organizer.detail.module.scss';
-
-const getImageUrl = (image?: string) => {
-    if (!image) {
-        return '';
-    }
-
-    if (/^https?:\/\//i.test(image)) {
-        return image;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    return `${baseUrl}/uploads/${image}`;
-};
+import { resolveImageSrc } from '../../utils/image-url';
 
 const OrganizerDetail: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -110,7 +98,7 @@ const OrganizerDetail: React.FC = () => {
         void fetchMyOrganizations();
     }, [currentUser?.id]);
 
-    const organizerImage = useMemo(() => getImageUrl(overview?.organizer?.image), [overview?.organizer?.image]);
+    const organizerImage = useMemo(() => resolveImageSrc(overview?.organizer?.image) || '', [overview?.organizer?.image]);
     const canManageOrganization = useMemo(() => {
         if (!organizerId) {
             return false;
@@ -147,7 +135,7 @@ const OrganizerDetail: React.FC = () => {
         setFormPhone(overview.organizer.phone || '');
         setFormDescription(overview.organizer.description || '');
         setImageFile(null);
-        setImagePreview(getImageUrl(overview.organizer.image));
+        setImagePreview(resolveImageSrc(overview.organizer.image) || '');
         setEditSuccess('');
     }, [overview]);
 
@@ -178,7 +166,7 @@ const OrganizerDetail: React.FC = () => {
         setFormPhone(overview.organizer.phone || '');
         setFormDescription(overview.organizer.description || '');
         setImageFile(null);
-        setImagePreview(getImageUrl(overview.organizer.image));
+        setImagePreview(resolveImageSrc(overview.organizer.image) || '');
         setEditError('');
         setEditSuccess('');
         setEditing(false);
@@ -299,6 +287,16 @@ const OrganizerDetail: React.FC = () => {
                             >
                                 <FontAwesomeIcon icon={faPenToSquare} /> {canResubmit ? 'Chỉnh sửa và gửi lại duyệt' : 'Chỉnh sửa thông tin'}
                             </button>
+                            {canEditOrganization && (
+                                <button
+                                    type="button"
+                                    className={styles.linkButton}
+                                    onClick={() => navigate(`/admin/complaints?organizerId=${organizerId}`)}
+                                    title="Mở danh sách khiếu nại của tổ chức"
+                                >
+                                    <FontAwesomeIcon icon={faClipboardCheck} /> Xử lý khiếu nại
+                                </button>
+                            )}
                         </div>
 
                         {canResubmit && overview.organizer.reviewNote && (
@@ -451,7 +449,7 @@ const OrganizerDetail: React.FC = () => {
                                     >
                                         <div className={styles.activityImageWrap}>
                                             {activity.image ? (
-                                                <img src={getImageUrl(activity.image)} alt={activity.title} />
+                                                <img src={resolveImageSrc(activity.image) || ''} alt={activity.title} />
                                             ) : (
                                                 <div className={styles.activityPlaceholder}>Không có ảnh</div>
                                             )}

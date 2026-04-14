@@ -3,6 +3,7 @@ import authService from '../../services/auth.service';
 import checkinService from '../../services/checkin.service';
 import studentService from '../../services/student.service';
 import { AttendanceHistoryItem, AttendanceHistorySummary } from '../../types/attendance-history.types';
+import { resolveImageSrc } from '../../utils/image-url';
 import styles from './student.dashboard.module.scss';
 
 const DEFAULT_SUMMARY: AttendanceHistorySummary = {
@@ -31,24 +32,7 @@ interface EditProfileForm {
     phone: string;
 }
 
-const buildAvatarUrl = (avatar?: string) => {
-    if (!avatar) {
-        return '';
-    }
-
-    if (/^https?:\/\//i.test(avatar)) {
-        return avatar;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    const normalizedAvatar = avatar.replace(/^\/+/, '');
-
-    if (normalizedAvatar.startsWith('uploads/')) {
-        return `${baseUrl}/${normalizedAvatar}`;
-    }
-
-    return `${baseUrl}/uploads/${normalizedAvatar}`;
-};
+const buildAvatarUrl = (avatar?: string) => resolveImageSrc(avatar) || '';
 
 const normalizeProfile = (raw: any): DashboardProfile => ({
     id: String(raw?.id || raw?._id || ''),

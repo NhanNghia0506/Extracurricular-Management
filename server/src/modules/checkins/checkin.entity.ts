@@ -7,28 +7,28 @@ export type CheckinDocument = Checkin & Document;
 @Schema({ timestamps: true })
 export class Checkin {
     @Prop({ required: true, type: Types.ObjectId, ref: 'CheckinSession' })
-    checkinSessionId: Types.ObjectId;
+    checkinSessionId!: Types.ObjectId;
 
     @Prop({ required: true, type: Types.ObjectId, ref: 'User' })
-    userId: Types.ObjectId;
+    userId!: Types.ObjectId;
 
     @Prop({ required: true })
-    latitude: number;
+    latitude!: number;
 
     @Prop({ required: true })
-    longitude: number;
+    longitude!: number;
 
     @Prop({ required: true })
-    distance: number;
+    distance!: number;
 
     @Prop({ required: true, enum: Object.values(CheckinStatus) })
-    status: CheckinStatus;
+    status!: CheckinStatus;
 
     @Prop({ required: false, default: null })
     failReason?: string;
 
     @Prop({ required: true })
-    deviceId: string;
+    deviceId!: string;
 
     @Prop({ required: false, default: false })
     isAnomalous?: boolean;
@@ -38,6 +38,18 @@ export class Checkin {
 
     @Prop({ required: false, default: null })
     movementSpeed?: number;
+
+    @Prop({ required: false, default: 0 })
+    trainingScoreDelta?: number;
+
+    @Prop({ required: false, default: null, type: Types.ObjectId, ref: 'User' })
+    adjustedBy?: Types.ObjectId | null;
+
+    @Prop({ required: false, default: null })
+    adjustmentReason?: string;
+
+    @Prop({ required: false, default: null })
+    adjustedAt?: Date;
 
     @Prop()
     createdAt?: Date;

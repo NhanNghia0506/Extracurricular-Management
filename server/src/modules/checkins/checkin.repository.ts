@@ -180,6 +180,44 @@ export class CheckinRepository {
         }).exec();
     }
 
+    async findLatestBySessionAndUser(checkinSessionId: string, userId: string): Promise<Checkin | null> {
+        return this.checkinModel
+            .findOne({
+                checkinSessionId: new Types.ObjectId(checkinSessionId),
+                userId: new Types.ObjectId(userId),
+            })
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
+    async updateComplaintAdjustment(
+        checkinId: string,
+        payload: {
+            status?: CheckinStatus;
+            trainingScoreDelta?: number;
+            adjustedBy: string;
+            adjustmentReason: string;
+        },
+    ): Promise<Checkin | null> {
+        const updateData: Record<string, unknown> = {
+            adjustedBy: new Types.ObjectId(payload.adjustedBy),
+            adjustedAt: new Date(),
+            adjustmentReason: payload.adjustmentReason,
+        };
+
+        if (payload.status !== undefined) {
+            updateData.status = payload.status;
+        }
+
+        if (payload.trainingScoreDelta !== undefined) {
+            updateData.trainingScoreDelta = payload.trainingScoreDelta;
+        }
+
+        return this.checkinModel
+            .findByIdAndUpdate(new Types.ObjectId(checkinId), updateData, { new: true })
+            .exec();
+    }
+
     /**
      * Lấy danh sách tất cả checkin theo sessionId
      * @param checkinSessionId - ID của session
@@ -189,7 +227,10 @@ export class CheckinRepository {
         checkinSessionId: string,
         status?: CheckinStatus,
     ): Promise<Checkin[]> {
-        const filter: any = {
+        const filter: {
+            checkinSessionId: Types.ObjectId;
+            status?: CheckinStatus;
+        } = {
             checkinSessionId: new Types.ObjectId(checkinSessionId),
         };
 
@@ -277,7 +318,12 @@ export class CheckinRepository {
                     checkinTime: '$createdAt',
                     locationAddress: '$session.location.address',
                     status: '$status',
-                    trainingScore: { $ifNull: ['$activity.trainingScore', 0] },
+                    trainingScore: {
+                        $add: [
+                            { $ifNull: ['$activity.trainingScore', 0] },
+                            { $ifNull: ['$trainingScoreDelta', 0] },
+                        ],
+                    },
                 },
             },
             {
@@ -480,7 +526,14 @@ export class CheckinRepository {
                     className: { $first: '$class.name' },
                     facultyId: { $first: '$faculty._id' },
                     facultyName: { $first: '$faculty.name' },
-                    trainingScore: { $first: { $ifNull: ['$activity.trainingScore', 0] } },
+                    trainingScore: {
+                        $max: {
+                            $add: [
+                                { $ifNull: ['$activity.trainingScore', 0] },
+                                { $ifNull: ['$trainingScoreDelta', 0] },
+                            ],
+                        },
+                    },
                 },
             },
             {
@@ -787,7 +840,14 @@ export class CheckinRepository {
                     studentCode: { $first: '$student.studentCode' },
                     className: { $first: '$class.name' },
                     activityTitle: { $first: '$activity.title' },
-                    trainingScore: { $first: { $ifNull: ['$activity.trainingScore', 0] } },
+                    trainingScore: {
+                        $first: {
+                            $add: [
+                                { $ifNull: ['$activity.trainingScore', 0] },
+                                { $ifNull: ['$trainingScoreDelta', 0] },
+                            ],
+                        },
+                    },
                     firstCheckinAt: { $min: '$createdAt' },
                 },
             },

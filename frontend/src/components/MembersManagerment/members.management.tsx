@@ -4,7 +4,7 @@ import styles from './members.management.module.scss';
 import organizerService from '../../services/organizer.service';
 import authService from '../../services/auth.service';
 
-type RoleKey = 'manager' | 'moderator' | 'member';
+type RoleKey = 'manager' | 'member';
 
 interface MemberItem {
     id: string;
@@ -23,14 +23,6 @@ const ROLE_META: Record<RoleKey, { label: string; permissions: string[] }> = {
             'Gửi thông báo cho thành viên',
         ],
     },
-    moderator: {
-        label: 'Moderator',
-        permissions: [
-            'Kiểm tra nội dung hoạt động và bình luận',
-            'Hỗ trợ điểm danh và xử lý thành viên vi phạm',
-            'Theo dõi trạng thái hoạt động được phân công',
-        ],
-    },
     member: {
         label: 'Member',
         permissions: [
@@ -45,7 +37,7 @@ const toRoleKey = (role: string): RoleKey => {
     const normalized = String(role || '').toUpperCase();
     if (normalized === 'MANAGER') return 'manager';
     if (normalized === 'MEMBER') return 'member';
-    return 'moderator';
+    return 'member';
 };
 
 const toApiRole = (roleKey: RoleKey): 'MANAGER' | 'MEMBER' => {

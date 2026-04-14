@@ -17,6 +17,7 @@ import { ConversationModule } from './modules/conversations/conversation.module'
 import { MessageModule } from './modules/messages/message.module';
 import { CommentModule } from './modules/comments/comment.module';
 import { ActivityFeedbackModule } from './modules/activity-feedback/activity-feedback.module';
+import { ComplaintModule } from './modules/complaints/complaint.module';
 import { CertificateModule } from './modules/certificates/certificate.module';
 import { ActivityReminderModule } from './modules/activity-reminders/activity-reminder.module';
 import { EventsModule } from './events/events.module';
@@ -42,6 +43,7 @@ import { MailModule } from './modules/mail/mail.module';
     MessageModule,
     CommentModule,
     ActivityFeedbackModule,
+    ComplaintModule,
     CertificateModule,
     ActivityReminderModule,
     EventsModule,

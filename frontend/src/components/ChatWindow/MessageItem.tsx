@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styles from '../ChatWindow/chat.window.module.scss';
 import UserAvatar from '../UserAvatar/user.avatar';
+import { resolveImageSrc } from '../../utils/image-url';
 
 interface MessageItemProps {
     avatar?: string;
@@ -13,25 +14,7 @@ interface MessageItemProps {
     isNew?: boolean;
 }
 
-const resolveMessageImageUrl = (value?: string): string => {
-    const normalized = (value || '').trim();
-    if (!normalized) {
-        return '';
-    }
-
-    if (/^(https?:|data:|blob:)/i.test(normalized)) {
-        return normalized;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    const normalizedPath = normalized.startsWith('/')
-        ? normalized
-        : normalized.startsWith('uploads/')
-            ? `/${normalized}`
-            : `/uploads/${normalized}`;
-
-    return `${baseUrl}${normalizedPath}`;
-};
+const resolveMessageImageUrl = (value?: string): string => resolveImageSrc(value) || '';
 
 const isImagePathLikeContent = (value: string): boolean => {
     const normalized = value.trim();

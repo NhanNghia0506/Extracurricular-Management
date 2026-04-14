@@ -9,6 +9,7 @@ import { useToast } from '../../contexts/ToastContext';
 import CreateActivityForm from './CreateActivityForm';
 import styles from './create.activity.module.scss';
 import type { ActivityDetailResponse } from '@/types/activity.types';
+import { resolveImageSrc } from '../../utils/image-url';
 
 const formatDateTimeLocal = (value?: string) => {
     if (!value) return '';
@@ -39,8 +40,6 @@ const UpdateActivity: React.FC = () => {
 
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
-
-    const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
 
     const {
         setTitle,
@@ -88,7 +87,7 @@ const UpdateActivity: React.FC = () => {
                 setParticipantCount(activity.participantCount ?? 0);
 
                 if (activity.image) {
-                    setCoverPreview(`${baseUrl}/uploads/${activity.image}`);
+                    setCoverPreview(resolveImageSrc(activity.image) || '');
                 }
 
                 if (activity.location) {
@@ -107,7 +106,6 @@ const UpdateActivity: React.FC = () => {
         fetchActivityDetail();
     }, [
         activityId,
-        baseUrl,
         setTitle,
         setDescription,
         setCategoryId,

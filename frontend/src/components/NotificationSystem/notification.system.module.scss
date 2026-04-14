@@ -71,6 +71,27 @@ $text-muted: #64748b;
             line-height: 1.5;
             margin-bottom: 1rem;
         }
+
+        .actionLink {
+            background: $info-blue;
+            border: none;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 0.86rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 0.5rem 0.85rem;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+                background: darken($info-blue, 5%);
+                text-decoration: none;
+            }
+        }
     }
 
     /* Success Variant */
@@ -78,24 +99,6 @@ $text-muted: #64748b;
         .iconContainer {
             background-color: #ecfdf5;
             color: $success-green;
-        }
-
-        .actionLink {
-            background: none;
-            border: none;
-            color: $info-blue;
-            font-weight: 700;
-            font-size: 0.9rem;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            padding: 0;
-
-            &:hover {
-                text-decoration: underline;
-            }
         }
     }
 

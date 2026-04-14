@@ -3,6 +3,7 @@ import {
     ActivityApprovalListItemResponse,
     ActivityApprovalStatsResponse,
 } from '@/types/activity.types';
+import { resolveImageSrc } from '../../utils/image-url';
 
 export type ApprovalState = 'pending' | 'needsEdit' | 'approved';
 export type ApprovalDecision = 'APPROVED' | 'NEEDS_EDIT' | 'REJECTED';
@@ -121,18 +122,7 @@ const buildChecklist = (item: {
     return checklist;
 };
 
-const toImageUrl = (image?: string): string | undefined => {
-    if (!image) {
-        return undefined;
-    }
-
-    if (/^https?:\/\//i.test(image)) {
-        return image;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    return `${baseUrl}/uploads/${image}`;
-};
+const toImageUrl = resolveImageSrc;
 
 const toApprovalState = (approvalStatus: string): ApprovalState | null => APPROVAL_STATE_MAP[approvalStatus] ?? null;
 
@@ -172,7 +162,6 @@ export const mapApprovalListItemToView = (item: ActivityApprovalListItemResponse
         imageUrl,
     };
 };
-
 export const mapApprovalDetailToView = (item: ActivityApprovalDetailResponse): ApprovalActivity | null => {
     const approvalState = toApprovalState(item.approvalStatus);
 

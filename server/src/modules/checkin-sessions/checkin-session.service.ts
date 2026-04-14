@@ -5,9 +5,10 @@ import { CreateCheckinSessionDto } from './dtos/create.checkin-session.dto';
 import { CheckinSessionRepository } from './checkin-session.repository';
 import { CheckinSession } from './checkin-session.entity';
 import { UpdateCheckinSessionDto } from './dtos/update.checkin-session.dto';
-import { ActivityStatus, NotificationPriority, NotificationType, UserRole } from 'src/global/globalEnum';
+import { ActivityStatus, NotificationPriority, NotificationType, OrganizerMemberRole, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { NotificationService } from '../notifications/notification.service';
+import { OrganizerMemberService } from '../organizer-members/organizer-member.service';
 
 @Injectable()
 export class CheckinSessionService {
@@ -18,9 +19,10 @@ export class CheckinSessionService {
         private readonly activityService: ActivityService,
         private readonly activityParticipantService: ActivityParticipantService,
         private readonly notificationService: NotificationService,
+        private readonly organizerMemberService: OrganizerMemberService,
     ) { }
 
-    async create(createCheckinSessionDto: CreateCheckinSessionDto) {
+    async create(createCheckinSessionDto: CreateCheckinSessionDto, actorUserId: string) {
         if (!Types.ObjectId.isValid(createCheckinSessionDto.activityId)) {
             throw new BadRequestException('activityId phải là MongoDB ObjectId hợp lệ');
         }
@@ -28,6 +30,19 @@ export class CheckinSessionService {
         const activity = await this.activityService.findById(createCheckinSessionDto.activityId);
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
+        }
+
+        const organizerId = typeof activity.organizerId === 'string'
+            ? activity.organizerId
+            : String((activity.organizerId as any)?._id || activity.organizerId || '');
+
+        if (!Types.ObjectId.isValid(organizerId)) {
+            throw new BadRequestException('Không xác định được tổ chức của hoạt động');
+        }
+
+        const actorMember = await this.organizerMemberService.findByUserIdAndOrganizerId(actorUserId, organizerId);
+        if (!actorMember || !actorMember.isActive || actorMember.role !== OrganizerMemberRole.MANAGER) {
+            throw new ForbiddenException('Chỉ MANAGER của tổ chức mới có quyền tạo phiên điểm danh');
         }
 
         if (activity.status === ActivityStatus.COMPLETED) {
@@ -200,5 +215,9 @@ export class CheckinSessionService {
         }
 
         return this.checkinSessionRepository.findAllByActivityId(activityId);
+    }
+
+    findIdsByActivityIds(activityIds: string[]): Promise<string[]> {
+        return this.checkinSessionRepository.findIdsByActivityIds(activityIds);
     }
 }

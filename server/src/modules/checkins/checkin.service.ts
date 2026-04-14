@@ -83,6 +83,23 @@ interface CheckinMovementSnapshot {
     createdAt?: Date;
 }
 
+interface ComplaintCheckinAdjustmentInput {
+    checkinSessionId: string;
+    userId: string;
+    adjustedBy: string;
+    status?: CheckinStatus;
+    trainingScoreDelta?: number;
+    reason: string;
+}
+
+interface ComplaintCheckinAdjustmentResult {
+    checkinId: string;
+    fromStatus: CheckinStatus;
+    toStatus: CheckinStatus;
+    fromTrainingScoreDelta: number;
+    toTrainingScoreDelta: number;
+}
+
 export interface MyAttendanceHistorySummary {
     totalParticipatedActivities: number;
     cumulativeTrainingScore: number;
@@ -313,6 +330,44 @@ export class CheckinService {
         };
 
         return repository.findBySessionId(checkinSessionId, status);
+    }
+
+    async applyComplaintAdjustment(input: ComplaintCheckinAdjustmentInput): Promise<ComplaintCheckinAdjustmentResult> {
+        if (!Types.ObjectId.isValid(input.checkinSessionId)) {
+            throw new BadRequestException('checkinSessionId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(input.userId)) {
+            throw new BadRequestException('userId phải là MongoDB ObjectId hợp lệ');
+        }
+
+        if (!Types.ObjectId.isValid(input.adjustedBy)) {
+            throw new BadRequestException('adjustedBy phải là MongoDB ObjectId hợp lệ');
+        }
+
+        const checkin = await this.checkinRepository.findLatestBySessionAndUser(input.checkinSessionId, input.userId);
+        if (!checkin) {
+            throw new NotFoundException('Không tìm thấy bản ghi checkin của sinh viên trong phiên này');
+        }
+
+        const updated = await this.checkinRepository.updateComplaintAdjustment(checkin._id.toString(), {
+            status: input.status,
+            trainingScoreDelta: input.trainingScoreDelta,
+            adjustedBy: input.adjustedBy,
+            adjustmentReason: input.reason,
+        });
+
+        if (!updated) {
+            throw new NotFoundException('Không thể cập nhật bản ghi checkin');
+        }
+
+        return {
+            checkinId: checkin._id.toString(),
+            fromStatus: checkin.status,
+            toStatus: updated.status,
+            fromTrainingScoreDelta: Number(checkin.trainingScoreDelta || 0),
+            toTrainingScoreDelta: Number(updated.trainingScoreDelta || 0),
+        };
     }
 
     async create(

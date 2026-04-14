@@ -86,3 +86,40 @@ export enum CertificateStatus {
     ISSUED = 'ISSUED',
     REVOKED = 'REVOKED',
 }
+
+export enum ComplaintCategory {
+    ACTIVITY = 'ACTIVITY',
+    CHECKIN = 'CHECKIN',
+}
+
+export enum ComplaintStatus {
+    SUBMITTED = 'SUBMITTED',
+    UNDER_REVIEW = 'UNDER_REVIEW',
+    RESOLVED = 'RESOLVED',
+    CLOSED = 'CLOSED',
+}
+
+export enum ComplaintResolution {
+    UPHELD = 'UPHELD',
+    DISMISSED = 'DISMISSED',
+    PARTIAL = 'PARTIAL',
+}
+
+export enum ComplaintPriority {
+    NORMAL = 'NORMAL',
+    HIGH = 'HIGH',
+    URGENT = 'URGENT',
+}
+
+export enum ComplaintActorRole {
+    STUDENT = 'STUDENT',
+    ADMIN = 'ADMIN',
+    SYSTEM = 'SYSTEM',
+}
+
+export enum ComplaintHistoryAction {
+    CREATED = 'CREATED',
+    ATTACHMENT_ADDED = 'ATTACHMENT_ADDED',
+    RESPONSE_ADDED = 'RESPONSE_ADDED',
+    STATUS_CHANGED = 'STATUS_CHANGED',
+}

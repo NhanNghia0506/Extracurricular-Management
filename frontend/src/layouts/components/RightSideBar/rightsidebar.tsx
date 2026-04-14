@@ -5,6 +5,7 @@ import styles from './rightsidebar.module.scss';
 import conversationService from '../../../services/conversation.service';
 import authService from '../../../services/auth.service';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
+import { resolveImageSrc } from '../../../utils/image-url';
 
 interface Club {
     id: string;
@@ -26,7 +27,6 @@ interface ActiveConversation {
 const RightSidebar: React.FC = () => {
     const navigate = useNavigate();
     const currentUser = authService.getCurrentUser();
-    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
     const [clubs, setClubs] = useState<Club[]>([]);
     const [isLoadingClubs, setIsLoadingClubs] = useState(true);
     const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
@@ -38,11 +38,9 @@ const RightSidebar: React.FC = () => {
         conversationId: conversation._id,
         title: conversation.title,
         preview: conversation.lastMessageContent || 'Chưa có tin nhắn nào',
-        activityImage: conversation.activityId?.image
-            ? `${apiBaseUrl.replace(/\/$/, '')}/uploads/${conversation.activityId.image}`
-            : undefined,
+        activityImage: resolveImageSrc(conversation.activityId?.image),
         lastMessageAt: conversation.lastMessageAt,
-    }), [apiBaseUrl]);
+    }), []);
 
     const formatConversationTime = (value?: string) => {
         if (!value) {
@@ -89,9 +87,7 @@ const RightSidebar: React.FC = () => {
                     conversationId: conversation._id,
                     name: conversation.title,
                     members: `${conversation.participantsCount || 0} thành viên`,
-                    activityImage: conversation.activityId?.image
-                        ? `${apiBaseUrl.replace(/\/$/, '')}/uploads/${conversation.activityId.image}`
-                        : undefined,
+                    activityImage: resolveImageSrc(conversation.activityId?.image),
                 })));
                 setActiveConversations(joinedConversations.map(mapConversationToActiveItem));
             } catch (error) {
@@ -105,7 +101,7 @@ const RightSidebar: React.FC = () => {
         };
 
         fetchSidebarData();
-    }, [apiBaseUrl, currentUser?.id, mapConversationToActiveItem]);
+    }, [currentUser?.id, mapConversationToActiveItem]);
 
     const handleJoinConversation = async () => {
         if (!currentUser?.id) {

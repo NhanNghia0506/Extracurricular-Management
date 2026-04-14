@@ -24,6 +24,7 @@ import type { CheckinEvent, CheckinResponse } from '../../types/checkin.types';
 import checkinService from '../../services/checkin.service';
 import checkinSessionService from '../../services/checkin-session.service';
 import { socketService } from '../../services/socket.service';
+import { resolveImageSrc } from '../../utils/image-url';
 
 const sessionLocationIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -36,22 +37,7 @@ const sessionLocationIcon = new L.Icon({
 
 const defaultCenter: LatLngTuple = [10.7769, 106.7009];
 
-const buildAssetUrl = (value?: string | null) => {
-  if (!value) {
-    return undefined;
-  }
-
-  if (/^(https?:|data:|blob:)/i.test(value)) {
-    return value;
-  }
-
-  if (value.startsWith('/')) {
-    return value;
-  }
-
-  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-  return `${apiBaseUrl.replace(/\/$/, '')}/uploads/${value}`;
-};
+const buildAssetUrl = resolveImageSrc;
 
 const escapeHtml = (value: string) => value
   .replace(/&/g, '&amp;')

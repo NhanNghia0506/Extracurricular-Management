@@ -15,6 +15,8 @@ import CreateConversation from '../CreateConversation/create.conversation';
 import authService from '../../services/auth.service';
 import CommentSection from '../Comments/comment.section';
 import ActivityFeedbackSection from '../ActivityFeedback/activity.feedback.section';
+import organizerService from '../../services/organizer.service';
+import { resolveImageSrc } from '../../utils/image-url';
 
 const locationIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -121,6 +123,8 @@ const ActivityDetail: React.FC = () => {
     const [checkinSession, setCheckinSession] = useState<CheckinSession | null>(null);
     const [endingActivity, setEndingActivity] = useState(false);
     const [allParticipants, setAllParticipants] = useState<Array<{ status?: string }>>([]);
+    const [myOrganizerIds, setMyOrganizerIds] = useState<string[]>([]);
+    const [myManagedOrganizerIds, setMyManagedOrganizerIds] = useState<string[]>([]);
 
     const currentUser = authService.getCurrentUser();
     const currentUserId = currentUser?.id as string | undefined;
@@ -159,6 +163,37 @@ const ActivityDetail: React.FC = () => {
             return null;
         }
     };
+
+    useEffect(() => {
+        const fetchMyOrganizations = async () => {
+            if (!currentUser?.id) {
+                setMyOrganizerIds([]);
+                setMyManagedOrganizerIds([]);
+                return;
+            }
+
+            try {
+                const response = await organizerService.myOrganizations(currentUser.id);
+                const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+                const ids = rows
+                    .map((item: any) => String(item?.organizerId?._id || item?.organizerId || ''))
+                    .filter((value: string) => Boolean(value));
+                const managerIds = rows
+                    .filter((item: any) => item?.role === 'MANAGER' && item?.isActive !== false)
+                    .map((item: any) => String(item?.organizerId?._id || item?.organizerId || ''))
+                    .filter((value: string) => Boolean(value));
+
+                setMyOrganizerIds(ids);
+                setMyManagedOrganizerIds(managerIds);
+            } catch (fetchError) {
+                console.error('Không thể tải danh sách tổ chức của người dùng:', fetchError);
+                setMyOrganizerIds([]);
+                setMyManagedOrganizerIds([]);
+            }
+        };
+
+        void fetchMyOrganizations();
+    }, [currentUser?.id]);
 
     useEffect(() => {
         const fetchActivityDetail = async () => {
@@ -414,8 +449,13 @@ const ActivityDetail: React.FC = () => {
     const isRejected = activity.approvalStatus === 'REJECTED';
     const isActivityEnded = activity.status === 'COMPLETED';
     const canResubmitActivity = (needsEdit || isRejected) && !isActivityEnded;
+    const canEditActivity = activity.isOwner && !isActivityEnded && !canResubmitActivity;
     const canEndActivity = activity.isOwner && isApproved && activity.status !== 'COMPLETED' && activity.status !== 'CANCELLED';
     const canAccessChat = hasConversation && (activity.isOwner || currentUserRole === 'ADMIN' || (activity.isRegistered && !isActivityEnded));
+    const isOrganizerMember = Boolean(activity.organizer?._id && myOrganizerIds.includes(activity.organizer._id));
+    const isOrganizerManager = Boolean(activity.organizer?._id && myManagedOrganizerIds.includes(activity.organizer._id));
+    const canManageCheckinSessions = isOrganizerManager;
+    const canViewParticipantLists = activity.isOwner || currentUserRole === 'ADMIN' || isOrganizerMember;
     const isWaitlisted = activity.participantStatus === 'PENDING';
     const isRegisteredParticipant = activity.participantStatus === 'REGISTERED' || activity.participantStatus === 'APPROVED';
     const participatedCount = allParticipants.filter((p) => p.status === 'PARTICIPATED').length;
@@ -435,11 +475,8 @@ const ActivityDetail: React.FC = () => {
     const directionsUrl = activity.location
         ? `https://www.google.com/maps/search/?api=1&query=${activity.location.latitude},${activity.location.longitude}`
         : 'https://www.google.com/maps';
-    const organizerImageUrl = activity.organizer?.image
-        ? (activity.organizer.image.startsWith('http')
-            ? activity.organizer.image
-            : `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}/uploads/${activity.organizer.image}`)
-        : 'https://api.dicebear.com/7.x/avataaars/svg?seed=Organizer';
+    const organizerImageUrl = resolveImageSrc(activity.organizer?.image)
+        || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Organizer';
     const activityStatusLabel = mapActivityStatusToVietnamese(activity.status);
 
     return (
@@ -447,9 +484,8 @@ const ActivityDetail: React.FC = () => {
             {/* 1. Banner Image */}
             <div className={styles.bannerWrapper}>
                 <img
-                    src={activity.image
-                        ? `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001'}/uploads/${activity.image}`
-                        : 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2070'
+                    src={resolveImageSrc(activity.image)
+                        || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2070'
                     }
                     alt={activity.title}
                 />
@@ -562,7 +598,16 @@ const ActivityDetail: React.FC = () => {
                         </div>
                         {activity.isOwner ? (
                             <>
-                                {isApproved && (
+                                {canEditActivity && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={handleGoToUpdate}
+                                    >
+                                        <i className="fa-solid fa-pen-to-square"></i>
+                                        Chỉnh sửa hoạt động
+                                    </button>
+                                )}
+                                {isApproved && canManageCheckinSessions && (
                                     <button
                                         className={styles.registerBtn}
                                         onClick={handleGoToCheckinSessions}
@@ -593,6 +638,15 @@ const ActivityDetail: React.FC = () => {
                             </>
                         ) : (
                             <>
+                                {isApproved && canManageCheckinSessions && (
+                                    <button
+                                        className={styles.registerBtn}
+                                        onClick={handleGoToCheckinSessions}
+                                    >
+                                        <i className="fa-solid fa-list-check"></i>
+                                        Danh sách phiên điểm danh
+                                    </button>
+                                )}
                                 {currentUserRole === 'ADMIN' && checkinSession?._id && (
                                     <button
                                         className={styles.actionBtnOutline}
@@ -649,7 +703,7 @@ const ActivityDetail: React.FC = () => {
                                 )}
                             </>
                         )}
-                        {(activity.isOwner || currentUserRole === 'ADMIN') && (
+                        {canViewParticipantLists && (
                             <button
                                 className={styles.registerBtn}
                                 onClick={handleGoToParticipants}
@@ -761,7 +815,7 @@ const ActivityDetail: React.FC = () => {
                                 {endingActivity ? 'Đang kết thúc...' : 'Kết thúc hoạt động'}
                             </button>
                         )}
-                        {isActivityEnded && activity.isOwner && (
+                        {isActivityEnded && canViewParticipantLists && (
                             <button
                                 className={styles.finalizedBtn}
                                 onClick={handleGoToFinalizedParticipants}

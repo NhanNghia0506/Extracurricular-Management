@@ -8,20 +8,8 @@ import {
 import authService from '../../services/auth.service';
 import organizerService from '../../services/organizer.service';
 import type { Organizer } from '../../types/organizer.types';
+import { resolveImageSrc } from '../../utils/image-url';
 import styles from './organizers.module.scss';
-
-const buildOrganizerImageUrl = (image?: string) => {
-    if (!image) {
-        return '';
-    }
-
-    if (/^https?:\/\//i.test(image)) {
-        return image;
-    }
-
-    const baseUrl = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
-    return `${baseUrl}/uploads/${image}`;
-};
 
 const normalizeOrganizer = (item: Organizer & { _id?: string }) => ({
     id: item.id || item._id || '',
@@ -29,7 +17,7 @@ const normalizeOrganizer = (item: Organizer & { _id?: string }) => ({
     email: item.email || 'Chưa cập nhật email',
     phone: item.phone || 'Chưa cập nhật số điện thoại',
     description: item.description || '',
-    image: buildOrganizerImageUrl(item.image),
+    image: resolveImageSrc(item.image) || '',
     approvalStatus: item.approvalStatus || 'PENDING',
 });
 

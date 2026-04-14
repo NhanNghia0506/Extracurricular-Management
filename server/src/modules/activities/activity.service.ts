@@ -374,6 +374,10 @@ export class ActivityService {
         return this.activityRepository.findById(id);
     }
 
+    findIdsByOrganizerId(organizerId: string): Promise<string[]> {
+        return this.activityRepository.findIdsByOrganizerId(organizerId);
+    }
+
     /**
      * Gộp danh sách activity user đã tạo và đã tham gia.
      */

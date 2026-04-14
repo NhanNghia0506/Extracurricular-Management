@@ -9,6 +9,7 @@ import { CheckinSessionService } from './checkin-session.service';
 import { UserModule } from '../users/user.module';
 import { ActivityParticipantModule } from '../activity-participants/activity-participant.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { NotificationModule } from '../notifications/notification.module';
         ActivityModule,
         ActivityParticipantModule,
         NotificationModule,
+        OrganizerMemberModule,
     ],
     controllers: [CheckinSessionController],
     providers: [CheckinSessionService, CheckinSessionRepository, AuthGuard],

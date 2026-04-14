@@ -8,6 +8,7 @@ import authService from '../../../services/auth.service';
 import { socketService } from '../../../services/socket.service';
 import { ConversationUpdatedPayload, SocketEvent } from '../../../types/socket.types';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
+import { resolveImageSrc } from '../../../utils/image-url';
 
 interface ConversationItem {
     _id: string;
@@ -25,7 +26,6 @@ interface ConversationItem {
 }
 
 const ConversationSidebar: React.FC = () => {
-    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const currentConversationId = searchParams.get('Id');
@@ -141,7 +141,7 @@ const ConversationSidebar: React.FC = () => {
             return undefined;
         }
 
-        return `${apiBaseUrl.replace(/\/$/, '')}/uploads/${imageName}`;
+        return resolveImageSrc(imageName) || undefined;
     };
 
     return (

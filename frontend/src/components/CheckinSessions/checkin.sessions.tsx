@@ -10,8 +10,10 @@ import activityService from '../../services/activity.service';
 import checkinSessionService from '../../services/checkin-session.service';
 import checkinService from '../../services/checkin.service';
 import authService from '../../services/auth.service';
+import organizerService from '../../services/organizer.service';
 import type { ActivityDetailResponse } from '../../types/activity.types';
 import type { CheckinSession } from '../../types/checkin-session.types';
+import { resolveImageSrc } from '../../utils/image-url';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -67,22 +69,7 @@ const buildStatusLabel = (status: SessionStatus) => {
     return { text: 'ĐÃ KẾT THÚC', className: styles.badgeGray };
 };
 
-const buildAssetUrl = (value?: string | null) => {
-    if (!value) {
-        return '';
-    }
-
-    if (/^(https?:|data:|blob:)/i.test(value)) {
-        return value;
-    }
-
-    if (value.startsWith('/')) {
-        return value;
-    }
-
-    const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-    return `${apiBaseUrl.replace(/\/$/, '')}/uploads/${value}`;
-};
+const buildAssetUrl = resolveImageSrc;
 
 const SessionManagement: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -93,6 +80,7 @@ const SessionManagement: React.FC = () => {
     const [sessionCheckinTotals, setSessionCheckinTotals] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [canManageCheckinSessions, setCanManageCheckinSessions] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -120,8 +108,31 @@ const SessionManagement: React.FC = () => {
                     return bTime - aTime;
                 });
 
+                const currentUser = authService.getCurrentUser();
+                const organizerId = String(activityData?.organizer?._id || '');
+                let nextCanManageCheckinSessions = false;
+
+                if (currentUser?.id && organizerId) {
+                    try {
+                        const myOrganizationsResponse = await organizerService.myOrganizations(currentUser.id);
+                        const rows = Array.isArray(myOrganizationsResponse.data?.data)
+                            ? myOrganizationsResponse.data.data
+                            : [];
+
+                        nextCanManageCheckinSessions = rows.some((row: any) => {
+                            const rowOrganizerId = String(row?.organizerId?._id || row?.organizerId || '');
+                            return rowOrganizerId === organizerId
+                                && row?.isActive !== false
+                                && row?.role === 'MANAGER';
+                        });
+                    } catch {
+                        nextCanManageCheckinSessions = false;
+                    }
+                }
+
                 setActivity(activityData);
                 setSessions(sortedSessionsData);
+                setCanManageCheckinSessions(nextCanManageCheckinSessions);
 
                 if (sessionsData.length > 0) {
                     const totalsEntries = await Promise.all(
@@ -141,6 +152,7 @@ const SessionManagement: React.FC = () => {
                 }
             } catch (nextError: any) {
                 setError(nextError?.response?.data?.message || nextError?.message || 'Không thể tải danh sách phiên điểm danh');
+                setCanManageCheckinSessions(false);
             } finally {
                 setLoading(false);
             }
@@ -162,7 +174,7 @@ const SessionManagement: React.FC = () => {
     }, [activity?.registeredCount, sessionCheckinTotals, sessions]);
 
     const handleCreateSession = () => {
-        if (!activityId) {
+        if (!activityId || !canManageCheckinSessions) {
             return;
         }
 
@@ -170,7 +182,7 @@ const SessionManagement: React.FC = () => {
     };
 
     const handleEditSession = (sessionId: string) => {
-        if (!activityId) {
+        if (!activityId || !canManageCheckinSessions) {
             return;
         }
 
@@ -221,10 +233,16 @@ const SessionManagement: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                <button className={styles.btnCreate} onClick={handleCreateSession}>
-                    <FontAwesomeIcon icon={faPlus} /> Tạo phiên điểm danh mới
-                </button>
+                {canManageCheckinSessions && (
+                    <button className={styles.btnCreate} onClick={handleCreateSession}>
+                        <FontAwesomeIcon icon={faPlus} /> Tạo phiên điểm danh mới
+                    </button>
+                )}
             </header>
+
+            {!canManageCheckinSessions && (
+                <p className="small text-muted mt-2 mb-3">Chỉ MANAGER của tổ chức mới có quyền tạo hoặc chỉnh sửa phiên điểm danh.</p>
+            )}
 
             {/* 2. Thẻ thống kê tổng quát */}
             <section className={styles.statsGrid}>
@@ -311,15 +329,17 @@ const SessionManagement: React.FC = () => {
                             </div>
                             <div className={styles.sessionActions}>
                                 <div className={styles.toolButtons}>
-                                    <button
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            handleEditSession(session._id);
-                                        }}
-                                        title="Chỉnh sửa phiên"
-                                    >
-                                        <FontAwesomeIcon icon={faEdit} />
-                                    </button>
+                                    {canManageCheckinSessions && (
+                                        <button
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleEditSession(session._id);
+                                            }}
+                                            title="Chỉnh sửa phiên"
+                                        >
+                                            <FontAwesomeIcon icon={faEdit} />
+                                        </button>
+                                    )}
                                 </div>
                                 {canOpenRealtimeDashboard && (
                                     <button

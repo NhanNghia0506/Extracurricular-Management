@@ -29,6 +29,16 @@
     flex: 1;
 }
 
+.orgAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border-lighter);
+    background-color: var(--color-bg-very-light);
+}
+
 .orgIconBox {
     width: 48px;
     height: 48px;
@@ -214,29 +224,27 @@
     gap: 0.5rem;
 }
 
-.participantGroup {
-    display: flex;
-    align-items: center;
-}
+.registerBtn {
+    border: 1px solid var(--color-primary-blue, #2563eb);
+    background: var(--color-primary-blue, #2563eb);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: all 0.2s ease;
 
-.avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 2px solid var(--color-white);
-    margin-left: -10px; // Kỹ thuật xếp chồng (negative margin)
-    object-fit: cover;
-
-    &:first-child {
-        margin-left: 0;
+    &:hover:not(:disabled) {
+        filter: brightness(0.95);
+        transform: translateY(-1px);
     }
-}
 
-.moreCount {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-text-muted);
-    margin-left: 8px;
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+        transform: none;
+    }
 }
 
 // Icon bình luận (Facebook style)
