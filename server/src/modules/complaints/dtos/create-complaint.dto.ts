@@ -1,10 +1,6 @@
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
-import { ComplaintCategory, ComplaintPriority } from 'src/global/globalEnum';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class CreateComplaintDto {
-    @IsEnum(ComplaintCategory)
-    category!: ComplaintCategory;
-
     @IsString()
     @IsNotEmpty()
     targetEntityId!: string;
@@ -18,10 +14,6 @@ export class CreateComplaintDto {
     @IsNotEmpty()
     @MaxLength(2000)
     description!: string;
-
-    @IsEnum(ComplaintPriority)
-    @IsOptional()
-    priority?: ComplaintPriority;
 
     @IsArray()
     @IsString({ each: true })

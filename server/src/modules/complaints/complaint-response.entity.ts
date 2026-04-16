@@ -18,9 +18,6 @@ export class ComplaintResponse {
     @Prop({ required: true, maxlength: 4000 })
     message!: string;
 
-    @Prop({ required: true, default: false, index: true })
-    isInternal!: boolean;
-
     @Prop({ type: Date, default: Date.now, index: true })
     createdAt?: Date;
 

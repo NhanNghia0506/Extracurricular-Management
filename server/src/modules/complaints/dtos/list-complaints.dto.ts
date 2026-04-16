@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
-import { ComplaintCategory, ComplaintPriority, ComplaintStatus } from 'src/global/globalEnum';
+import { ComplaintStatus } from 'src/global/globalEnum';
 
 export class ListComplaintsDto {
     @IsNumber()
@@ -18,14 +18,6 @@ export class ListComplaintsDto {
     @IsEnum(ComplaintStatus)
     @IsOptional()
     status?: ComplaintStatus;
-
-    @IsEnum(ComplaintCategory)
-    @IsOptional()
-    category?: ComplaintCategory;
-
-    @IsEnum(ComplaintPriority)
-    @IsOptional()
-    priority?: ComplaintPriority;
 
     @IsString()
     @IsOptional()

@@ -9,12 +9,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
     ComplaintActorRole,
-    ComplaintCategory,
     ComplaintHistoryAction,
-    ComplaintPriority,
     ComplaintResolution,
     ComplaintStatus,
-    NotificationPriority,
     NotificationType,
     UserRole,
 } from 'src/global/globalEnum';
@@ -49,7 +46,6 @@ interface ComplaintResponseItem {
     senderName?: string;
     senderRole: ComplaintActorRole;
     message: string;
-    isInternal: boolean;
     attachments: ComplaintAttachmentItem[];
     createdAt?: Date;
     updatedAt?: Date;
@@ -73,7 +69,6 @@ interface ComplaintListItem {
     id: string;
     complainantId: string;
     complainantName?: string;
-    category: ComplaintCategory;
     targetEntityId: string;
     targetEntityName: string;
     title: string;
@@ -81,7 +76,6 @@ interface ComplaintListItem {
     attachmentUrls: string[];
     attachments: ComplaintAttachmentItem[];
     status: ComplaintStatus;
-    priority: ComplaintPriority;
     resolution?: ComplaintResolution | null;
     reviewNote?: string | null;
     reviewedBy?: {
@@ -133,11 +127,10 @@ export class ComplaintService {
         this.ensureObjectId(payload.targetEntityId, 'targetEntityId phải là MongoDB ObjectId hợp lệ');
         this.ensureObjectId(complainantId, 'userId phải là MongoDB ObjectId hợp lệ');
 
-        const targetName = await this.getTargetEntityName(payload.category, payload.targetEntityId);
+        const targetName = await this.getTargetEntityName(payload.targetEntityId);
 
         const existingOpen = await this.complaintRepository.findOpenByTargetAndComplainant(
             complainantId,
-            payload.category,
             payload.targetEntityId,
         );
 
@@ -147,11 +140,9 @@ export class ComplaintService {
 
         const created = await this.complaintRepository.create({
             complainantId,
-            category: payload.category,
             targetEntityId: payload.targetEntityId,
             title: payload.title.trim(),
             description: payload.description.trim(),
-            priority: payload.priority || ComplaintPriority.NORMAL,
             attachmentUrls: (payload.attachmentUrls || []).map((item) => item.trim()).filter(Boolean),
         });
 
@@ -196,15 +187,11 @@ export class ComplaintService {
             this.complaintRepository.countAll({
                 complainantId: currentUserId,
                 status: query.status,
-                category: query.category,
-                priority: query.priority,
             }),
             this.complaintRepository.findAll(
                 {
                     complainantId: currentUserId,
                     status: query.status,
-                    category: query.category,
-                    priority: query.priority,
                 },
                 limit,
                 skip,
@@ -237,13 +224,13 @@ export class ComplaintService {
 
         return this.toResponse(
             complaint,
-            await this.getTargetEntityName(complaint.category, complaint.targetEntityId.toString()),
+            await this.getTargetEntityName(complaint.targetEntityId.toString()),
         );
     }
 
     async listMineResponses(id: string, currentUserId: string): Promise<ComplaintResponseItem[]> {
         const complaint = await this.assertMineComplaint(id, currentUserId);
-        return this.listResponsesInternal(complaint._id.toString(), false);
+        return this.listResponsesInternal(complaint._id.toString());
     }
 
     async addMineResponse(
@@ -257,7 +244,6 @@ export class ComplaintService {
             senderId: new Types.ObjectId(currentUserId),
             senderRole: ComplaintActorRole.STUDENT,
             message: payload.message.trim(),
-            isInternal: false,
         });
 
         await this.createAttachmentRows(
@@ -297,15 +283,11 @@ export class ComplaintService {
         const [total, rows] = await Promise.all([
             this.complaintRepository.countAll({
                 status: query.status,
-                category: query.category,
-                priority: query.priority,
                 targetEntityIds,
             }),
             this.complaintRepository.findAll(
                 {
                     status: query.status,
-                    category: query.category,
-                    priority: query.priority,
                     targetEntityIds,
                 },
                 limit,
@@ -336,13 +318,13 @@ export class ComplaintService {
 
         return this.toResponse(
             complaint,
-            await this.getTargetEntityName(complaint.category, complaint.targetEntityId.toString()),
+            await this.getTargetEntityName(complaint.targetEntityId.toString()),
         );
     }
 
     async listAdminResponses(id: string, actorUserId?: string, organizerId?: string): Promise<ComplaintResponseItem[]> {
         const complaint = await this.assertComplaintForManagerScope(id, actorUserId, organizerId);
-        return this.listResponsesInternal(complaint._id.toString(), true);
+        return this.listResponsesInternal(complaint._id.toString());
     }
 
     async addAdminResponse(
@@ -354,13 +336,11 @@ export class ComplaintService {
         const complaint = await this.assertComplaintForManagerScope(id, adminId, organizerId);
         await this.assertCanManageComplaint(complaint, adminId, organizerId);
 
-        const isInternal = Boolean(payload.isInternal);
         const created = await this.complaintResponseModel.create({
             complaintId: complaint._id,
             senderId: new Types.ObjectId(adminId),
             senderRole: ComplaintActorRole.ADMIN,
             message: payload.message.trim(),
-            isInternal,
         });
 
         await this.createAttachmentRows(
@@ -377,7 +357,7 @@ export class ComplaintService {
             actorRole: ComplaintActorRole.ADMIN,
             fromStatus: complaint.status,
             toStatus: complaint.status,
-            note: isInternal ? 'Admin thêm ghi chú nội bộ' : 'Admin phản hồi cho sinh viên',
+            note: 'Admin phản hồi cho khiếu nại',
         });
 
         return this.toResponseMessage(created);
@@ -444,7 +424,7 @@ export class ComplaintService {
 
         return this.toResponse(
             updated,
-            await this.getTargetEntityName(updated.category, updated.targetEntityId.toString()),
+            await this.getTargetEntityName(updated.targetEntityId.toString()),
         );
     }
 
@@ -540,15 +520,11 @@ export class ComplaintService {
     }
 
     private async getComplaintOrganizerId(complaint: ComplaintDocument): Promise<string | null> {
-        if (complaint.category === ComplaintCategory.ACTIVITY) {
-            const activity = await this.activityService.findById(complaint.targetEntityId.toString());
-            if (!activity?.organizerId) {
-                return null;
-            }
-
-            return typeof activity.organizerId === 'string'
-                ? activity.organizerId
-                : String((activity.organizerId as any)._id || activity.organizerId);
+        const directActivity = await this.activityService.findById(complaint.targetEntityId.toString());
+        if (directActivity?.organizerId) {
+            return typeof directActivity.organizerId === 'string'
+                ? directActivity.organizerId
+                : String((directActivity.organizerId as any)._id || directActivity.organizerId);
         }
 
         const activity = await this.checkinSessionService.findActivityBySessionId(complaint.targetEntityId.toString());
@@ -561,12 +537,9 @@ export class ComplaintService {
             : String((activity.organizerId as any)._id || activity.organizerId);
     }
 
-    private async getTargetEntityName(category: ComplaintCategory, targetEntityId: string): Promise<string> {
-        if (category === ComplaintCategory.ACTIVITY) {
-            const activity = await this.activityService.findById(targetEntityId);
-            if (!activity) {
-                throw new NotFoundException('Không tìm thấy hoạt động để khiếu nại');
-            }
+    private async getTargetEntityName(targetEntityId: string): Promise<string> {
+        const activity = await this.activityService.findById(targetEntityId);
+        if (activity) {
             return activity.title;
         }
 
@@ -581,7 +554,7 @@ export class ComplaintService {
         return Promise.all(
             rows.map(async (row) => this.toResponse(
                 row,
-                await this.getTargetEntityName(row.category, row.targetEntityId.toString()),
+                await this.getTargetEntityName(row.targetEntityId.toString()),
             )),
         );
     }
@@ -614,7 +587,6 @@ export class ComplaintService {
             id: item._id.toString(),
             complainantId,
             complainantName: userMap.get(complainantId),
-            category: item.category,
             targetEntityId: item.targetEntityId.toString(),
             targetEntityName,
             title: item.title,
@@ -622,7 +594,6 @@ export class ComplaintService {
             attachmentUrls: attachments.map((attachment) => attachment.fileUrl),
             attachments,
             status: item.status,
-            priority: item.priority,
             resolution: item.resolution || null,
             reviewNote: item.reviewNote || null,
             reviewedBy: reviewedById
@@ -655,14 +626,10 @@ export class ComplaintService {
         return complaint;
     }
 
-    private async listResponsesInternal(
-        complaintId: string,
-        includeInternal: boolean,
-    ): Promise<ComplaintResponseItem[]> {
+    private async listResponsesInternal(complaintId: string): Promise<ComplaintResponseItem[]> {
         const rows = await this.complaintResponseModel
             .find({
                 complaintId: new Types.ObjectId(complaintId),
-                ...(includeInternal ? {} : { isInternal: false }),
             })
             .sort({ createdAt: 1 })
             .lean();
@@ -703,7 +670,6 @@ export class ComplaintService {
             senderName: userMap.get(String(row.senderId)),
             senderRole: row.senderRole,
             message: row.message,
-            isInternal: row.isInternal,
             attachments: attachmentMap.get(String(row._id)) || [],
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
@@ -728,7 +694,6 @@ export class ComplaintService {
             senderName: (user as any)?.name,
             senderRole: row.senderRole,
             message: row.message,
-            isInternal: row.isInternal,
             attachments: (attachments as any[]).map((item) => ({
                 id: String(item._id),
                 fileName: item.fileName,
@@ -842,24 +807,16 @@ export class ComplaintService {
             return;
         }
 
-        const priorityMap: Record<ComplaintPriority, NotificationPriority> = {
-            [ComplaintPriority.NORMAL]: NotificationPriority.NORMAL,
-            [ComplaintPriority.HIGH]: NotificationPriority.HIGH,
-            [ComplaintPriority.URGENT]: NotificationPriority.URGENT,
-        };
-
         await this.notificationService.createBulkNotifications(adminIds, {
             senderName: 'Hệ thống',
             senderType: 'complaint-system',
             title: 'Có khiếu nại mới',
-            message: `Khiếu nại mới cho ${complaint.category === ComplaintCategory.ACTIVITY ? 'hoạt động' : 'phiên điểm danh'}: ${targetEntityName}`,
+            message: `Khiếu nại mới cho ${targetEntityName}`,
             type: NotificationType.ALERT,
-            priority: priorityMap[complaint.priority],
             linkUrl: `/admin/complaints?id=${complaint._id.toString()}`,
             groupKey: `complaint:${complaint._id.toString()}`,
             meta: {
                 complaintId: complaint._id.toString(),
-                category: complaint.category,
                 targetEntityId: complaint.targetEntityId.toString(),
             },
         });
@@ -873,7 +830,6 @@ export class ComplaintService {
             title: 'Khiếu nại đã được xử lý',
             message: `Khiếu nại "${complaint.title}" đã được cập nhật sang trạng thái ${complaint.status}.`,
             type: NotificationType.SYSTEM,
-            priority: NotificationPriority.HIGH,
             linkUrl: `/complaints?id=${complaint._id.toString()}`,
             groupKey: `complaint:${complaint._id.toString()}:review`,
             meta: {

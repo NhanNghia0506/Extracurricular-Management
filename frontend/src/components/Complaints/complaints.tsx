@@ -4,9 +4,7 @@ import activityService from '../../services/activity.service';
 import checkinSessionService from '../../services/checkin-session.service';
 import checkinService from '../../services/checkin.service';
 import {
-    ComplaintCategory,
     ComplaintItem,
-    ComplaintPriority,
     ComplaintResponseItem,
     ComplaintStatus,
     CreateComplaintPayload,
@@ -33,12 +31,6 @@ const statusLabel: Record<ComplaintStatus, string> = {
     UNDER_REVIEW: 'Đang xử lý',
     RESOLVED: 'Đã xử lý',
     CLOSED: 'Đã đóng',
-};
-
-const priorityLabel: Record<ComplaintPriority, string> = {
-    NORMAL: 'Thường',
-    HIGH: 'Cao',
-    URGENT: 'Khẩn cấp',
 };
 
 const checkinStatusLabel: Record<AttendanceCheckinStatus, string> = {
@@ -78,13 +70,15 @@ const Complaints: React.FC = () => {
     const [loadingSessions, setLoadingSessions] = useState(false);
     const [responses, setResponses] = useState<ComplaintResponseItem[]>([]);
     const [loadingResponses, setLoadingResponses] = useState(false);
+    const [responseMessage, setResponseMessage] = useState('');
+    const [responseAttachmentUrls, setResponseAttachmentUrls] = useState<string[]>([]);
+    const [uploadingResponseAttachment, setUploadingResponseAttachment] = useState(false);
+    const [sendingResponse, setSendingResponse] = useState(false);
 
     const [form, setForm] = useState<CreateComplaintPayload>({
-        category: 'ACTIVITY',
         targetEntityId: '',
         title: '',
         description: '',
-        priority: 'NORMAL',
         attachmentUrls: [],
     });
 
@@ -196,14 +190,7 @@ const Complaints: React.FC = () => {
     useEffect(() => {
         if (!selectedActivityId) {
             setSessionOptions([]);
-            if (form.category === 'ACTIVITY') {
-                setForm((prev) => ({ ...prev, targetEntityId: '' }));
-            }
-            return;
-        }
-
-        if (form.category === 'ACTIVITY') {
-            setForm((prev) => ({ ...prev, targetEntityId: selectedActivityId }));
+            setForm((prev) => ({ ...prev, targetEntityId: '' }));
             return;
         }
 
@@ -240,15 +227,7 @@ const Complaints: React.FC = () => {
         return () => {
             ignore = true;
         };
-    }, [selectedActivityId, form.category, showToast]);
-
-    useEffect(() => {
-        if (form.category === 'CHECKIN') {
-            setForm((prev) => ({ ...prev, targetEntityId: '' }));
-        } else if (form.category === 'ACTIVITY' && selectedActivityId) {
-            setForm((prev) => ({ ...prev, targetEntityId: selectedActivityId }));
-        }
-    }, [form.category, selectedActivityId]);
+    }, [selectedActivityId, showToast]);
 
     useEffect(() => {
         let ignore = false;
@@ -279,6 +258,11 @@ const Complaints: React.FC = () => {
             ignore = true;
         };
     }, [selectedId, showToast]);
+
+    useEffect(() => {
+        setResponseMessage('');
+        setResponseAttachmentUrls([]);
+    }, [selectedId]);
 
     useEffect(() => {
         let ignore = false;
@@ -376,11 +360,9 @@ const Complaints: React.FC = () => {
             });
 
             setForm({
-                category: form.category,
-                targetEntityId: form.category === 'ACTIVITY' ? selectedActivityId : '',
+                targetEntityId: '',
                 title: '',
                 description: '',
-                priority: 'NORMAL',
                 attachmentUrls: [],
             });
 
@@ -397,13 +379,80 @@ const Complaints: React.FC = () => {
         }
     };
 
+    const handleUploadResponseAttachment = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        setUploadingResponseAttachment(true);
+        try {
+            const uploaded = await complaintService.uploadAttachment(file);
+            setResponseAttachmentUrls((previous) => [...previous, uploaded.imageUrl]);
+            showToast({
+                type: 'success',
+                title: 'Upload thành công',
+                message: 'Đã thêm minh chứng cho phản hồi.',
+            });
+        } catch (error: any) {
+            showToast({
+                type: 'error',
+                title: 'Upload thất bại',
+                message: error?.response?.data?.message || 'Không thể upload minh chứng phản hồi.',
+            });
+        } finally {
+            setUploadingResponseAttachment(false);
+            event.target.value = '';
+        }
+    };
+
+    const handleSendResponse = async (event: React.FormEvent) => {
+        event.preventDefault();
+
+        if (!selectedDetail) {
+            return;
+        }
+
+        const normalizedMessage = responseMessage.trim();
+        if (!normalizedMessage) {
+            showToast({
+                type: 'error',
+                title: 'Thiếu nội dung phản hồi',
+                message: 'Vui lòng nhập nội dung trước khi gửi bổ sung minh chứng.',
+            });
+            return;
+        }
+
+        setSendingResponse(true);
+        try {
+            await complaintService.addMineResponse(selectedDetail.id, {
+                message: normalizedMessage,
+                attachmentUrls: responseAttachmentUrls,
+            });
+
+            const refreshedResponses = await complaintService.listMineResponses(selectedDetail.id);
+            setResponses(refreshedResponses || []);
+            setResponseMessage('');
+            setResponseAttachmentUrls([]);
+
+            showToast({
+                type: 'success',
+                title: 'Đã gửi phản hồi',
+                message: 'Minh chứng bổ sung đã được gửi vào khiếu nại hiện tại.',
+            });
+        } catch (error: any) {
+            showToast({
+                type: 'error',
+                title: 'Gửi phản hồi thất bại',
+                message: error?.response?.data?.message || 'Không thể gửi phản hồi cho khiếu nại này.',
+            });
+        } finally {
+            setSendingResponse(false);
+        }
+    };
+
     const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
     const selectedResponses = useMemo(() => responses || [], [responses]);
-
-    const selectedActivityTitle = useMemo(
-        () => activityOptions.find((activity) => activity.id === selectedActivityId)?.title || '',
-        [activityOptions, selectedActivityId],
-    );
 
     const pendingCount = items.filter((item) => item.status === 'SUBMITTED' || item.status === 'UNDER_REVIEW').length;
     const resolvedCount = items.filter((item) => item.status === 'RESOLVED' || item.status === 'CLOSED').length;
@@ -415,7 +464,7 @@ const Complaints: React.FC = () => {
                     <p className={styles.eyebrow}>Complaint Center</p>
                     <h2>Khiếu nại của tôi</h2>
                     <p className={styles.heroDescription}>
-                        Gửi khiếu nại cho Activity hoặc Checkin, đính kèm bằng chứng và theo dõi tiến độ xử lý trong cùng một màn hình.
+                        Gửi khiếu nại về điểm danh, đính kèm bằng chứng và theo dõi tiến độ xử lý trong cùng một màn hình.
                     </p>
                     <div className={styles.heroMeta}>
                         <span className={styles.heroChip}>{total} khiếu nại</span>
@@ -450,29 +499,13 @@ const Complaints: React.FC = () => {
 
                     <form className={styles.formGrid} onSubmit={handleCreate}>
                         <label>
-                            Loại khiếu nại
-                            <select
-                                value={form.category}
-                                onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value as ComplaintCategory }))}
-                            >
-                                <option value="ACTIVITY">Activity</option>
-                                <option value="CHECKIN">Checkin Session</option>
-                            </select>
-                        </label>
-
-                        <label>
                             Chọn hoạt động
                             <select
                                 value={selectedActivityId}
                                 onChange={(event) => {
                                     const nextActivityId = event.target.value;
                                     setSelectedActivityId(nextActivityId);
-
-                                    if (form.category === 'ACTIVITY') {
-                                        setForm((prev) => ({ ...prev, targetEntityId: nextActivityId }));
-                                    } else {
-                                        setForm((prev) => ({ ...prev, targetEntityId: '' }));
-                                    }
+                                    setForm((prev) => ({ ...prev, targetEntityId: '' }));
                                 }}
                                 disabled={loadingTargets}
                             >
@@ -483,77 +516,59 @@ const Complaints: React.FC = () => {
                             </select>
                         </label>
 
-                        {form.category === 'ACTIVITY' && selectedActivityId && (
-                            <div className={styles.targetHint}>Đối tượng khiếu nại: {selectedActivityTitle}</div>
-                        )}
-
-                        {form.category === 'CHECKIN' && (
-                            <div className={styles.sessionPicker}>
-                                <div className={styles.sessionPickerHeader}>
-                                    <strong>Chọn phiên điểm danh để khiếu nại</strong>
-                                    {!selectedActivityId && <span>Vui lòng chọn hoạt động trước</span>}
-                                </div>
-
-                                {selectedActivityId && loadingSessions && (
-                                    <div className={styles.targetHint}>Đang tải danh sách phiên điểm danh...</div>
-                                )}
-
-                                {selectedActivityId && !loadingSessions && sessionOptions.length === 0 && (
-                                    <div className={styles.targetHint}>Hoạt động này chưa có phiên điểm danh.</div>
-                                )}
-
-                                {selectedActivityId && !loadingSessions && sessionOptions.length > 0 && (
-                                    <div className={styles.sessionList}>
-                                        {sessionOptions.map((session) => {
-                                            const sessionStatus = sessionStatusMap[session._id];
-                                            const isSelected = form.targetEntityId === session._id;
-
-                                            return (
-                                                <button
-                                                    key={session._id}
-                                                    type="button"
-                                                    className={`${styles.sessionItem} ${isSelected ? styles.sessionItemActive : ''}`}
-                                                    onClick={() => setForm((prev) => ({ ...prev, targetEntityId: session._id }))}
-                                                >
-                                                    <div className={styles.sessionTopRow}>
-                                                        <strong>{session.title}</strong>
-                                                        {sessionStatus ? (
-                                                            <span className={`${styles.sessionStatusBadge} ${sessionStatus.status === 'SUCCESS'
-                                                                ? styles.sessionStatusSuccess
-                                                                : sessionStatus.status === 'FAILED'
-                                                                    ? styles.sessionStatusFailed
-                                                                    : styles.sessionStatusLate
-                                                                }`}>
-                                                                {checkinStatusLabel[sessionStatus.status]}
-                                                            </span>
-                                                        ) : (
-                                                            <span className={`${styles.sessionStatusBadge} ${styles.sessionStatusUnknown}`}>
-                                                                Chưa check-in
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p>
-                                                        {formatDate(session.startTime)} - {formatDate(session.endTime)}
-                                                    </p>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                        <div className={styles.sessionPicker}>
+                            <div className={styles.sessionPickerHeader}>
+                                <strong>Chọn phiên điểm danh để khiếu nại</strong>
+                                {!selectedActivityId && <span>Vui lòng chọn hoạt động trước</span>}
                             </div>
-                        )}
 
-                        <label>
-                            Mức ưu tiên
-                            <select
-                                value={form.priority}
-                                onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value as ComplaintPriority }))}
-                            >
-                                <option value="NORMAL">Thường</option>
-                                <option value="HIGH">Cao</option>
-                                <option value="URGENT">Khẩn cấp</option>
-                            </select>
-                        </label>
+                            {selectedActivityId && loadingSessions && (
+                                <div className={styles.targetHint}>Đang tải danh sách phiên điểm danh...</div>
+                            )}
+
+                            {selectedActivityId && !loadingSessions && sessionOptions.length === 0 && (
+                                <div className={styles.targetHint}>Hoạt động này chưa có phiên điểm danh.</div>
+                            )}
+
+                            {selectedActivityId && !loadingSessions && sessionOptions.length > 0 && (
+                                <div className={styles.sessionList}>
+                                    {sessionOptions.map((session) => {
+                                        const sessionStatus = sessionStatusMap[session._id];
+                                        const isSelected = form.targetEntityId === session._id;
+
+                                        return (
+                                            <button
+                                                key={session._id}
+                                                type="button"
+                                                className={`${styles.sessionItem} ${isSelected ? styles.sessionItemActive : ''}`}
+                                                onClick={() => setForm((prev) => ({ ...prev, targetEntityId: session._id }))}
+                                            >
+                                                <div className={styles.sessionTopRow}>
+                                                    <strong>{session.title}</strong>
+                                                    {sessionStatus ? (
+                                                        <span className={`${styles.sessionStatusBadge} ${sessionStatus.status === 'SUCCESS'
+                                                            ? styles.sessionStatusSuccess
+                                                            : sessionStatus.status === 'FAILED'
+                                                                ? styles.sessionStatusFailed
+                                                                : styles.sessionStatusLate
+                                                            }`}>
+                                                            {checkinStatusLabel[sessionStatus.status]}
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`${styles.sessionStatusBadge} ${styles.sessionStatusUnknown}`}>
+                                                            Chưa check-in
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p>
+                                                    {formatDate(session.startTime)} - {formatDate(session.endTime)}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
 
                         <label>
                             Tiêu đề
@@ -656,11 +671,6 @@ const Complaints: React.FC = () => {
                                             }`}>
                                             {statusLabel[item.status]}
                                         </span>
-                                        <span className={`${styles.badge} ${item.priority === 'NORMAL' ? styles.priorityNormal
-                                            : item.priority === 'HIGH' ? styles.priorityHigh : styles.priorityUrgent
-                                            }`}>
-                                            {priorityLabel[item.priority]}
-                                        </span>
                                     </div>
                                     <h4>{item.title}</h4>
                                     <p>{item.targetEntityName}</p>
@@ -682,14 +692,8 @@ const Complaints: React.FC = () => {
                                             }`}>
                                             {statusLabel[selectedDetail.status]}
                                         </span>
-                                        <span className={`${styles.badge} ${selectedDetail.priority === 'NORMAL' ? styles.priorityNormal
-                                            : selectedDetail.priority === 'HIGH' ? styles.priorityHigh : styles.priorityUrgent
-                                            }`}>
-                                            {priorityLabel[selectedDetail.priority]}
-                                        </span>
                                     </div>
                                     <div className={styles.detailMeta}>
-                                        <div><strong>Loại:</strong> {selectedDetail.category}</div>
                                         <div><strong>Đối tượng:</strong> {selectedDetail.targetEntityName}</div>
                                         <div><strong>Tạo lúc:</strong> {formatDate(selectedDetail.createdAt)}</div>
                                         <div><strong>Xử lý lúc:</strong> {formatDate(selectedDetail.reviewedAt)}</div>
@@ -723,7 +727,7 @@ const Complaints: React.FC = () => {
                                                 {selectedResponses.map((response, index) => (
                                                     <article
                                                         key={response.id}
-                                                        className={`${styles.responseCard} ${response.isInternal ? styles.responseCardInternal : ''}`}
+                                                        className={styles.responseCard}
                                                     >
                                                         <div className={styles.responseCardTop}>
                                                             <div className={styles.responseCardMeta}>
@@ -733,14 +737,79 @@ const Complaints: React.FC = () => {
                                                                     <small>{formatDate(response.createdAt)}</small>
                                                                 </div>
                                                             </div>
-                                                            <span className={`${styles.responseBadge} ${response.isInternal ? styles.responseBadgeInternal : styles.responseBadgePublic}`}>
-                                                                {response.isInternal ? 'Nội bộ' : 'Công khai'}
-                                                            </span>
                                                         </div>
                                                         <p>{response.message}</p>
+
+                                                        {response.attachments.length > 0 && (
+                                                            <div className={styles.responseAttachmentList}>
+                                                                {response.attachments.map((attachment) => {
+                                                                    const src = resolveImageSrc(attachment.fileUrl) || attachment.fileUrl;
+                                                                    return (
+                                                                        <a
+                                                                            key={attachment.id}
+                                                                            className={styles.responseAttachmentItem}
+                                                                            href={src}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                        >
+                                                                            <img src={src} alt={attachment.fileName} />
+                                                                            <span>{attachment.fileName}</span>
+                                                                        </a>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
                                                     </article>
                                                 ))}
                                             </div>
+                                        )}
+
+                                        {selectedDetail.status !== 'CLOSED' && (
+                                            <form className={styles.formGrid} onSubmit={handleSendResponse}>
+                                                <label className={styles.responseComposerLabel}>
+                                                    Bổ sung phản hồi / minh chứng
+                                                    <textarea
+                                                        value={responseMessage}
+                                                        onChange={(event) => setResponseMessage(event.target.value)}
+                                                        placeholder="Nhập thông tin bổ sung cho khiếu nại hiện tại"
+                                                    />
+                                                </label>
+
+                                                <div className={styles.uploadRow}>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleUploadResponseAttachment}
+                                                        disabled={uploadingResponseAttachment}
+                                                    />
+                                                    <span>{uploadingResponseAttachment ? 'Đang upload...' : 'Minh chứng bổ sung (tùy chọn)'}</span>
+                                                </div>
+
+                                                {responseAttachmentUrls.length > 0 && (
+                                                    <div className={styles.attachmentList}>
+                                                        {responseAttachmentUrls.map((url, index) => {
+                                                            const src = resolveImageSrc(url) || url;
+                                                            return (
+                                                                <div className={styles.attachmentItem} key={`${url}-${index}`}>
+                                                                    <img src={src} alt={`response-attachment-${index + 1}`} />
+                                                                    <a href={src} target="_blank" rel="noreferrer">{src}</a>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`${styles.btn} ${styles.btnSecondary}`}
+                                                                        onClick={() => setResponseAttachmentUrls((previous) => previous.filter((_, idx) => idx !== index))}
+                                                                    >
+                                                                        Xóa
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={sendingResponse}>
+                                                    {sendingResponse ? 'Đang gửi...' : 'Gửi phản hồi bổ sung'}
+                                                </button>
+                                            </form>
                                         )}
                                     </section>
 

@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import complaintService from '../../services/complaint.service';
 import {
-    ComplaintCategory,
     ComplaintItem,
-    ComplaintPriority,
     ComplaintResponseItem,
     ComplaintResolution,
     ComplaintStatus,
@@ -21,12 +19,6 @@ const statusLabel: Record<ComplaintStatus, string> = {
     UNDER_REVIEW: 'Đang xử lý',
     RESOLVED: 'Đã xử lý',
     CLOSED: 'Đã đóng',
-};
-
-const priorityLabel: Record<ComplaintPriority, string> = {
-    NORMAL: 'Thường',
-    HIGH: 'Cao',
-    URGENT: 'Khẩn cấp',
 };
 
 const resolutionLabel: Record<ComplaintResolution, string> = {
@@ -55,8 +47,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
     const [loading, setLoading] = useState(true);
     const [dashboard, setDashboard] = useState({ submitted: 0, underReview: 0, resolved: 0, closed: 0 });
     const [statusFilter, setStatusFilter] = useState<'' | ComplaintStatus>('');
-    const [categoryFilter, setCategoryFilter] = useState<'' | ComplaintCategory>('');
-    const [priorityFilter, setPriorityFilter] = useState<'' | ComplaintPriority>('');
     const [reviewStatus, setReviewStatus] = useState<Exclude<ComplaintStatus, 'SUBMITTED'>>('UNDER_REVIEW');
     const [reviewResolution, setReviewResolution] = useState<ComplaintResolution>('UPHELD');
     const [reviewNote, setReviewNote] = useState('');
@@ -64,9 +54,9 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
     const [responses, setResponses] = useState<ComplaintResponseItem[]>([]);
     const [loadingResponses, setLoadingResponses] = useState(false);
     const [responseMessage, setResponseMessage] = useState('');
-    const [responseIsInternal, setResponseIsInternal] = useState(false);
     const [sendingResponse, setSendingResponse] = useState(false);
     const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
+    const [evidenceModalImages, setEvidenceModalImages] = useState<Array<{ id: string; fileName: string; fileUrl: string }>>([]);
 
     const normalizedOrganizerId = organizerId?.trim() || '';
 
@@ -98,8 +88,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         try {
             const response = await complaintService.listOrganizer(normalizedOrganizerId, {
                 status: statusFilter || undefined,
-                category: categoryFilter || undefined,
-                priority: priorityFilter || undefined,
                 limit: 100,
             });
 
@@ -117,7 +105,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         } finally {
             setLoading(false);
         }
-    }, [categoryFilter, normalizedOrganizerId, priorityFilter, selectedId, showToast, statusFilter]);
+    }, [normalizedOrganizerId, selectedId, showToast, statusFilter]);
 
     useEffect(() => {
         void loadDashboard();
@@ -289,19 +277,15 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         try {
             await complaintService.addOrganizerResponse(normalizedOrganizerId, selectedDetail.id, {
                 message: responseMessage.trim(),
-                isInternal: responseIsInternal,
             });
 
             showToast({
                 type: 'success',
                 title: 'Gửi phản hồi thành công',
-                message: responseIsInternal
-                    ? 'Phản hồi nội bộ đã được lưu.'
-                    : 'Phản hồi đã được gửi cho người khiếu nại.',
+                message: 'Phản hồi đã được gửi cho người khiếu nại.',
             });
 
             setResponseMessage('');
-            setResponseIsInternal(false);
 
             const refreshedResponses = await complaintService.listOrganizerResponses(normalizedOrganizerId, selectedDetail.id);
             setResponses(refreshedResponses || []);
@@ -332,11 +316,22 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         setIsResponseModalOpen(false);
     };
 
+    const openEvidenceModal = (response: ComplaintResponseItem) => {
+        const images = (response.attachments || []).map((attachment) => ({
+            id: attachment.id,
+            fileName: attachment.fileName,
+            fileUrl: attachment.fileUrl,
+        }));
+        setEvidenceModalImages(images);
+    };
+
+    const closeEvidenceModal = () => {
+        setEvidenceModalImages([]);
+    };
+
     const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
-    const hasActiveFilters = Boolean(statusFilter || categoryFilter || priorityFilter);
-    const activeFilterCount = [statusFilter, categoryFilter, priorityFilter].filter(Boolean).length;
-    const publicResponses = responses.filter((item) => !item.isInternal);
-    const internalResponses = responses.filter((item) => item.isInternal);
+    const hasActiveFilters = Boolean(statusFilter);
+    const activeFilterCount = [statusFilter].filter(Boolean).length;
 
     const dashboardLabel = 'Khiếu nại của tổ chức';
 
@@ -414,8 +409,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                 disabled={!hasActiveFilters}
                                 onClick={() => {
                                     setStatusFilter('');
-                                    setCategoryFilter('');
-                                    setPriorityFilter('');
                                 }}
                             >
                                 Xóa lọc
@@ -432,25 +425,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                     <option value="UNDER_REVIEW">Đang xử lý</option>
                                     <option value="RESOLVED">Đã xử lý</option>
                                     <option value="CLOSED">Đã đóng</option>
-                                </select>
-                            </label>
-
-                            <label className={styles.filterControl}>
-                                <span>Loại khiếu nại</span>
-                                <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as '' | ComplaintCategory)}>
-                                    <option value="">Tất cả</option>
-                                    <option value="ACTIVITY">Activity</option>
-                                    <option value="CHECKIN">Checkin</option>
-                                </select>
-                            </label>
-
-                            <label className={styles.filterControl}>
-                                <span>Mức ưu tiên</span>
-                                <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as '' | ComplaintPriority)}>
-                                    <option value="">Tất cả ưu tiên</option>
-                                    <option value="NORMAL">Thường</option>
-                                    <option value="HIGH">Cao</option>
-                                    <option value="URGENT">Khẩn cấp</option>
                                 </select>
                             </label>
                         </div>
@@ -527,18 +501,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                     >
                                         {statusLabel[item.status]}
                                     </span>
-                                    <span className={`${styles.badge} ${item.priority === 'NORMAL'
-                                        ? styles.priorityNormal
-                                        : item.priority === 'HIGH'
-                                            ? styles.priorityHigh
-                                            : styles.priorityUrgent
-                                        }`}
-                                    >
-                                        {priorityLabel[item.priority]}
-                                    </span>
-                                    <span className={`${styles.badge} ${styles.badgeCategory}`}>
-                                        {item.category === 'ACTIVITY' ? 'Activity' : 'Checkin'}
-                                    </span>
                                 </div>
                                 <div className={styles.listItemTop}>
                                     <h4>{item.title}</h4>
@@ -580,21 +542,11 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                     >
                                         {statusLabel[selectedDetail.status]}
                                     </span>
-                                    <span className={`${styles.badge} ${selectedDetail.priority === 'NORMAL'
-                                        ? styles.priorityNormal
-                                        : selectedDetail.priority === 'HIGH'
-                                            ? styles.priorityHigh
-                                            : styles.priorityUrgent
-                                        }`}
-                                    >
-                                        {priorityLabel[selectedDetail.priority]}
-                                    </span>
                                 </div>
                             </div>
 
                             <div className={styles.detailMeta}>
                                 <div><strong>Người gửi:</strong> {selectedDetail.complainantName || selectedDetail.complainantId}</div>
-                                <div><strong>Loại:</strong> {selectedDetail.category}</div>
                                 <div><strong>Đối tượng:</strong> {selectedDetail.targetEntityName}</div>
                                 <div><strong>Tạo lúc:</strong> {formatDate(selectedDetail.createdAt)}</div>
                             </div>
@@ -618,7 +570,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                             <div className={styles.responseSectionHeaderRow}>
                                 <div className={styles.responseSectionSummary}>
                                     <p className={styles.responseEyebrow}>Trao đổi</p>
-                                    <h4>Phản hồi riêng</h4>
+                                    <h4>Phản hồi</h4>
                                     <span>{responses.length} phản hồi đã ghi nhận</span>
                                 </div>
 
@@ -640,47 +592,26 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
 
                                 {!loadingResponses && responses.length > 0 && (
                                     <div className={styles.responseList}>
-                                        {publicResponses.length > 0 && (
-                                            <div className={styles.responseGroup}>
-                                                <div className={styles.responseGroupHeader}>
-                                                    <span>Phản hồi công khai</span>
-                                                    <strong>{publicResponses.length}</strong>
+                                        {responses.map((response) => (
+                                            <article key={response.id} className={styles.responseItem}>
+                                                <div className={styles.responseItemHeader}>
+                                                    <div>
+                                                        <strong>{response.senderName || response.senderId}</strong>
+                                                        <span>{formatDate(response.createdAt)}</span>
+                                                    </div>
                                                 </div>
-                                                {publicResponses.map((response) => (
-                                                    <article key={response.id} className={styles.responseItem}>
-                                                        <div className={styles.responseItemHeader}>
-                                                            <div>
-                                                                <strong>{response.senderName || response.senderId}</strong>
-                                                                <span>{formatDate(response.createdAt)}</span>
-                                                            </div>
-                                                            <span className={styles.responseBadge}>Công khai</span>
-                                                        </div>
-                                                        <p>{response.message}</p>
-                                                    </article>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {internalResponses.length > 0 && (
-                                            <div className={styles.responseGroup}>
-                                                <div className={styles.responseGroupHeader}>
-                                                    <span>Ghi chú nội bộ</span>
-                                                    <strong>{internalResponses.length}</strong>
-                                                </div>
-                                                {internalResponses.map((response) => (
-                                                    <article key={response.id} className={`${styles.responseItem} ${styles.responseItemInternal}`}>
-                                                        <div className={styles.responseItemHeader}>
-                                                            <div>
-                                                                <strong>{response.senderName || response.senderId}</strong>
-                                                                <span>{formatDate(response.createdAt)}</span>
-                                                            </div>
-                                                            <span className={styles.responseBadgeInternal}>Nội bộ</span>
-                                                        </div>
-                                                        <p>{response.message}</p>
-                                                    </article>
-                                                ))}
-                                            </div>
-                                        )}
+                                                <p>{response.message}</p>
+                                                {response.attachments.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.evidenceButton}
+                                                        onClick={() => openEvidenceModal(response)}
+                                                    >
+                                                        Xem minh chứng ({response.attachments.length})
+                                                    </button>
+                                                )}
+                                            </article>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -749,7 +680,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                     >
                         <div className={styles.modalHeader}>
                             <div>
-                                <p className={styles.filterEyebrow}>Phản hồi riêng</p>
+                                <p className={styles.filterEyebrow}>Phản hồi</p>
                                 <h3 id="manager-response-title">Gửi phản hồi cho khiếu nại</h3>
                                 <p className={styles.modalSubtitle}>{selectedDetail.title}</p>
                             </div>
@@ -762,17 +693,8 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                 <textarea
                                     value={responseMessage}
                                     onChange={(event) => setResponseMessage(event.target.value)}
-                                    placeholder="Nhập phản hồi gửi cho sinh viên hoặc ghi chú nội bộ cho ban tổ chức"
+                                    placeholder="Nhập phản hồi gửi cho sinh viên"
                                 />
-                            </label>
-
-                            <label className={styles.responseToggle}>
-                                <input
-                                    type="checkbox"
-                                    checked={responseIsInternal}
-                                    onChange={(event) => setResponseIsInternal(event.target.checked)}
-                                />
-                                <span>Chỉ lưu nội bộ cho ban tổ chức</span>
                             </label>
 
                             <div className={styles.modalActions}>
@@ -784,6 +706,45 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {evidenceModalImages.length > 0 && (
+                <div className={styles.modalBackdrop} role="presentation" onClick={closeEvidenceModal}>
+                    <div
+                        className={styles.modalCard}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="response-evidence-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <p className={styles.filterEyebrow}>Minh chứng phản hồi</p>
+                                <h3 id="response-evidence-title">Hình ảnh minh chứng</h3>
+                                <p className={styles.modalSubtitle}>{evidenceModalImages.length} tệp</p>
+                            </div>
+                            <button type="button" className={styles.modalCloseBtn} onClick={closeEvidenceModal}>×</button>
+                        </div>
+
+                        <div className={styles.evidenceGrid}>
+                            {evidenceModalImages.map((item) => {
+                                const src = resolveImageSrc(item.fileUrl) || item.fileUrl;
+                                return (
+                                    <a
+                                        key={item.id}
+                                        className={styles.responseAttachmentItem}
+                                        href={src}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <img src={src} alt={item.fileName} />
+                                        <span>{item.fileName}</span>
+                                    </a>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}

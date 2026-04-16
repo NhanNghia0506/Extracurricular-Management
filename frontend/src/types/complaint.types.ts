@@ -1,6 +1,4 @@
-export type ComplaintCategory = 'ACTIVITY' | 'CHECKIN';
 export type ComplaintStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'RESOLVED' | 'CLOSED';
-export type ComplaintPriority = 'NORMAL' | 'HIGH' | 'URGENT';
 export type ComplaintResolution = 'UPHELD' | 'DISMISSED';
 export type ComplaintActorRole = 'STUDENT' | 'ADMIN' | 'SYSTEM';
 export type ComplaintHistoryAction = 'CREATED' | 'ATTACHMENT_ADDED' | 'RESPONSE_ADDED' | 'STATUS_CHANGED';
@@ -26,7 +24,6 @@ export interface ComplaintResponseItem {
     senderName?: string;
     senderRole: ComplaintActorRole;
     message: string;
-    isInternal: boolean;
     attachments: ComplaintAttachmentItem[];
     createdAt?: string | Date;
     updatedAt?: string | Date;
@@ -50,7 +47,6 @@ export interface ComplaintItem {
     id: string;
     complainantId: string;
     complainantName?: string;
-    category: ComplaintCategory;
     targetEntityId: string;
     targetEntityName: string;
     title: string;
@@ -58,7 +54,6 @@ export interface ComplaintItem {
     attachmentUrls: string[];
     attachments?: ComplaintAttachmentItem[];
     status: ComplaintStatus;
-    priority: ComplaintPriority;
     resolution?: ComplaintResolution | null;
     reviewNote?: string | null;
     reviewedBy?: ComplaintUserInfo | null;
@@ -83,11 +78,9 @@ export interface ComplaintDashboardResponse {
 }
 
 export interface CreateComplaintPayload {
-    category: ComplaintCategory;
     targetEntityId: string;
     title: string;
     description: string;
-    priority?: ComplaintPriority;
     attachmentUrls?: string[];
 }
 
@@ -95,8 +88,6 @@ export interface ListComplaintQuery {
     limit?: number;
     skip?: number;
     status?: ComplaintStatus;
-    category?: ComplaintCategory;
-    priority?: ComplaintPriority;
 }
 
 export interface ReviewComplaintPayload {
@@ -112,6 +103,5 @@ export interface UploadedComplaintAttachment {
 
 export interface CreateComplaintResponsePayload {
     message: string;
-    isInternal?: boolean;
     attachmentUrls?: string[];
 }

@@ -46,7 +46,7 @@ export class CheckinController {
         @Param('checkinId') checkinId: string,
         @Body() payload: UpdateCheckinStatusDto,
         @Req() req: Request,
-    ) {
+    ): Promise<unknown> {
         const actorUserId = req.user?.id;
         const actorRole = req.user?.role;
         if (!actorUserId) {

@@ -1,8 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import {
-    ComplaintCategory,
-    ComplaintPriority,
     ComplaintResolution,
     ComplaintStatus,
 } from 'src/global/globalEnum';
@@ -13,9 +11,6 @@ export type ComplaintDocument = Complaint & Document;
 export class Complaint {
     @Prop({ required: true, type: Types.ObjectId, ref: 'User', index: true })
     complainantId!: Types.ObjectId;
-
-    @Prop({ required: true, enum: Object.values(ComplaintCategory), index: true })
-    category!: ComplaintCategory;
 
     @Prop({ required: true, type: Types.ObjectId, index: true })
     targetEntityId!: Types.ObjectId;
@@ -31,9 +26,6 @@ export class Complaint {
 
     @Prop({ required: true, enum: Object.values(ComplaintStatus), default: ComplaintStatus.SUBMITTED, index: true })
     status!: ComplaintStatus;
-
-    @Prop({ enum: Object.values(ComplaintPriority), default: ComplaintPriority.NORMAL, index: true })
-    priority!: ComplaintPriority;
 
     @Prop({ type: String, enum: Object.values(ComplaintResolution), default: null })
     resolution?: ComplaintResolution | null;
@@ -58,4 +50,4 @@ export const ComplaintSchema = SchemaFactory.createForClass(Complaint);
 
 ComplaintSchema.index({ complainantId: 1, createdAt: -1 });
 ComplaintSchema.index({ status: 1, createdAt: -1 });
-ComplaintSchema.index({ category: 1, targetEntityId: 1, createdAt: -1 });
+ComplaintSchema.index({ targetEntityId: 1, createdAt: -1 });

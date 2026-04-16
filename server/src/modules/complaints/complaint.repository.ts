@@ -1,24 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ComplaintCategory, ComplaintPriority, ComplaintStatus } from 'src/global/globalEnum';
+import { ComplaintStatus } from 'src/global/globalEnum';
 import { Complaint, ComplaintDocument } from './complaint.entity';
 
 interface CreateComplaintPayload {
     complainantId: string;
-    category: ComplaintCategory;
     targetEntityId: string;
     title: string;
     description: string;
-    priority: ComplaintPriority;
     attachmentUrls: string[];
 }
 
 interface ListComplaintFilter {
     complainantId?: string;
     status?: ComplaintStatus;
-    category?: ComplaintCategory;
-    priority?: ComplaintPriority;
     targetEntityIds?: string[];
 }
 
@@ -32,11 +28,9 @@ export class ComplaintRepository {
     async create(payload: CreateComplaintPayload): Promise<ComplaintDocument> {
         return this.complaintModel.create({
             complainantId: new Types.ObjectId(payload.complainantId),
-            category: payload.category,
             targetEntityId: new Types.ObjectId(payload.targetEntityId),
             title: payload.title,
             description: payload.description,
-            priority: payload.priority,
             attachmentUrls: payload.attachmentUrls,
             status: ComplaintStatus.SUBMITTED,
         });
@@ -48,13 +42,11 @@ export class ComplaintRepository {
 
     async findOpenByTargetAndComplainant(
         complainantId: string,
-        category: ComplaintCategory,
         targetEntityId: string,
     ): Promise<ComplaintDocument | null> {
         return this.complaintModel
             .findOne({
                 complainantId: new Types.ObjectId(complainantId),
-                category,
                 targetEntityId: new Types.ObjectId(targetEntityId),
                 status: { $in: [ComplaintStatus.SUBMITTED, ComplaintStatus.UNDER_REVIEW] },
             })
@@ -114,12 +106,6 @@ export class ComplaintRepository {
         }
         if (filter.status) {
             query.status = filter.status;
-        }
-        if (filter.category) {
-            query.category = filter.category;
-        }
-        if (filter.priority) {
-            query.priority = filter.priority;
         }
         if (filter.targetEntityIds?.length) {
             query.targetEntityId = {

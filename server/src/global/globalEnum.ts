@@ -87,11 +87,6 @@ export enum CertificateStatus {
     REVOKED = 'REVOKED',
 }
 
-export enum ComplaintCategory {
-    ACTIVITY = 'ACTIVITY',
-    CHECKIN = 'CHECKIN',
-}
-
 export enum ComplaintStatus {
     SUBMITTED = 'SUBMITTED',
     UNDER_REVIEW = 'UNDER_REVIEW',
@@ -102,12 +97,6 @@ export enum ComplaintStatus {
 export enum ComplaintResolution {
     UPHELD = 'UPHELD',
     DISMISSED = 'DISMISSED',
-}
-
-export enum ComplaintPriority {
-    NORMAL = 'NORMAL',
-    HIGH = 'HIGH',
-    URGENT = 'URGENT',
 }
 
 export enum ComplaintActorRole {

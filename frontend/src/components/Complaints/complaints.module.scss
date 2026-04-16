@@ -263,7 +263,7 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
 
 .filterGrid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.65rem;
 }
 
@@ -491,11 +491,6 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
     }
 }
 
-.badgeCategory {
-    background: #eef2ff;
-    color: #3730a3;
-}
-
 .listItemActive {
     border-color: rgba(37, 99, 235, 0.55);
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.02));
@@ -536,21 +531,6 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
 .statusClosed {
     background: #e2e8f0;
     color: #334155;
-}
-
-.priorityNormal {
-    background: #f1f5f9;
-    color: #334155;
-}
-
-.priorityHigh {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.priorityUrgent {
-    background: #ef4444;
-    color: #ffffff;
 }
 
 .detail {
@@ -662,11 +642,6 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
     }
 }
 
-.responseCardInternal {
-    border-style: dashed;
-    background: #f8fafc;
-}
-
 .responseCardTop {
     display: flex;
     align-items: flex-start;
@@ -705,25 +680,6 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
     font-weight: 900;
     font-size: 0.82rem;
     flex-shrink: 0;
-}
-
-.responseBadgePublic,
-.responseBadgeInternal {
-    border-radius: 999px;
-    padding: 0.28rem 0.6rem;
-    font-size: 0.68rem;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.responseBadgePublic {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-
-.responseBadgeInternal {
-    background: #e2e8f0;
-    color: #334155;
 }
 
 .empty {
@@ -1110,4 +1066,59 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
 .sessionStatusUnknown {
     background: #e2e8f0;
     color: #334155;
+}
+
+.responseAttachmentList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.6rem;
+}
+
+.responseAttachmentItem {
+    border: 1px solid $border-light;
+    border-radius: 12px;
+    padding: 0.5rem;
+    display: grid;
+    gap: 0.4rem;
+    text-decoration: none;
+    background: #ffffff;
+
+    img {
+        width: 100%;
+        height: 108px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid $border-lighter;
+        background: $bg-light;
+    }
+
+    span {
+        font-size: 0.78rem;
+        color: $primary-blue;
+        word-break: break-word;
+    }
+}
+
+.evidenceButton {
+    width: fit-content;
+    margin-top: 0.35rem;
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 999px;
+    padding: 0.34rem 0.7rem;
+    font-size: 0.74rem;
+    font-weight: 800;
+    cursor: pointer;
+
+    &:hover {
+        background: #dbeafe;
+    }
+}
+
+.evidenceGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.7rem;
+    padding-top: 0.9rem;
 }
