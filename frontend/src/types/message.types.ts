@@ -9,6 +9,8 @@ export interface Message {
     status: 'sending' | 'sent' | 'delivered' | 'read';
     messageType: 'text' | 'image' | 'file';
     reactions: string[];
+    isDeleted?: boolean;
+    deletedAt?: Date;
     editHistory: EditHistory[];
     createdAt: Date;
     updatedAt: Date;

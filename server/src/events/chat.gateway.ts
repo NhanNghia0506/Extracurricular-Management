@@ -27,6 +27,17 @@ interface ConversationUpdatePayload {
     [key: string]: unknown;
 }
 
+interface ConversationMessageDeletedPayload {
+    conversationId?: string | number;
+    messageId?: string | number;
+    content?: string;
+    isDeleted?: boolean;
+    deletedAt?: Date | string;
+    senderName?: string;
+    senderId?: string | number;
+    [key: string]: unknown;
+}
+
 @WebSocketGateway({
     cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -198,6 +209,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
             .to(this.getConversationRoom(conversationId))
             .emit('conversation:message:new', payload);
+    }
+
+    emitConversationMessageDeleted(message: unknown) {
+        const payload = typeof message === 'object' && message !== null
+            ? message as ConversationMessageDeletedPayload
+            : {};
+        const conversationId = String(payload.conversationId || '');
+
+        if (!conversationId || !payload.messageId) {
+            this.logger.warn('Skipping conversation message deleted emit because conversationId or messageId is missing');
+            return;
+        }
+
+        this.server
+            .to(this.getConversationRoom(conversationId))
+            .emit('conversation:message:deleted', payload);
     }
 
     emitConversationUpdated(conversation: unknown) {

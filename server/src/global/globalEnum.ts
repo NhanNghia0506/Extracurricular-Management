@@ -102,7 +102,6 @@ export enum ComplaintStatus {
 export enum ComplaintResolution {
     UPHELD = 'UPHELD',
     DISMISSED = 'DISMISSED',
-    PARTIAL = 'PARTIAL',
 }
 
 export enum ComplaintPriority {

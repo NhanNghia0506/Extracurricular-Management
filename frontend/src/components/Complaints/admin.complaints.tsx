@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import complaintService from '../../services/complaint.service';
 import {
-    CheckinStatus,
     ComplaintCategory,
     ComplaintItem,
     ComplaintPriority,
+    ComplaintResponseItem,
     ComplaintResolution,
     ComplaintStatus,
 } from '../../types/complaint.types';
@@ -31,14 +31,7 @@ const priorityLabel: Record<ComplaintPriority, string> = {
 
 const resolutionLabel: Record<ComplaintResolution, string> = {
     UPHELD: 'Chấp nhận khiếu nại',
-    DISMISSED: 'Bác khiếu nại',
-    PARTIAL: 'Chấp nhận một phần',
-};
-
-const checkinStatusLabel: Record<CheckinStatus, string> = {
-    SUCCESS: 'Thành công',
-    LATE: 'Đi muộn',
-    FAILED: 'Thất bại',
+    DISMISSED: 'Bác bỏ khiếu nại',
 };
 
 const formatDate = (value?: string | Date | null) => {
@@ -67,40 +60,48 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
     const [reviewStatus, setReviewStatus] = useState<Exclude<ComplaintStatus, 'SUBMITTED'>>('UNDER_REVIEW');
     const [reviewResolution, setReviewResolution] = useState<ComplaintResolution>('UPHELD');
     const [reviewNote, setReviewNote] = useState('');
-    const [enableCheckinAdjustment, setEnableCheckinAdjustment] = useState(false);
-    const [adjustCheckinStatus, setAdjustCheckinStatus] = useState<CheckinStatus>('SUCCESS');
-    const [trainingScoreDelta, setTrainingScoreDelta] = useState<number>(0);
     const [reviewing, setReviewing] = useState(false);
+    const [responses, setResponses] = useState<ComplaintResponseItem[]>([]);
+    const [loadingResponses, setLoadingResponses] = useState(false);
+    const [responseMessage, setResponseMessage] = useState('');
+    const [responseIsInternal, setResponseIsInternal] = useState(false);
+    const [sendingResponse, setSendingResponse] = useState(false);
+    const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
 
-    const isOrganizerScoped = Boolean(organizerId);
+    const normalizedOrganizerId = organizerId?.trim() || '';
+
+    const isOrganizerScoped = Boolean(normalizedOrganizerId);
 
     const loadDashboard = useCallback(async () => {
+        if (!normalizedOrganizerId) {
+            setDashboard({ submitted: 0, underReview: 0, resolved: 0, closed: 0 });
+            return;
+        }
+
         try {
-            const data = organizerId
-                ? await complaintService.getOrganizerDashboard(organizerId)
-                : await complaintService.getAdminDashboard();
+            const data = await complaintService.getOrganizerDashboard(normalizedOrganizerId);
             setDashboard(data);
         } catch {
             setDashboard({ submitted: 0, underReview: 0, resolved: 0, closed: 0 });
         }
-    }, [organizerId]);
+    }, [normalizedOrganizerId]);
 
     const loadList = useCallback(async () => {
+        if (!normalizedOrganizerId) {
+            setItems([]);
+            setSelectedId(null);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
-            const response = organizerId
-                ? await complaintService.listOrganizer(organizerId, {
-                    status: statusFilter || undefined,
-                    category: categoryFilter || undefined,
-                    priority: priorityFilter || undefined,
-                    limit: 100,
-                })
-                : await complaintService.listAdmin({
-                    status: statusFilter || undefined,
-                    category: categoryFilter || undefined,
-                    priority: priorityFilter || undefined,
-                    limit: 100,
-                });
+            const response = await complaintService.listOrganizer(normalizedOrganizerId, {
+                status: statusFilter || undefined,
+                category: categoryFilter || undefined,
+                priority: priorityFilter || undefined,
+                limit: 100,
+            });
 
             setItems(response.items || []);
             const nextId = response.items?.find((item) => item.id === selectedId)?.id
@@ -116,7 +117,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         } finally {
             setLoading(false);
         }
-    }, [categoryFilter, organizerId, priorityFilter, selectedId, showToast, statusFilter]);
+    }, [categoryFilter, normalizedOrganizerId, priorityFilter, selectedId, showToast, statusFilter]);
 
     useEffect(() => {
         void loadDashboard();
@@ -127,6 +128,10 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
     }, [loadList]);
 
     useEffect(() => {
+        if (!normalizedOrganizerId) {
+            return;
+        }
+
         let ignore = false;
 
         const loadDetail = async () => {
@@ -136,9 +141,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
             }
 
             try {
-                const detail = organizerId
-                    ? await complaintService.getOrganizerById(organizerId, selectedId)
-                    : await complaintService.getAdminById(selectedId);
+                const detail = await complaintService.getOrganizerById(normalizedOrganizerId, selectedId);
 
                 if (ignore) {
                     return;
@@ -148,9 +151,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                 setReviewStatus(detail.status === 'SUBMITTED' ? 'UNDER_REVIEW' : detail.status);
                 setReviewResolution(detail.resolution || 'UPHELD');
                 setReviewNote(detail.reviewNote || '');
-                setEnableCheckinAdjustment(false);
-                setAdjustCheckinStatus('SUCCESS');
-                setTrainingScoreDelta(0);
             } catch (error: any) {
                 if (ignore) {
                     return;
@@ -169,7 +169,53 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         return () => {
             ignore = true;
         };
-    }, [organizerId, selectedId, showToast]);
+    }, [normalizedOrganizerId, selectedId, showToast]);
+
+    useEffect(() => {
+        if (!normalizedOrganizerId || !selectedId) {
+            setResponses([]);
+            return;
+        }
+
+        let ignore = false;
+
+        const loadResponses = async () => {
+            setLoadingResponses(true);
+
+            try {
+                const response = await complaintService.listOrganizerResponses(normalizedOrganizerId, selectedId);
+
+                if (!ignore) {
+                    setResponses(response || []);
+                }
+            } catch (error: any) {
+                if (!ignore) {
+                    setResponses([]);
+                    showToast({
+                        type: 'error',
+                        title: 'Tải phản hồi thất bại',
+                        message: error?.response?.data?.message || 'Không thể tải danh sách phản hồi của khiếu nại này.',
+                    });
+                }
+            } finally {
+                if (!ignore) {
+                    setLoadingResponses(false);
+                }
+            }
+        };
+
+        void loadResponses();
+
+        return () => {
+            ignore = true;
+        };
+    }, [normalizedOrganizerId, selectedId, showToast]);
+
+    useEffect(() => {
+        if (!selectedDetail) {
+            setIsResponseModalOpen(false);
+        }
+    }, [selectedDetail]);
 
     const handleReview = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -193,22 +239,13 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                 status: reviewStatus,
                 resolution: reviewStatus === 'RESOLVED' || reviewStatus === 'CLOSED' ? reviewResolution : undefined,
                 reviewNote: reviewNote.trim(),
-                ...(enableCheckinAdjustment && selectedDetail.category === 'CHECKIN'
-                    ? {
-                        checkinAdjustment: {
-                            status: adjustCheckinStatus,
-                            trainingScoreDelta,
-                            reason: reviewNote.trim(),
-                        },
-                    }
-                    : {}),
             };
 
-            if (organizerId) {
-                await complaintService.reviewOrganizer(organizerId, selectedDetail.id, reviewPayload);
-            } else {
-                await complaintService.review(selectedDetail.id, reviewPayload);
+            if (!normalizedOrganizerId) {
+                throw new Error('Thiếu organizerId để xử lý khiếu nại theo tổ chức');
             }
+
+            await complaintService.reviewOrganizer(normalizedOrganizerId, selectedDetail.id, reviewPayload);
 
             showToast({
                 type: 'success',
@@ -218,9 +255,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
 
             await Promise.all([loadList(), loadDashboard()]);
 
-            const refreshed = organizerId
-                ? await complaintService.getOrganizerById(organizerId, selectedDetail.id)
-                : await complaintService.getAdminById(selectedDetail.id);
+            const refreshed = await complaintService.getOrganizerById(normalizedOrganizerId, selectedDetail.id);
             setSelectedDetail(refreshed);
         } catch (error: any) {
             showToast({
@@ -233,20 +268,102 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
         }
     };
 
-    const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
+    const handleSendResponse = async (event: React.FormEvent) => {
+        event.preventDefault();
 
-    const dashboardLabel = isOrganizerScoped ? 'Khiếu nại của tổ chức' : 'Quản trị khiếu nại';
+        if (!selectedDetail || !normalizedOrganizerId) {
+            return;
+        }
+
+        if (!responseMessage.trim()) {
+            showToast({
+                type: 'error',
+                title: 'Thiếu nội dung phản hồi',
+                message: 'Vui lòng nhập nội dung phản hồi trước khi gửi.',
+            });
+            return;
+        }
+
+        setSendingResponse(true);
+
+        try {
+            await complaintService.addOrganizerResponse(normalizedOrganizerId, selectedDetail.id, {
+                message: responseMessage.trim(),
+                isInternal: responseIsInternal,
+            });
+
+            showToast({
+                type: 'success',
+                title: 'Gửi phản hồi thành công',
+                message: responseIsInternal
+                    ? 'Phản hồi nội bộ đã được lưu.'
+                    : 'Phản hồi đã được gửi cho người khiếu nại.',
+            });
+
+            setResponseMessage('');
+            setResponseIsInternal(false);
+
+            const refreshedResponses = await complaintService.listOrganizerResponses(normalizedOrganizerId, selectedDetail.id);
+            setResponses(refreshedResponses || []);
+        } catch (error: any) {
+            showToast({
+                type: 'error',
+                title: 'Gửi phản hồi thất bại',
+                message: error?.response?.data?.message || 'Không thể gửi phản hồi cho khiếu nại này.',
+            });
+        } finally {
+            setSendingResponse(false);
+        }
+    };
+
+    const openResponseModal = () => {
+        if (!selectedDetail) {
+            return;
+        }
+
+        setIsResponseModalOpen(true);
+    };
+
+    const closeResponseModal = () => {
+        if (sendingResponse) {
+            return;
+        }
+
+        setIsResponseModalOpen(false);
+    };
+
+    const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
+    const hasActiveFilters = Boolean(statusFilter || categoryFilter || priorityFilter);
+    const activeFilterCount = [statusFilter, categoryFilter, priorityFilter].filter(Boolean).length;
+    const publicResponses = responses.filter((item) => !item.isInternal);
+    const internalResponses = responses.filter((item) => item.isInternal);
+
+    const dashboardLabel = 'Khiếu nại của tổ chức';
+
+    if (!isOrganizerScoped) {
+        return (
+            <div className={styles.page}>
+                <section className={styles.hero}>
+                    <div className={styles.heroCopy}>
+                        <p className={styles.eyebrow}>Organizer complaints</p>
+                        <h2>Khiếu nại của tổ chức</h2>
+                        <p className={styles.heroDescription}>
+                            Thiếu organizerId. Chỉ MANAGER của tổ chức mới được xử lý khiếu nại trong phạm vi tổ chức của mình.
+                        </p>
+                    </div>
+                </section>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>
             <section className={styles.hero}>
                 <div className={styles.heroCopy}>
-                    <p className={styles.eyebrow}>{isOrganizerScoped ? 'Organizer complaints' : 'Complaint admin'}</p>
+                    <p className={styles.eyebrow}>Organizer complaints</p>
                     <h2>{dashboardLabel}</h2>
                     <p className={styles.heroDescription}>
-                        {isOrganizerScoped
-                            ? 'Lọc, theo dõi và xử lý khiếu nại trong phạm vi tổ chức này.'
-                            : 'Lọc, theo dõi và xử lý khiếu nại trực tiếp từ dashboard.'}
+                        Lọc, theo dõi và xử lý khiếu nại trong phạm vi tổ chức này.
                     </p>
                     <div className={styles.heroMeta}>
                         <span className={styles.heroChip}>Mới gửi {dashboard.submitted}</span>
@@ -280,30 +397,101 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                     <div className={styles.panelHeader}>
                         <div>
                             <p className={styles.sectionLabel}>Điều phối</p>
-                            <h3>{isOrganizerScoped ? 'Khiếu nại của tổ chức' : 'Danh sách khiếu nại'}</h3>
+                            <h3>Khiếu nại của tổ chức</h3>
                         </div>
                         <span className={styles.panelHint}>{items.length} mục</span>
                     </div>
 
-                    <div className={styles.toolbar}>
-                        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as '' | ComplaintStatus)}>
-                            <option value="">Tất cả trạng thái</option>
-                            <option value="SUBMITTED">Mới gửi</option>
-                            <option value="UNDER_REVIEW">Đang xử lý</option>
-                            <option value="RESOLVED">Đã xử lý</option>
-                            <option value="CLOSED">Đã đóng</option>
-                        </select>
-                        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as '' | ComplaintCategory)}>
-                            <option value="">Tất cả loại</option>
-                            <option value="ACTIVITY">Activity</option>
-                            <option value="CHECKIN">Checkin</option>
-                        </select>
-                        <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as '' | ComplaintPriority)}>
-                            <option value="">Tất cả ưu tiên</option>
-                            <option value="NORMAL">Thường</option>
-                            <option value="HIGH">Cao</option>
-                            <option value="URGENT">Khẩn cấp</option>
-                        </select>
+                    <div className={styles.filterPanel}>
+                        <div className={styles.filterPanelHeader}>
+                            <div>
+                                <p className={styles.filterEyebrow}>Bộ lọc nâng cao</p>
+                                <h4>Lọc nhanh khiếu nại</h4>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.filterResetBtn}
+                                disabled={!hasActiveFilters}
+                                onClick={() => {
+                                    setStatusFilter('');
+                                    setCategoryFilter('');
+                                    setPriorityFilter('');
+                                }}
+                            >
+                                Xóa lọc
+                                {activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                            </button>
+                        </div>
+
+                        <div className={styles.filterGrid}>
+                            <label className={styles.filterControl}>
+                                <span>Trạng thái</span>
+                                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as '' | ComplaintStatus)}>
+                                    <option value="">Tất cả</option>
+                                    <option value="SUBMITTED">Mới gửi</option>
+                                    <option value="UNDER_REVIEW">Đang xử lý</option>
+                                    <option value="RESOLVED">Đã xử lý</option>
+                                    <option value="CLOSED">Đã đóng</option>
+                                </select>
+                            </label>
+
+                            <label className={styles.filterControl}>
+                                <span>Loại khiếu nại</span>
+                                <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as '' | ComplaintCategory)}>
+                                    <option value="">Tất cả</option>
+                                    <option value="ACTIVITY">Activity</option>
+                                    <option value="CHECKIN">Checkin</option>
+                                </select>
+                            </label>
+
+                            <label className={styles.filterControl}>
+                                <span>Mức ưu tiên</span>
+                                <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value as '' | ComplaintPriority)}>
+                                    <option value="">Tất cả ưu tiên</option>
+                                    <option value="NORMAL">Thường</option>
+                                    <option value="HIGH">Cao</option>
+                                    <option value="URGENT">Khẩn cấp</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div className={styles.filterPills}>
+                            <button
+                                type="button"
+                                className={`${styles.filterPill} ${statusFilter === '' ? styles.filterPillActive : ''}`}
+                                onClick={() => setStatusFilter('')}
+                            >
+                                Tất cả ({items.length})
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.filterPill} ${statusFilter === 'SUBMITTED' ? styles.filterPillActive : ''}`}
+                                onClick={() => setStatusFilter('SUBMITTED')}
+                            >
+                                Mới gửi ({dashboard.submitted})
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.filterPill} ${statusFilter === 'UNDER_REVIEW' ? styles.filterPillActive : ''}`}
+                                onClick={() => setStatusFilter('UNDER_REVIEW')}
+                            >
+                                Đang xử lý ({dashboard.underReview})
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.filterPill} ${statusFilter === 'RESOLVED' ? styles.filterPillActive : ''}`}
+                                onClick={() => setStatusFilter('RESOLVED')}
+                            >
+                                Đã xử lý ({dashboard.resolved})
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.filterPill} ${statusFilter === 'CLOSED' ? styles.filterPillActive : ''}`}
+                                onClick={() => setStatusFilter('CLOSED')}
+                            >
+                                Đã đóng ({dashboard.closed})
+                            </button>
+                        </div>
                     </div>
 
                     <div className={styles.list}>
@@ -348,11 +536,18 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                     >
                                         {priorityLabel[item.priority]}
                                     </span>
+                                    <span className={`${styles.badge} ${styles.badgeCategory}`}>
+                                        {item.category === 'ACTIVITY' ? 'Activity' : 'Checkin'}
+                                    </span>
                                 </div>
-                                <h4>{item.title}</h4>
-                                <p>{item.targetEntityName}</p>
-                                <p>{item.complainantName || item.complainantId}</p>
-                                <p>{formatDate(item.createdAt)}</p>
+                                <div className={styles.listItemTop}>
+                                    <h4>{item.title}</h4>
+                                    <span className={styles.listItemDate}>{formatDate(item.createdAt)}</span>
+                                </div>
+                                <div className={styles.listItemMeta}>
+                                    <p><strong>Đối tượng:</strong> {item.targetEntityName}</p>
+                                    <p><strong>Người gửi:</strong> {item.complainantName || item.complainantId}</p>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -420,6 +615,76 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                 </div>
                             )}
 
+                            <div className={styles.responseSectionHeaderRow}>
+                                <div className={styles.responseSectionSummary}>
+                                    <p className={styles.responseEyebrow}>Trao đổi</p>
+                                    <h4>Phản hồi riêng</h4>
+                                    <span>{responses.length} phản hồi đã ghi nhận</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className={`${styles.btn} ${styles.btnPrimary}`}
+                                    onClick={openResponseModal}
+                                >
+                                    Phản hồi
+                                </button>
+                            </div>
+
+                            <div className={styles.responseListWrap}>
+                                {loadingResponses && <div className={styles.empty}>Đang tải phản hồi...</div>}
+
+                                {!loadingResponses && responses.length === 0 && (
+                                    <div className={styles.empty}>Chưa có phản hồi nào cho khiếu nại này.</div>
+                                )}
+
+                                {!loadingResponses && responses.length > 0 && (
+                                    <div className={styles.responseList}>
+                                        {publicResponses.length > 0 && (
+                                            <div className={styles.responseGroup}>
+                                                <div className={styles.responseGroupHeader}>
+                                                    <span>Phản hồi công khai</span>
+                                                    <strong>{publicResponses.length}</strong>
+                                                </div>
+                                                {publicResponses.map((response) => (
+                                                    <article key={response.id} className={styles.responseItem}>
+                                                        <div className={styles.responseItemHeader}>
+                                                            <div>
+                                                                <strong>{response.senderName || response.senderId}</strong>
+                                                                <span>{formatDate(response.createdAt)}</span>
+                                                            </div>
+                                                            <span className={styles.responseBadge}>Công khai</span>
+                                                        </div>
+                                                        <p>{response.message}</p>
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {internalResponses.length > 0 && (
+                                            <div className={styles.responseGroup}>
+                                                <div className={styles.responseGroupHeader}>
+                                                    <span>Ghi chú nội bộ</span>
+                                                    <strong>{internalResponses.length}</strong>
+                                                </div>
+                                                {internalResponses.map((response) => (
+                                                    <article key={response.id} className={`${styles.responseItem} ${styles.responseItemInternal}`}>
+                                                        <div className={styles.responseItemHeader}>
+                                                            <div>
+                                                                <strong>{response.senderName || response.senderId}</strong>
+                                                                <span>{formatDate(response.createdAt)}</span>
+                                                            </div>
+                                                            <span className={styles.responseBadgeInternal}>Nội bộ</span>
+                                                        </div>
+                                                        <p>{response.message}</p>
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <form className={styles.reviewPanel} onSubmit={handleReview}>
                                 <div className={styles.panelHeaderInner}>
                                     <h4>Xử lý khiếu nại</h4>
@@ -448,7 +713,6 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                             >
                                                 <option value="UPHELD">{resolutionLabel.UPHELD}</option>
                                                 <option value="DISMISSED">{resolutionLabel.DISMISSED}</option>
-                                                <option value="PARTIAL">{resolutionLabel.PARTIAL}</option>
                                             </select>
                                         </label>
                                     )}
@@ -457,49 +721,10 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                         Ghi chú xử lý
                                         <textarea
                                             value={reviewNote}
-                                            onChange={(event) => setReviewNote(event.target.value)}
+                                            onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setReviewNote(event.target.value)}
                                             placeholder="Nhập ghi chú phản hồi cho người khiếu nại"
                                         />
                                     </label>
-
-                                    {selectedDetail.category === 'CHECKIN' && (
-                                        <label>
-                                            <span>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={enableCheckinAdjustment}
-                                                    onChange={(event) => setEnableCheckinAdjustment(event.target.checked)}
-                                                />
-                                                {' '}Điều chỉnh checkin + delta điểm
-                                            </span>
-                                        </label>
-                                    )}
-
-                                    {selectedDetail.category === 'CHECKIN' && enableCheckinAdjustment && (
-                                        <>
-                                            <label>
-                                                Trạng thái checkin mới
-                                                <select
-                                                    value={adjustCheckinStatus}
-                                                    onChange={(event) => setAdjustCheckinStatus(event.target.value as CheckinStatus)}
-                                                >
-                                                    <option value="SUCCESS">{checkinStatusLabel.SUCCESS}</option>
-                                                    <option value="LATE">{checkinStatusLabel.LATE}</option>
-                                                    <option value="FAILED">{checkinStatusLabel.FAILED}</option>
-                                                </select>
-                                            </label>
-
-                                            <label>
-                                                Delta điểm rèn luyện
-                                                <input
-                                                    type="number"
-                                                    value={trainingScoreDelta}
-                                                    onChange={(event) => setTrainingScoreDelta(Number(event.target.value || 0))}
-                                                    placeholder="Ví dụ: -2 hoặc 3"
-                                                />
-                                            </label>
-                                        </>
-                                    )}
                                 </div>
 
                                 <div className={styles.actionsRow}>
@@ -512,6 +737,56 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                     )}
                 </section>
             </div>
+
+            {isResponseModalOpen && selectedDetail && (
+                <div className={styles.modalBackdrop} role="presentation" onClick={closeResponseModal}>
+                    <div
+                        className={styles.modalCard}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="manager-response-title"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <p className={styles.filterEyebrow}>Phản hồi riêng</p>
+                                <h3 id="manager-response-title">Gửi phản hồi cho khiếu nại</h3>
+                                <p className={styles.modalSubtitle}>{selectedDetail.title}</p>
+                            </div>
+                            <button type="button" className={styles.modalCloseBtn} onClick={closeResponseModal}>×</button>
+                        </div>
+
+                        <form className={styles.modalBody} onSubmit={handleSendResponse}>
+                            <label className={styles.responseComposerLabel}>
+                                Nội dung phản hồi
+                                <textarea
+                                    value={responseMessage}
+                                    onChange={(event) => setResponseMessage(event.target.value)}
+                                    placeholder="Nhập phản hồi gửi cho sinh viên hoặc ghi chú nội bộ cho ban tổ chức"
+                                />
+                            </label>
+
+                            <label className={styles.responseToggle}>
+                                <input
+                                    type="checkbox"
+                                    checked={responseIsInternal}
+                                    onChange={(event) => setResponseIsInternal(event.target.checked)}
+                                />
+                                <span>Chỉ lưu nội bộ cho ban tổ chức</span>
+                            </label>
+
+                            <div className={styles.modalActions}>
+                                <button type="button" className={`${styles.btn} ${styles.btnSecondary}`} onClick={closeResponseModal}>
+                                    Hủy
+                                </button>
+                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={sendingResponse}>
+                                    {sendingResponse ? 'Đang gửi...' : 'Gửi phản hồi'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

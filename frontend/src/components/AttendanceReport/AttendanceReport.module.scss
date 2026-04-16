@@ -95,6 +95,20 @@ $text-muted: #64748b;
                 font-size: 14px;
             }
 
+            .searchInput {
+                min-width: 280px;
+                padding: 8px 12px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+                font-size: 14px;
+                outline: none;
+
+                &:focus {
+                    border-color: #93c5fd;
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+                }
+            }
+
             .exportBtn {
                 background: $white;
                 border: 1px solid #e2e8f0;
@@ -341,6 +355,43 @@ $text-muted: #64748b;
     background: #eff6ff;
 }
 
+.adjustActions {
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.adjustSelect,
+.adjustReasonInput {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: #fff;
+}
+
+.adjustReasonInput {
+    min-width: 220px;
+}
+
+.adjustBtn {
+    width: fit-content;
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: #2563eb;
+    cursor: pointer;
+
+    &:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+}
+
 @media (max-width: 992px) {
     .container {
         padding: 16px;
@@ -351,6 +402,11 @@ $text-muted: #64748b;
 
         .tableContainer {
             padding: 16px;
+        }
+
+        .searchInput {
+            min-width: 220px;
+            width: 100%;
         }
 
         .mapPanel {
@@ -371,6 +427,10 @@ $text-muted: #64748b;
 
         .tableContainer {
             padding: 12px;
+        }
+
+        .searchInput {
+            min-width: 0;
         }
 
         .mapPanel {

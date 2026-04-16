@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { CheckinService } from './checkin.service';
 import { CreateCheckinDto } from './dtos/create.checkin.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
@@ -10,6 +10,7 @@ import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.
 import { AdminGuard } from 'src/guards/admin.guard';
 import { StudentStatsQueryDto } from './dtos/student-stats.query.dto';
 import { StudentStatsFilterOptionsQueryDto } from './dtos/student-stats-filter-options.query.dto';
+import { UpdateCheckinStatusDto } from './dtos/update-checkin-status.dto';
 
 @Controller('checkins')
 export class CheckinController {
@@ -37,6 +38,22 @@ export class CheckinController {
         }
 
         return this.checkinService.createManual(manualCheckinDto, actorUserId, actorRole);
+    }
+
+    @Patch(':checkinId/status')
+    @UseGuards(AuthGuard)
+    async updateCheckinStatus(
+        @Param('checkinId') checkinId: string,
+        @Body() payload: UpdateCheckinStatusDto,
+        @Req() req: Request,
+    ) {
+        const actorUserId = req.user?.id;
+        const actorRole = req.user?.role;
+        if (!actorUserId) {
+            throw new UnauthorizedException('User not authenticated');
+        }
+
+        return this.checkinService.updateCheckinStatus(checkinId, payload, actorUserId, actorRole);
     }
 
     /**

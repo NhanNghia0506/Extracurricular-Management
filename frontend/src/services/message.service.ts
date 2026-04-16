@@ -53,7 +53,8 @@ export const messageService = {
 
     // Xoá tin nhắn
     async deleteMessage(messageId: string): Promise<any> {
-        return apiService.delete(`${BASE_URL}/${messageId}`);
+        const response = await apiService.delete(`${BASE_URL}/${messageId}`);
+        return response.data.data;
     },
 
     // Đánh dấu tin nhắn là đã đọc

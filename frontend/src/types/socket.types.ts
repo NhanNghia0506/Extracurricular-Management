@@ -19,6 +19,21 @@ export interface ConversationUpdatedPayload {
     lastMessageContent?: string;
     lastMessageUserName?: string;
     activityImage?: string;
+    activityId?: {
+        _id?: string;
+        title?: string;
+        image?: string;
+    };
+}
+
+export interface ConversationMessageDeletedPayload {
+    conversationId: string;
+    messageId: string;
+    content?: string;
+    isDeleted?: boolean;
+    deletedAt?: string;
+    senderName?: string;
+    senderId?: string;
 }
 
 export interface ConversationOnlineCountPayload {
@@ -79,6 +94,7 @@ export enum SocketEvent {
     // Server to Client
     RECEIVE_MESSAGE = 'receive-message',
     CONVERSATION_MESSAGE_NEW = 'conversation:message:new',
+    CONVERSATION_MESSAGE_DELETED = 'conversation:message:deleted',
     CONVERSATION_UPDATED = 'conversation:updated',
     CONVERSATION_ONLINE_COUNT = 'conversation:online-count',
     ACTIVITY_COMMENT_CREATED = 'activity:comment:created',

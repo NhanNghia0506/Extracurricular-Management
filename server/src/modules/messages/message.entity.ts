@@ -11,19 +11,19 @@ interface EditHistory {
 @Schema({ timestamps: true })
 export class Message {
     @Prop({ type: Types.ObjectId, ref: 'Conversation', required: true, index: true })
-    conversationId: Types.ObjectId;
+    conversationId!: Types.ObjectId;
 
     @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
-    senderId: Types.ObjectId;
+    senderId!: Types.ObjectId;
 
     @Prop({ required: true })
-    senderName: string;
+    senderName!: string;
 
     @Prop()
-    senderAvatar: string;
+    senderAvatar!: string;
 
     @Prop({ required: true })
-    content: string;
+    content!: string;
 
     @Prop()
     imageUrl?: string;
@@ -33,16 +33,22 @@ export class Message {
         default: 'sending',
         index: true
     })
-    status: string;
+    status!: string;
 
     @Prop({
         enum: ['text', 'image', 'file'],
         default: 'text'
     })
-    messageType: string;
+    messageType!: string;
 
     @Prop({ type: [String], default: [] })
-    reactions: string[];
+    reactions!: string[];
+
+    @Prop({ default: false, index: true })
+    isDeleted?: boolean;
+
+    @Prop({ type: Date, default: null })
+    deletedAt?: Date;
 
     @Prop({
         type: [{
@@ -51,13 +57,13 @@ export class Message {
         }],
         default: []
     })
-    editHistory: EditHistory[];
+    editHistory!: EditHistory[];
 
     @Prop({ type: Date, default: Date.now, index: true })
-    createdAt: Date;
+    createdAt!: Date;
 
     @Prop({ type: Date, default: Date.now })
-    updatedAt: Date;
+    updatedAt!: Date;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

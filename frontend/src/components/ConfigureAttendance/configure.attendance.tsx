@@ -77,6 +77,24 @@ const formatDuration = (totalMinutes: number): string => {
     return `${minutes} phút`;
 };
 
+const formatDateTimeLabel = (value?: string): string => {
+    if (!value) {
+        return '--';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '--';
+    }
+
+    return date.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
 const ConfigureAttendance: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [activityName, setActivityName] = useState('');
@@ -90,6 +108,8 @@ const ConfigureAttendance: React.FC = () => {
     const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
     const [activityLocationAddress, setActivityLocationAddress] = useState('');
     const [activityDateBase, setActivityDateBase] = useState('');
+    const [activityStartAt, setActivityStartAt] = useState('');
+    const [activityEndAt, setActivityEndAt] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const activityId = searchParams.get('activityId') || searchParams.get('id');
     const sessionId = searchParams.get('sessionId') || '';
@@ -112,6 +132,8 @@ const ConfigureAttendance: React.FC = () => {
                 setSessionTitle(`Phiên điểm danh - ${activityData.title || 'Hoạt động'}`);
                 setActivityLocationAddress(activityData.location?.address || '');
                 setActivityDateBase(activityData.startAt);
+                setActivityStartAt(activityData.startAt || '');
+                setActivityEndAt(activityData.endAt || '');
                 if (!hasCustomCenterRef.current && activityData.location?.latitude && activityData.location?.longitude) {
                     setCenter([activityData.location.latitude, activityData.location.longitude]);
                 }
@@ -216,6 +238,7 @@ const ConfigureAttendance: React.FC = () => {
     }, [startAt, endAt]);
 
     const coordinatesLabel = `${center[0].toFixed(5)}, ${center[1].toFixed(5)}`;
+    const activityTimeWindowLabel = `${formatDateTimeLabel(activityStartAt)} - ${formatDateTimeLabel(activityEndAt)}`;
 
     const buildDateTime = (dateBase: string, timeValue: string): Date | null => {
         if (!dateBase || !timeValue) return null;
@@ -250,6 +273,29 @@ const ConfigureAttendance: React.FC = () => {
 
         if (!startTime || !endTime || startTime >= endTime) {
             setError('Giờ bắt đầu và kết thúc chưa hợp lệ');
+            return;
+        }
+
+        const activityStartTime = activityStartAt ? new Date(activityStartAt) : null;
+        const activityEndTime = activityEndAt ? new Date(activityEndAt) : null;
+
+        if (activityStartTime && Number.isNaN(activityStartTime.getTime())) {
+            setError('Không thể xác định thời gian bắt đầu của hoạt động để kiểm tra phiên điểm danh');
+            return;
+        }
+
+        if (activityEndTime && Number.isNaN(activityEndTime.getTime())) {
+            setError('Không thể xác định thời gian kết thúc của hoạt động để kiểm tra phiên điểm danh');
+            return;
+        }
+
+        if (activityStartTime && startTime < activityStartTime) {
+            setError('Giờ bắt đầu phiên điểm danh phải nằm trong khung giờ diễn ra hoạt động');
+            return;
+        }
+
+        if (activityEndTime && endTime > activityEndTime) {
+            setError('Giờ kết thúc phiên điểm danh phải nằm trong khung giờ diễn ra hoạt động');
             return;
         }
 
@@ -429,6 +475,7 @@ const ConfigureAttendance: React.FC = () => {
                                 <small>
                                     {durationWarning || (durationValue ? `Tổng thời gian: ${durationValue}` : 'Chưa chọn giờ bắt đầu')}
                                 </small>
+                                <small>Khung giờ hoạt động: {activityTimeWindowLabel}</small>
                             </div>
                         </div>
 

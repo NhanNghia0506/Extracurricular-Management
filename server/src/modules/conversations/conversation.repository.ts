@@ -56,6 +56,33 @@ export class ConversationRepository {
         ).exec();
     }
 
+    async updateAfterMessageDeletion(
+        conversationId: string,
+        messageData: {
+            content?: string;
+            userId?: string;
+            userName?: string;
+            lastMessageAt?: Date;
+        } | null,
+    ): Promise<ConversationDocument | null> {
+        const updateData: Record<string, unknown> = {};
+
+        if (messageData?.content && messageData.userId && messageData.userName && messageData.lastMessageAt) {
+            updateData.$set = {
+                lastMessageContent: messageData.content.normalize('NFC'),
+                lastMessageAt: messageData.lastMessageAt,
+                lastMessageUserId: new Types.ObjectId(messageData.userId),
+                lastMessageUserName: messageData.userName.normalize('NFC'),
+            };
+        }
+
+        return this.conversationModel.findByIdAndUpdate(
+            conversationId,
+            updateData,
+            { new: true },
+        ).exec();
+    }
+
     async addMember(
         conversationId: string,
         userId: string,

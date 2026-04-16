@@ -330,16 +330,6 @@ const Header: React.FC<HeaderProps> = ({ onSearch, searchValue }) => {
                                                     <i className="fa-solid fa-school"></i>
                                                     <span>Quản lý khoa lớp</span>
                                                 </button>
-                                                <button
-                                                    className={styles.dropdownItem}
-                                                    onClick={() => {
-                                                        navigate('/admin/complaints');
-                                                        setAdminDropdownOpen(false);
-                                                    }}
-                                                >
-                                                    <i className="fa-solid fa-triangle-exclamation"></i>
-                                                    <span>Xử lý khiếu nại</span>
-                                                </button>
                                             </div>
                                         )}
                                     </div>

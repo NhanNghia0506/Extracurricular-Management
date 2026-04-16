@@ -20,7 +20,6 @@ import {
 } from 'src/global/globalEnum';
 import { User } from '../users/user.entity';
 import { ActivityService } from '../activities/activity.service';
-import { CheckinService } from '../checkins/checkin.service';
 import { CheckinSessionService } from '../checkin-sessions/checkin-session.service';
 import { NotificationService } from '../notifications/notification.service';
 import { OrganizerMemberService } from '../organizer-members/organizer-member.service';
@@ -109,20 +108,11 @@ interface ComplaintDashboardResponse {
     closed: number;
 }
 
-interface ComplaintCheckinAdjustmentSummary {
-    checkinId: string;
-    fromStatus: string;
-    toStatus: string;
-    fromTrainingScoreDelta: number;
-    toTrainingScoreDelta: number;
-}
-
 @Injectable()
 export class ComplaintService {
     constructor(
         private readonly complaintRepository: ComplaintRepository,
         private readonly activityService: ActivityService,
-        private readonly checkinService: CheckinService,
         private readonly checkinSessionService: CheckinSessionService,
         private readonly notificationService: NotificationService,
         private readonly organizerMemberService: OrganizerMemberService,
@@ -295,15 +285,14 @@ export class ComplaintService {
         return this.listHistoryInternal(complaint._id.toString());
     }
 
-    async listAdmin(query: ListComplaintsDto, actorUserId?: string, actorRole?: string): Promise<ComplaintListResponse> {
+    async listAdmin(query: ListComplaintsDto, actorUserId?: string): Promise<ComplaintListResponse> {
         const limit = query.limit ?? 10;
         const skip = query.skip ?? 0;
-        if (actorRole !== UserRole.ADMIN && !query.organizerId) {
+        if (!query.organizerId) {
             throw new ForbiddenException('Bạn chỉ có thể xem khiếu nại trong phạm vi tổ chức của mình');
         }
-        const targetEntityIds = query.organizerId
-            ? await this.getTargetEntityIdsForOrganizer(query.organizerId, actorUserId, actorRole)
-            : undefined;
+
+        const targetEntityIds = await this.getTargetEntityIdsForOrganizer(query.organizerId, actorUserId);
 
         const [total, rows] = await Promise.all([
             this.complaintRepository.countAll({
@@ -335,7 +324,7 @@ export class ComplaintService {
         };
     }
 
-    async getAdminById(id: string, actorUserId?: string, actorRole?: string, organizerId?: string): Promise<ComplaintListItem> {
+    async getAdminById(id: string, actorUserId?: string, organizerId?: string): Promise<ComplaintListItem> {
         this.ensureObjectId(id, 'complaintId phải là MongoDB ObjectId hợp lệ');
 
         const complaint = await this.complaintRepository.findById(id);
@@ -343,7 +332,7 @@ export class ComplaintService {
             throw new NotFoundException('Không tìm thấy khiếu nại');
         }
 
-        await this.assertCanManageComplaint(complaint, actorUserId, actorRole, organizerId);
+        await this.assertCanManageComplaint(complaint, actorUserId, organizerId);
 
         return this.toResponse(
             complaint,
@@ -351,20 +340,19 @@ export class ComplaintService {
         );
     }
 
-    async listAdminResponses(id: string, actorUserId?: string, actorRole?: string, organizerId?: string): Promise<ComplaintResponseItem[]> {
-        const complaint = await this.assertComplaintForManagerScope(id, actorUserId, actorRole, organizerId);
+    async listAdminResponses(id: string, actorUserId?: string, organizerId?: string): Promise<ComplaintResponseItem[]> {
+        const complaint = await this.assertComplaintForManagerScope(id, actorUserId, organizerId);
         return this.listResponsesInternal(complaint._id.toString(), true);
     }
 
     async addAdminResponse(
         id: string,
         adminId: string,
-        adminRole: string | undefined,
         organizerId: string | undefined,
         payload: CreateComplaintResponseDto,
     ): Promise<ComplaintResponseItem> {
-        const complaint = await this.assertComplaintForManagerScope(id, adminId, adminRole, organizerId);
-        await this.assertCanManageComplaint(complaint, adminId, adminRole, organizerId);
+        const complaint = await this.assertComplaintForManagerScope(id, adminId, organizerId);
+        await this.assertCanManageComplaint(complaint, adminId, organizerId);
 
         const isInternal = Boolean(payload.isInternal);
         const created = await this.complaintResponseModel.create({
@@ -395,15 +383,14 @@ export class ComplaintService {
         return this.toResponseMessage(created);
     }
 
-    async listAdminHistory(id: string, actorUserId?: string, actorRole?: string, organizerId?: string): Promise<ComplaintHistoryItem[]> {
-        const complaint = await this.assertComplaintForManagerScope(id, actorUserId, actorRole, organizerId);
+    async listAdminHistory(id: string, actorUserId?: string, organizerId?: string): Promise<ComplaintHistoryItem[]> {
+        const complaint = await this.assertComplaintForManagerScope(id, actorUserId, organizerId);
         return this.listHistoryInternal(complaint._id.toString());
     }
 
     async review(
         id: string,
         reviewerId: string,
-        reviewerRole: string | undefined,
         organizerId: string | undefined,
         payload: ReviewComplaintDto,
     ): Promise<ComplaintListItem> {
@@ -415,7 +402,7 @@ export class ComplaintService {
             throw new NotFoundException('Không tìm thấy khiếu nại');
         }
 
-        await this.assertCanManageComplaint(existing, reviewerId, reviewerRole, organizerId);
+        await this.assertCanManageComplaint(existing, reviewerId, organizerId);
 
         if (![ComplaintStatus.UNDER_REVIEW, ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED].includes(payload.status)) {
             throw new BadRequestException('Trạng thái xử lý không hợp lệ cho thao tác review');
@@ -427,13 +414,6 @@ export class ComplaintService {
         ) {
             throw new BadRequestException('Cần cung cấp kết quả xử lý khi kết thúc khiếu nại');
         }
-
-        const checkinAdjustment = await this.applyCheckinAdjustmentIfNeeded(
-            existing,
-            reviewerId,
-            payload.checkinAdjustment,
-            payload.reviewNote,
-        );
 
         const updated = await this.complaintRepository.updateReview(id, {
             status: payload.status,
@@ -457,11 +437,10 @@ export class ComplaintService {
             note: payload.reviewNote.trim(),
             meta: {
                 resolution: payload.resolution ?? null,
-                checkinAdjustment,
             },
         });
 
-        await this.notifyComplainantOnReviewed(updated, checkinAdjustment);
+        await this.notifyComplainantOnReviewed(updated);
 
         return this.toResponse(
             updated,
@@ -469,14 +448,12 @@ export class ComplaintService {
         );
     }
 
-    async getDashboard(actorUserId?: string, actorRole?: string, organizerId?: string): Promise<ComplaintDashboardResponse> {
-        if (actorRole !== UserRole.ADMIN && !organizerId) {
+    async getDashboard(actorUserId?: string, organizerId?: string): Promise<ComplaintDashboardResponse> {
+        if (!organizerId) {
             throw new ForbiddenException('Bạn chỉ có thể xem dashboard khiếu nại trong phạm vi tổ chức của mình');
         }
 
-        const targetEntityIds = organizerId
-            ? await this.getTargetEntityIdsForOrganizer(organizerId, actorUserId, actorRole)
-            : undefined;
+        const targetEntityIds = await this.getTargetEntityIdsForOrganizer(organizerId, actorUserId);
 
         const [submitted, underReview, resolved, closed] = await Promise.all([
             this.complaintRepository.countAll({ status: ComplaintStatus.SUBMITTED, targetEntityIds }),
@@ -502,17 +479,14 @@ export class ComplaintService {
     private async getTargetEntityIdsForOrganizer(
         organizerId: string,
         actorUserId?: string,
-        actorRole?: string,
     ): Promise<string[]> {
         this.ensureObjectId(organizerId, 'organizerId phải là MongoDB ObjectId hợp lệ');
 
-        if (actorRole !== UserRole.ADMIN) {
-            if (!actorUserId) {
-                throw new ForbiddenException('Bạn không có quyền xử lý khiếu nại của tổ chức này');
-            }
-
-            await this.assertOrganizerManager(organizerId, actorUserId);
+        if (!actorUserId) {
+            throw new ForbiddenException('Bạn không có quyền xử lý khiếu nại của tổ chức này');
         }
+
+        await this.assertOrganizerManager(organizerId, actorUserId);
 
         const activityIds = await this.activityService.findIdsByOrganizerId(organizerId);
         if (!activityIds.length) {
@@ -533,22 +507,18 @@ export class ComplaintService {
     private async assertCanManageComplaint(
         complaint: ComplaintDocument,
         actorUserId?: string,
-        actorRole?: string,
         organizerId?: string,
     ): Promise<void> {
-        if (actorRole === UserRole.ADMIN) {
-            if (organizerId) {
-                await this.assertComplaintMatchesOrganizer(complaint, organizerId);
-            }
-            return;
-        }
-
         if (!actorUserId) {
             throw new ForbiddenException('Bạn không có quyền xử lý khiếu nại này');
         }
 
+        if (!organizerId) {
+            throw new ForbiddenException('Bạn chỉ có thể xử lý khiếu nại trong phạm vi tổ chức của mình');
+        }
+
         const complaintOrganizerId = await this.getComplaintOrganizerId(complaint);
-        if (organizerId && complaintOrganizerId !== organizerId) {
+        if (complaintOrganizerId !== organizerId) {
             throw new ForbiddenException('Bạn không có quyền xử lý khiếu nại này');
         }
 
@@ -556,25 +526,17 @@ export class ComplaintService {
             throw new ForbiddenException('Không xác định được tổ chức của khiếu nại này');
         }
 
-        await this.assertOrganizerManager(complaintOrganizerId, actorUserId);
+        await this.assertOrganizerManager(organizerId, actorUserId);
     }
 
     private async assertComplaintForManagerScope(
         id: string,
         actorUserId?: string,
-        actorRole?: string,
         organizerId?: string,
     ): Promise<ComplaintDocument> {
         const complaint = await this.assertExistingComplaint(id);
-        await this.assertCanManageComplaint(complaint, actorUserId, actorRole, organizerId);
+        await this.assertCanManageComplaint(complaint, actorUserId, organizerId);
         return complaint;
-    }
-
-    private async assertComplaintMatchesOrganizer(complaint: ComplaintDocument, organizerId: string): Promise<void> {
-        const complaintOrganizerId = await this.getComplaintOrganizerId(complaint);
-        if (complaintOrganizerId !== organizerId) {
-            throw new ForbiddenException('Khiếu nại này không thuộc tổ chức đã chọn');
-        }
     }
 
     private async getComplaintOrganizerId(complaint: ComplaintDocument): Promise<string | null> {
@@ -869,45 +831,6 @@ export class ComplaintService {
         return 'application/octet-stream';
     }
 
-    private async applyCheckinAdjustmentIfNeeded(
-        complaint: ComplaintDocument,
-        reviewerId: string,
-        adjustment: ReviewComplaintDto['checkinAdjustment'],
-        fallbackReason: string,
-    ): Promise<ComplaintCheckinAdjustmentSummary | null> {
-        if (!adjustment) {
-            return null;
-        }
-
-        if (complaint.category !== ComplaintCategory.CHECKIN) {
-            throw new BadRequestException('Chỉ khiếu nại CHECKIN mới có thể điều chỉnh trạng thái điểm danh hoặc delta điểm');
-        }
-
-        const hasStatusAdjustment = adjustment.status !== undefined;
-        const hasDeltaAdjustment = adjustment.trainingScoreDelta !== undefined;
-        if (!hasStatusAdjustment && !hasDeltaAdjustment) {
-            throw new BadRequestException('Thiếu dữ liệu điều chỉnh checkin hoặc delta điểm');
-        }
-
-        const reason = adjustment.reason?.trim() || fallbackReason.trim();
-        const result = await this.checkinService.applyComplaintAdjustment({
-            checkinSessionId: complaint.targetEntityId.toString(),
-            userId: complaint.complainantId.toString(),
-            adjustedBy: reviewerId,
-            status: adjustment.status,
-            trainingScoreDelta: adjustment.trainingScoreDelta,
-            reason,
-        });
-
-        return {
-            checkinId: result.checkinId,
-            fromStatus: result.fromStatus,
-            toStatus: result.toStatus,
-            fromTrainingScoreDelta: result.fromTrainingScoreDelta,
-            toTrainingScoreDelta: result.toTrainingScoreDelta,
-        };
-    }
-
     private async notifyAdminsOnCreated(complaint: ComplaintDocument, targetEntityName: string): Promise<void> {
         const admins = await this.userModel
             .find({ role: UserRole.ADMIN })
@@ -942,20 +865,13 @@ export class ComplaintService {
         });
     }
 
-    private async notifyComplainantOnReviewed(
-        complaint: ComplaintDocument,
-        checkinAdjustment?: ComplaintCheckinAdjustmentSummary | null,
-    ): Promise<void> {
-        const adjustmentMessage = checkinAdjustment
-            ? ` Điều chỉnh checkin: ${checkinAdjustment.fromStatus} -> ${checkinAdjustment.toStatus}, delta điểm: ${checkinAdjustment.fromTrainingScoreDelta} -> ${checkinAdjustment.toTrainingScoreDelta}.`
-            : '';
-
+    private async notifyComplainantOnReviewed(complaint: ComplaintDocument): Promise<void> {
         await this.notificationService.create({
             userId: complaint.complainantId.toString(),
             senderName: 'Quản trị viên',
             senderType: 'complaint-review',
             title: 'Khiếu nại đã được xử lý',
-            message: `Khiếu nại "${complaint.title}" đã được cập nhật sang trạng thái ${complaint.status}.${adjustmentMessage}`,
+            message: `Khiếu nại "${complaint.title}" đã được cập nhật sang trạng thái ${complaint.status}.`,
             type: NotificationType.SYSTEM,
             priority: NotificationPriority.HIGH,
             linkUrl: `/complaints?id=${complaint._id.toString()}`,

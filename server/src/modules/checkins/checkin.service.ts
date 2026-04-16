@@ -6,17 +6,19 @@ import { Checkin } from './checkin.entity';
 import { CheckinSessionService } from '../checkin-sessions/checkin-session.service';
 import { calculateHaversineDistance, isLocationWithinRadius } from 'src/utils/haversine.util';
 import { calculateMovementSpeed, MovementSpeedResult } from 'src/utils/movement-speed.util';
-import { CheckinStatus, UserRole } from 'src/global/globalEnum';
+import { CheckinStatus, OrganizerMemberRole, UserRole } from 'src/global/globalEnum';
 import { ActivityParticipantService } from '../activity-participants/activity-participant.service';
 import { CheckinGateway } from 'src/events/checkin.gateway';
 import StudentService from '../students/student.service';
 import UserService from '../users/user.service';
+import { OrganizerMemberService } from '../organizer-members/organizer-member.service';
 import { StudentProfile } from 'src/global/globalInterface';
 import { ManualCheckinDto } from './dtos/manual.checkin.dto';
 import { MyAttendanceHistoryQueryDto } from './dtos/my-attendance-history.query.dto';
 import { TrainingScoreReportQueryDto } from './dtos/training-score-report.query.dto';
 import { StudentStatsQueryDto } from './dtos/student-stats.query.dto';
 import { StudentStatsFilterOptionsQueryDto } from './dtos/student-stats-filter-options.query.dto';
+import { UpdateCheckinStatusDto } from './dtos/update-checkin-status.dto';
 import {
     TrainingScoreClassItem,
     TrainingScoreFacultyItem,
@@ -83,21 +85,29 @@ interface CheckinMovementSnapshot {
     createdAt?: Date;
 }
 
-interface ComplaintCheckinAdjustmentInput {
-    checkinSessionId: string;
-    userId: string;
-    adjustedBy: string;
-    status?: CheckinStatus;
-    trainingScoreDelta?: number;
-    reason: string;
+interface CheckinStatusAdjustmentRecord {
+    _id?: Types.ObjectId;
+    checkinSessionId: Types.ObjectId;
+    userId: Types.ObjectId;
+    failReason?: string | null;
 }
 
-interface ComplaintCheckinAdjustmentResult {
-    checkinId: string;
-    fromStatus: CheckinStatus;
-    toStatus: CheckinStatus;
-    fromTrainingScoreDelta: number;
-    toTrainingScoreDelta: number;
+interface CheckinRepositoryStatusAdjustmentAdapter {
+    findById(checkinId: string): Promise<CheckinStatusAdjustmentRecord | null>;
+    findOneBySessionAndUser(
+        checkinSessionId: string,
+        userId: string,
+        status: CheckinStatus | CheckinStatus[],
+    ): Promise<{ _id?: Types.ObjectId } | null>;
+    updateStatus(
+        checkinId: string,
+        payload: {
+            status: CheckinStatus;
+            adjustedBy: string;
+            adjustmentReason: string;
+            failReason?: string | null;
+        },
+    ): Promise<CheckinStatusAdjustmentRecord | null>;
 }
 
 export interface MyAttendanceHistorySummary {
@@ -195,6 +205,7 @@ export class CheckinService {
         private readonly checkinGateway: CheckinGateway,
         private readonly studentService: StudentService,
         private readonly userService: UserService,
+        private readonly organizerMemberService: OrganizerMemberService,
         private readonly academicService: AcademicService,
     ) { }
 
@@ -330,44 +341,6 @@ export class CheckinService {
         };
 
         return repository.findBySessionId(checkinSessionId, status);
-    }
-
-    async applyComplaintAdjustment(input: ComplaintCheckinAdjustmentInput): Promise<ComplaintCheckinAdjustmentResult> {
-        if (!Types.ObjectId.isValid(input.checkinSessionId)) {
-            throw new BadRequestException('checkinSessionId phải là MongoDB ObjectId hợp lệ');
-        }
-
-        if (!Types.ObjectId.isValid(input.userId)) {
-            throw new BadRequestException('userId phải là MongoDB ObjectId hợp lệ');
-        }
-
-        if (!Types.ObjectId.isValid(input.adjustedBy)) {
-            throw new BadRequestException('adjustedBy phải là MongoDB ObjectId hợp lệ');
-        }
-
-        const checkin = await this.checkinRepository.findLatestBySessionAndUser(input.checkinSessionId, input.userId);
-        if (!checkin) {
-            throw new NotFoundException('Không tìm thấy bản ghi checkin của sinh viên trong phiên này');
-        }
-
-        const updated = await this.checkinRepository.updateComplaintAdjustment(checkin._id.toString(), {
-            status: input.status,
-            trainingScoreDelta: input.trainingScoreDelta,
-            adjustedBy: input.adjustedBy,
-            adjustmentReason: input.reason,
-        });
-
-        if (!updated) {
-            throw new NotFoundException('Không thể cập nhật bản ghi checkin');
-        }
-
-        return {
-            checkinId: checkin._id.toString(),
-            fromStatus: checkin.status,
-            toStatus: updated.status,
-            fromTrainingScoreDelta: Number(checkin.trainingScoreDelta || 0),
-            toTrainingScoreDelta: Number(updated.trainingScoreDelta || 0),
-        };
     }
 
     async create(
@@ -514,15 +487,6 @@ export class CheckinService {
             throw new NotFoundException('Không tìm thấy check-in session');
         }
 
-        const now = new Date();
-        if (now < checkinSession.startTime) {
-            throw new BadRequestException('Check-in session chưa diễn ra');
-        }
-
-        if (now > checkinSession.endTime) {
-            throw new BadRequestException('Check-in session đã kết thúc');
-        }
-
         const activity = await this.checkinSessionService.findActivityBySessionId(manualCheckinDto.checkinSessionId);
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động của check-in session');
@@ -530,8 +494,32 @@ export class CheckinService {
 
         const isOwner = activity.createdBy?.toString() === actorUserId;
         const isAdmin = actorRole === UserRole.ADMIN;
-        if (!isOwner && !isAdmin) {
-            throw new ForbiddenException('Chỉ chủ hoạt động hoặc admin mới có quyền điểm danh thủ công');
+        const organizerId = typeof activity.organizerId === 'string'
+            ? activity.organizerId
+            : String((activity.organizerId as { _id?: { toString(): string } } | null | undefined)?._id?.toString() || '');
+        const actorMember = organizerId
+            ? await this.organizerMemberService.findByUserIdAndOrganizerId(actorUserId, organizerId)
+            : null;
+        const isOrganizerManager = Boolean(
+            actorMember
+            && actorMember.isActive
+            && actorMember.role === OrganizerMemberRole.MANAGER,
+        );
+
+        if (!isOwner && !isAdmin && !isOrganizerManager) {
+            throw new ForbiddenException('Chỉ chủ hoạt động, MANAGER của tổ chức hoặc admin mới có quyền điểm danh thủ công');
+        }
+
+        // MANAGER của tổ chức có thể điểm danh thủ công bất cứ lúc nào, không bị ràng buộc khung thời gian.
+        if (!isOrganizerManager) {
+            const now = new Date();
+            if (now < checkinSession.startTime) {
+                throw new BadRequestException('Check-in session chưa diễn ra');
+            }
+
+            if (now > checkinSession.endTime) {
+                throw new BadRequestException('Check-in session đã kết thúc');
+            }
         }
 
         const participant = await this.activityParticipantService.findByActivityAndUserId(
@@ -566,6 +554,76 @@ export class CheckinService {
         void this.emitCheckinEventAsync(savedCheckin, manualCheckinDto.userId);
 
         return savedCheckin;
+    }
+
+    async updateCheckinStatus(
+        checkinId: string,
+        payload: UpdateCheckinStatusDto,
+        actorUserId: string,
+        actorRole?: string,
+    ) {
+        if (!Types.ObjectId.isValid(checkinId)) {
+            throw new BadRequestException('checkinId không hợp lệ');
+        }
+
+        const checkinRepository = this.checkinRepository as unknown as CheckinRepositoryStatusAdjustmentAdapter;
+        const checkin = await checkinRepository.findById(checkinId);
+        if (!checkin) {
+            throw new NotFoundException('Không tìm thấy bản ghi điểm danh');
+        }
+
+        const activity = await this.checkinSessionService.findActivityBySessionId(checkin.checkinSessionId.toString());
+        if (!activity) {
+            throw new NotFoundException('Không tìm thấy hoạt động của check-in session');
+        }
+
+        const isOwner = activity.createdBy?.toString() === actorUserId;
+        const isAdmin = actorRole === UserRole.ADMIN;
+        const organizerId = typeof activity.organizerId === 'string'
+            ? activity.organizerId
+            : String((activity.organizerId as { _id?: { toString(): string } } | null | undefined)?._id?.toString() || '');
+        const actorMember = organizerId
+            ? await this.organizerMemberService.findByUserIdAndOrganizerId(actorUserId, organizerId)
+            : null;
+        const isOrganizerManager = Boolean(
+            actorMember
+            && actorMember.isActive
+            && actorMember.role === OrganizerMemberRole.MANAGER,
+        );
+
+        if (!isOwner && !isAdmin && !isOrganizerManager) {
+            throw new ForbiddenException('Chỉ chủ hoạt động, MANAGER của tổ chức hoặc admin mới có quyền chỉnh sửa trạng thái điểm danh');
+        }
+
+        if ([CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(payload.status)) {
+            const existingSuccess = await checkinRepository.findOneBySessionAndUser(
+                checkin.checkinSessionId.toString(),
+                checkin.userId.toString(),
+                [CheckinStatus.SUCCESS, CheckinStatus.LATE],
+            );
+
+            if (existingSuccess?._id?.toString() && checkin._id?.toString() && existingSuccess._id.toString() !== checkin._id.toString()) {
+                throw new BadRequestException('Người dùng này đã có một lượt điểm danh thành công trong session');
+            }
+        }
+
+        const adjustmentReason = payload.adjustmentReason?.trim() || 'Điều chỉnh thủ công bởi ban tổ chức';
+        const failReason = payload.status === CheckinStatus.FAILED
+            ? (payload.failReason?.trim() || checkin.failReason || 'Điểm danh bị đánh dấu thất bại khi xử lý khiếu nại')
+            : null;
+
+        const updated = await checkinRepository.updateStatus(checkinId, {
+            status: payload.status,
+            adjustedBy: actorUserId,
+            adjustmentReason,
+            failReason,
+        });
+
+        if (!updated) {
+            throw new NotFoundException('Không thể cập nhật trạng thái điểm danh');
+        }
+
+        return updated;
     }
 
     /**

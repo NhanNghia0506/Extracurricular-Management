@@ -1,15 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import complaintService from '../../services/complaint.service';
+import activityService from '../../services/activity.service';
+import checkinSessionService from '../../services/checkin-session.service';
+import checkinService from '../../services/checkin.service';
 import {
     ComplaintCategory,
     ComplaintItem,
     ComplaintPriority,
+    ComplaintResponseItem,
     ComplaintStatus,
     CreateComplaintPayload,
 } from '../../types/complaint.types';
+import { AttendanceCheckinStatus, AttendanceHistoryItem } from '../../types/attendance-history.types';
+import { CheckinSession } from '../../types/checkin-session.types';
 import { useToastActions } from '../../contexts/ToastContext';
 import { resolveImageSrc } from '../../utils/image-url';
 import styles from './complaints.module.scss';
+
+interface ComplaintActivityOption {
+    id: string;
+    title: string;
+}
+
+interface SessionCheckinOverview {
+    sessionId: string;
+    status: AttendanceCheckinStatus;
+    checkinTime: string;
+}
 
 const statusLabel: Record<ComplaintStatus, string> = {
     SUBMITTED: 'Mới gửi',
@@ -22,6 +39,12 @@ const priorityLabel: Record<ComplaintPriority, string> = {
     NORMAL: 'Thường',
     HIGH: 'Cao',
     URGENT: 'Khẩn cấp',
+};
+
+const checkinStatusLabel: Record<AttendanceCheckinStatus, string> = {
+    SUCCESS: 'Thành công',
+    LATE: 'Muộn',
+    FAILED: 'Thất bại',
 };
 
 const formatDate = (value?: string | Date | null) => {
@@ -47,6 +70,14 @@ const Complaints: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [statusFilter, setStatusFilter] = useState<'' | ComplaintStatus>('');
+    const [activityOptions, setActivityOptions] = useState<ComplaintActivityOption[]>([]);
+    const [selectedActivityId, setSelectedActivityId] = useState('');
+    const [sessionOptions, setSessionOptions] = useState<CheckinSession[]>([]);
+    const [sessionStatusMap, setSessionStatusMap] = useState<Record<string, SessionCheckinOverview>>({});
+    const [loadingTargets, setLoadingTargets] = useState(false);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+    const [responses, setResponses] = useState<ComplaintResponseItem[]>([]);
+    const [loadingResponses, setLoadingResponses] = useState(false);
 
     const [form, setForm] = useState<CreateComplaintPayload>({
         category: 'ACTIVITY',
@@ -56,6 +87,21 @@ const Complaints: React.FC = () => {
         priority: 'NORMAL',
         attachmentUrls: [],
     });
+
+    const mapActivityOption = (raw: any): ComplaintActivityOption | null => {
+        const idCandidate = raw?.activityId || raw?._id;
+        const id = typeof idCandidate === 'string' ? idCandidate : String(idCandidate || '');
+        const title = typeof raw?.title === 'string' ? raw.title.trim() : '';
+
+        if (!id || !title) {
+            return null;
+        }
+
+        return {
+            id,
+            title,
+        };
+    };
 
     const loadList = useCallback(async () => {
         setLoading(true);
@@ -85,6 +131,127 @@ const Complaints: React.FC = () => {
 
     useEffect(() => {
         let ignore = false;
+
+        const loadComplaintTargets = async () => {
+            setLoadingTargets(true);
+
+            try {
+                const [activitiesResponse, historyResponse] = await Promise.all([
+                    activityService.myActivities(),
+                    checkinService.getMyAttendanceHistory({ page: 1, limit: 1000 }),
+                ]);
+
+                if (ignore) {
+                    return;
+                }
+
+                const rawActivities = Array.isArray(activitiesResponse.data?.data) ? activitiesResponse.data.data : [];
+                const options: ComplaintActivityOption[] = rawActivities
+                    .map((item: any) => mapActivityOption(item))
+                    .filter((item: ComplaintActivityOption | null): item is ComplaintActivityOption => Boolean(item));
+
+                const uniqueOptions = options.filter((item, index, source) => source.findIndex((candidate) => candidate.id === item.id) === index);
+                setActivityOptions(uniqueOptions);
+
+                const historyItems = Array.isArray(historyResponse.items) ? historyResponse.items : [];
+                const statusLookup: Record<string, SessionCheckinOverview> = {};
+
+                historyItems.forEach((item: AttendanceHistoryItem) => {
+                    const existing = statusLookup[item.sessionId];
+                    const currentTime = new Date(item.checkinTime).getTime();
+                    const existingTime = existing ? new Date(existing.checkinTime).getTime() : 0;
+
+                    if (!existing || currentTime >= existingTime) {
+                        statusLookup[item.sessionId] = {
+                            sessionId: item.sessionId,
+                            status: item.status,
+                            checkinTime: item.checkinTime,
+                        };
+                    }
+                });
+
+                setSessionStatusMap(statusLookup);
+            } catch (error: any) {
+                if (!ignore) {
+                    showToast({
+                        type: 'error',
+                        title: 'Tải dữ liệu khiếu nại thất bại',
+                        message: error?.response?.data?.message || 'Không thể tải danh sách hoạt động/checkin để khiếu nại.',
+                    });
+                }
+            } finally {
+                if (!ignore) {
+                    setLoadingTargets(false);
+                }
+            }
+        };
+
+        void loadComplaintTargets();
+
+        return () => {
+            ignore = true;
+        };
+    }, [showToast]);
+
+    useEffect(() => {
+        if (!selectedActivityId) {
+            setSessionOptions([]);
+            if (form.category === 'ACTIVITY') {
+                setForm((prev) => ({ ...prev, targetEntityId: '' }));
+            }
+            return;
+        }
+
+        if (form.category === 'ACTIVITY') {
+            setForm((prev) => ({ ...prev, targetEntityId: selectedActivityId }));
+            return;
+        }
+
+        let ignore = false;
+
+        const loadSessionsByActivity = async () => {
+            setLoadingSessions(true);
+
+            try {
+                const response = await checkinSessionService.listByActivityId(selectedActivityId);
+                const sessions = Array.isArray(response.data?.data) ? response.data.data : [];
+
+                if (!ignore) {
+                    setSessionOptions(sessions);
+                }
+            } catch (error: any) {
+                if (!ignore) {
+                    setSessionOptions([]);
+                    showToast({
+                        type: 'error',
+                        title: 'Tải phiên điểm danh thất bại',
+                        message: error?.response?.data?.message || 'Không thể tải danh sách phiên điểm danh của hoạt động.',
+                    });
+                }
+            } finally {
+                if (!ignore) {
+                    setLoadingSessions(false);
+                }
+            }
+        };
+
+        void loadSessionsByActivity();
+
+        return () => {
+            ignore = true;
+        };
+    }, [selectedActivityId, form.category, showToast]);
+
+    useEffect(() => {
+        if (form.category === 'CHECKIN') {
+            setForm((prev) => ({ ...prev, targetEntityId: '' }));
+        } else if (form.category === 'ACTIVITY' && selectedActivityId) {
+            setForm((prev) => ({ ...prev, targetEntityId: selectedActivityId }));
+        }
+    }, [form.category, selectedActivityId]);
+
+    useEffect(() => {
+        let ignore = false;
         const loadDetail = async () => {
             if (!selectedId) {
                 setSelectedDetail(null);
@@ -108,6 +275,45 @@ const Complaints: React.FC = () => {
         };
 
         void loadDetail();
+        return () => {
+            ignore = true;
+        };
+    }, [selectedId, showToast]);
+
+    useEffect(() => {
+        let ignore = false;
+
+        const loadResponses = async () => {
+            if (!selectedId) {
+                setResponses([]);
+                return;
+            }
+
+            setLoadingResponses(true);
+
+            try {
+                const response = await complaintService.listMineResponses(selectedId);
+                if (!ignore) {
+                    setResponses(response || []);
+                }
+            } catch (error: any) {
+                if (!ignore) {
+                    setResponses([]);
+                    showToast({
+                        type: 'error',
+                        title: 'Tải phản hồi thất bại',
+                        message: error?.response?.data?.message || 'Không thể tải luồng phản hồi của khiếu nại.',
+                    });
+                }
+            } finally {
+                if (!ignore) {
+                    setLoadingResponses(false);
+                }
+            }
+        };
+
+        void loadResponses();
+
         return () => {
             ignore = true;
         };
@@ -149,7 +355,7 @@ const Complaints: React.FC = () => {
             showToast({
                 type: 'error',
                 title: 'Thiếu thông tin',
-                message: 'Vui lòng nhập đầy đủ targetEntityId, tiêu đề và nội dung khiếu nại.',
+                message: 'Vui lòng chọn đối tượng khiếu nại, nhập tiêu đề và nội dung.',
             });
             return;
         }
@@ -171,7 +377,7 @@ const Complaints: React.FC = () => {
 
             setForm({
                 category: form.category,
-                targetEntityId: '',
+                targetEntityId: form.category === 'ACTIVITY' ? selectedActivityId : '',
                 title: '',
                 description: '',
                 priority: 'NORMAL',
@@ -192,6 +398,12 @@ const Complaints: React.FC = () => {
     };
 
     const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
+    const selectedResponses = useMemo(() => responses || [], [responses]);
+
+    const selectedActivityTitle = useMemo(
+        () => activityOptions.find((activity) => activity.id === selectedActivityId)?.title || '',
+        [activityOptions, selectedActivityId],
+    );
 
     const pendingCount = items.filter((item) => item.status === 'SUBMITTED' || item.status === 'UNDER_REVIEW').length;
     const resolvedCount = items.filter((item) => item.status === 'RESOLVED' || item.status === 'CLOSED').length;
@@ -249,13 +461,87 @@ const Complaints: React.FC = () => {
                         </label>
 
                         <label>
-                            Target Entity ID
-                            <input
-                                value={form.targetEntityId}
-                                onChange={(event) => setForm((prev) => ({ ...prev, targetEntityId: event.target.value }))}
-                                placeholder="Mongo ObjectId của Activity hoặc Checkin Session"
-                            />
+                            Chọn hoạt động
+                            <select
+                                value={selectedActivityId}
+                                onChange={(event) => {
+                                    const nextActivityId = event.target.value;
+                                    setSelectedActivityId(nextActivityId);
+
+                                    if (form.category === 'ACTIVITY') {
+                                        setForm((prev) => ({ ...prev, targetEntityId: nextActivityId }));
+                                    } else {
+                                        setForm((prev) => ({ ...prev, targetEntityId: '' }));
+                                    }
+                                }}
+                                disabled={loadingTargets}
+                            >
+                                <option value="">{loadingTargets ? 'Đang tải hoạt động...' : 'Chọn hoạt động muốn khiếu nại'}</option>
+                                {activityOptions.map((activity) => (
+                                    <option key={activity.id} value={activity.id}>{activity.title}</option>
+                                ))}
+                            </select>
                         </label>
+
+                        {form.category === 'ACTIVITY' && selectedActivityId && (
+                            <div className={styles.targetHint}>Đối tượng khiếu nại: {selectedActivityTitle}</div>
+                        )}
+
+                        {form.category === 'CHECKIN' && (
+                            <div className={styles.sessionPicker}>
+                                <div className={styles.sessionPickerHeader}>
+                                    <strong>Chọn phiên điểm danh để khiếu nại</strong>
+                                    {!selectedActivityId && <span>Vui lòng chọn hoạt động trước</span>}
+                                </div>
+
+                                {selectedActivityId && loadingSessions && (
+                                    <div className={styles.targetHint}>Đang tải danh sách phiên điểm danh...</div>
+                                )}
+
+                                {selectedActivityId && !loadingSessions && sessionOptions.length === 0 && (
+                                    <div className={styles.targetHint}>Hoạt động này chưa có phiên điểm danh.</div>
+                                )}
+
+                                {selectedActivityId && !loadingSessions && sessionOptions.length > 0 && (
+                                    <div className={styles.sessionList}>
+                                        {sessionOptions.map((session) => {
+                                            const sessionStatus = sessionStatusMap[session._id];
+                                            const isSelected = form.targetEntityId === session._id;
+
+                                            return (
+                                                <button
+                                                    key={session._id}
+                                                    type="button"
+                                                    className={`${styles.sessionItem} ${isSelected ? styles.sessionItemActive : ''}`}
+                                                    onClick={() => setForm((prev) => ({ ...prev, targetEntityId: session._id }))}
+                                                >
+                                                    <div className={styles.sessionTopRow}>
+                                                        <strong>{session.title}</strong>
+                                                        {sessionStatus ? (
+                                                            <span className={`${styles.sessionStatusBadge} ${sessionStatus.status === 'SUCCESS'
+                                                                ? styles.sessionStatusSuccess
+                                                                : sessionStatus.status === 'FAILED'
+                                                                    ? styles.sessionStatusFailed
+                                                                    : styles.sessionStatusLate
+                                                                }`}>
+                                                                {checkinStatusLabel[sessionStatus.status]}
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`${styles.sessionStatusBadge} ${styles.sessionStatusUnknown}`}>
+                                                                Chưa check-in
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p>
+                                                        {formatDate(session.startTime)} - {formatDate(session.endTime)}
+                                                    </p>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <label>
                             Mức ưu tiên
@@ -416,6 +702,47 @@ const Complaints: React.FC = () => {
                                             <p>{selectedDetail.reviewNote}</p>
                                         </div>
                                     )}
+
+                                    <section className={styles.responseThread}>
+                                        <div className={styles.responseThreadHeader}>
+                                            <div>
+                                                <p className={styles.responseEyebrow}>Trao đổi</p>
+                                                <h4>Luồng phản hồi</h4>
+                                            </div>
+                                            <span className={styles.panelHint}>{selectedResponses.length} phản hồi</span>
+                                        </div>
+
+                                        {loadingResponses && <div className={styles.empty}>Đang tải phản hồi...</div>}
+
+                                        {!loadingResponses && selectedResponses.length === 0 && (
+                                            <div className={styles.empty}>Chưa có phản hồi nào từ ban tổ chức.</div>
+                                        )}
+
+                                        {!loadingResponses && selectedResponses.length > 0 && (
+                                            <div className={styles.responseTimeline}>
+                                                {selectedResponses.map((response, index) => (
+                                                    <article
+                                                        key={response.id}
+                                                        className={`${styles.responseCard} ${response.isInternal ? styles.responseCardInternal : ''}`}
+                                                    >
+                                                        <div className={styles.responseCardTop}>
+                                                            <div className={styles.responseCardMeta}>
+                                                                <span className={styles.responseStep}>{index + 1}</span>
+                                                                <div>
+                                                                    <strong>{response.senderName || 'Ban tổ chức'}</strong>
+                                                                    <small>{formatDate(response.createdAt)}</small>
+                                                                </div>
+                                                            </div>
+                                                            <span className={`${styles.responseBadge} ${response.isInternal ? styles.responseBadgeInternal : styles.responseBadgePublic}`}>
+                                                                {response.isInternal ? 'Nội bộ' : 'Công khai'}
+                                                            </span>
+                                                        </div>
+                                                        <p>{response.message}</p>
+                                                    </article>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
 
                                     {selectedAttachments.length > 0 && (
                                         <div className={styles.attachmentList}>

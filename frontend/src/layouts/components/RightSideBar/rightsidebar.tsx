@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import styles from './rightsidebar.module.scss';
 import conversationService from '../../../services/conversation.service';
 import authService from '../../../services/auth.service';
+import { socketService } from '../../../services/socket.service';
 import UserAvatar from '../../../components/UserAvatar/user.avatar';
 import { resolveImageSrc } from '../../../utils/image-url';
+import { ConversationUpdatedPayload, SocketEvent } from '../../../types/socket.types';
 
 interface Club {
     id: string;
@@ -102,6 +104,48 @@ const RightSidebar: React.FC = () => {
 
         fetchSidebarData();
     }, [currentUser?.id, mapConversationToActiveItem]);
+
+    useEffect(() => {
+        if (!currentUser?.id) {
+            return;
+        }
+
+        socketService.connect();
+
+        const handleConversationUpdated = (updatedConversation: ConversationUpdatedPayload) => {
+            setActiveConversations((prevConversations) => {
+                const hasConversation = prevConversations.some(
+                    (conversation) => conversation.conversationId === updatedConversation._id,
+                );
+
+                if (!hasConversation) {
+                    return prevConversations;
+                }
+
+                return prevConversations
+                    .map((conversation) => conversation.conversationId === updatedConversation._id
+                        ? {
+                            ...conversation,
+                            title: updatedConversation.title,
+                            preview: updatedConversation.lastMessageContent || 'Chưa có tin nhắn nào',
+                            activityImage: resolveImageSrc(updatedConversation.activityId?.image || updatedConversation.activityImage),
+                            lastMessageAt: updatedConversation.lastMessageAt,
+                        }
+                        : conversation)
+                    .sort((left, right) => {
+                        const leftTime = left.lastMessageAt ? new Date(left.lastMessageAt).getTime() : 0;
+                        const rightTime = right.lastMessageAt ? new Date(right.lastMessageAt).getTime() : 0;
+                        return rightTime - leftTime;
+                    });
+            });
+        };
+
+        socketService.on(SocketEvent.CONVERSATION_UPDATED, handleConversationUpdated);
+
+        return () => {
+            socketService.off(SocketEvent.CONVERSATION_UPDATED, handleConversationUpdated);
+        };
+    }, [currentUser?.id]);
 
     const handleJoinConversation = async () => {
         if (!currentUser?.id) {

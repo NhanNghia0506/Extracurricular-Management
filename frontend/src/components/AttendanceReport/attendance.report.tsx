@@ -10,11 +10,13 @@ import styles from './AttendanceReport.module.scss';
 import checkinService from '../../services/checkin.service';
 import checkinSessionService from '../../services/checkin-session.service';
 import activityService from '../../services/activity.service';
+import { useToastActions } from '../../contexts/ToastContext';
 import type { CheckinResponse } from '../../types/checkin.types';
 import type { CheckinSession } from '../../types/checkin-session.types';
 import type { ActivityDetailResponse } from '../../types/activity.types';
 
 type MethodLabel = 'GPS' | 'Thủ công';
+type CheckinStatus = 'SUCCESS' | 'LATE' | 'FAILED';
 
 type AttendanceReportRow = CheckinResponse & {
     method: MethodLabel;
@@ -61,8 +63,13 @@ const AttendanceReport: React.FC = () => {
     const [error, setError] = React.useState<string | null>(null);
     const [statusFilter, setStatusFilter] = React.useState<'ALL' | 'SUCCESS' | 'LATE' | 'FAILED'>('ALL');
     const [methodFilter, setMethodFilter] = React.useState<'ALL' | MethodLabel>('ALL');
+    const [searchTerm, setSearchTerm] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
     const [selectedRowId, setSelectedRowId] = React.useState<string>('');
+    const [statusDrafts, setStatusDrafts] = React.useState<Record<string, CheckinStatus>>({});
+    const [reasonDrafts, setReasonDrafts] = React.useState<Record<string, string>>({});
+    const [updatingRowId, setUpdatingRowId] = React.useState<string>('');
+    const { showToast } = useToastActions();
 
     React.useEffect(() => {
         const loadReport = async () => {
@@ -117,15 +124,31 @@ const AttendanceReport: React.FC = () => {
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, methodFilter]);
+    }, [statusFilter, methodFilter, searchTerm]);
+
+    React.useEffect(() => {
+        setStatusDrafts((previous) => {
+            const next = { ...previous };
+            rows.forEach((row) => {
+                if (!next[row._id]) {
+                    next[row._id] = row.status;
+                }
+            });
+            return next;
+        });
+    }, [rows]);
 
     const filteredRows = React.useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+
         return rows.filter((row) => {
             const statusMatch = statusFilter === 'ALL' || row.status === statusFilter;
             const methodMatch = methodFilter === 'ALL' || row.method === methodFilter;
-            return statusMatch && methodMatch;
+            const searchableText = `${row.student.name} ${row.student.mssv} ${row.student.email}`.toLowerCase();
+            const searchMatch = normalizedSearch.length === 0 || searchableText.includes(normalizedSearch);
+            return statusMatch && methodMatch && searchMatch;
         });
-    }, [methodFilter, rows, statusFilter]);
+    }, [methodFilter, rows, searchTerm, statusFilter]);
 
     React.useEffect(() => {
         if (!selectedRowId && filteredRows[0]?._id) {
@@ -176,6 +199,74 @@ const AttendanceReport: React.FC = () => {
             if (current === 'GPS') return 'Thủ công';
             return 'ALL';
         });
+    };
+
+    const handleUpdateStatus = async (row: AttendanceReportRow) => {
+        const nextStatus = statusDrafts[row._id] || row.status;
+        const adjustmentReason = (reasonDrafts[row._id] || '').trim();
+
+        if (nextStatus === row.status && !adjustmentReason) {
+            showToast({
+                type: 'info',
+                title: 'Chưa có thay đổi',
+                message: 'Hãy chọn trạng thái khác hoặc nhập lý do điều chỉnh trước khi lưu.',
+            });
+            return;
+        }
+
+        try {
+            setUpdatingRowId(row._id);
+
+            const payload: {
+                status: CheckinStatus;
+                adjustmentReason?: string;
+                failReason?: string;
+            } = {
+                status: nextStatus,
+            };
+
+            if (adjustmentReason) {
+                payload.adjustmentReason = adjustmentReason;
+            }
+
+            if (nextStatus === 'FAILED') {
+                payload.failReason = adjustmentReason || row.failReason || 'Điểm danh bị điều chỉnh thành thất bại';
+            }
+
+            const response = await checkinService.updateCheckinStatus(row._id, payload);
+            const updated = response?.data ?? response;
+
+            setRows((previous) => previous.map((item) => {
+                if (item._id !== row._id) {
+                    return item;
+                }
+
+                const updatedStatus = (updated?.status || nextStatus) as CheckinStatus;
+                return {
+                    ...item,
+                    status: updatedStatus,
+                    failReason: updatedStatus === 'FAILED'
+                        ? (updated?.failReason || payload.failReason || item.failReason || null)
+                        : null,
+                };
+            }));
+
+            setReasonDrafts((previous) => ({ ...previous, [row._id]: '' }));
+            showToast({
+                type: 'success',
+                title: 'Đã cập nhật trạng thái',
+                message: `Đã đổi trạng thái điểm danh của ${row.student.name} sang ${nextStatus}.`,
+            });
+        } catch (updateError) {
+            const message = updateError instanceof Error ? updateError.message : 'Không thể cập nhật trạng thái điểm danh';
+            showToast({
+                type: 'error',
+                title: 'Cập nhật thất bại',
+                message,
+            });
+        } finally {
+            setUpdatingRowId('');
+        }
     };
 
     if (loading) {
@@ -298,6 +389,12 @@ const AttendanceReport: React.FC = () => {
                     <div className={styles.filters}>
                         <button className={styles.filterBtn} onClick={cycleStatusFilter}>Trạng thái: {statusFilter}</button>
                         <button className={styles.filterBtn} onClick={cycleMethodFilter}>Phương thức: {methodFilter}</button>
+                        <input
+                            className={styles.searchInput}
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                            placeholder="Tìm sinh viên theo tên / MSSV / email"
+                        />
                     </div>
                     <button className={styles.exportBtn} onClick={() => window.alert('Chức năng xuất file sẽ được bổ sung sau.')}>
                         <FontAwesomeIcon icon={faDownload} /> Xuất file báo cáo
@@ -313,12 +410,13 @@ const AttendanceReport: React.FC = () => {
                             <th>Status</th>
                             <th>Method</th>
                             <th>Reason for Failure</th>
+                            <th>Điều chỉnh</th>
                         </tr>
                     </thead>
                     <tbody>
                         {pagedRows.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className={styles.emptyState}>Không có dữ liệu theo bộ lọc hiện tại.</td>
+                                <td colSpan={7} className={styles.emptyState}>Không có dữ liệu theo bộ lọc hiện tại.</td>
                             </tr>
                         ) : pagedRows.map((row) => (
                             <tr
@@ -352,6 +450,37 @@ const AttendanceReport: React.FC = () => {
                                 </td>
                                 <td style={{ color: row.status === 'FAILED' ? '#ef4444' : '#64748b', fontSize: '13px' }}>
                                     {row.failReason || '—'}
+                                </td>
+                                <td onClick={(event) => event.stopPropagation()}>
+                                    <div className={styles.adjustActions}>
+                                        <select
+                                            className={styles.adjustSelect}
+                                            value={statusDrafts[row._id] || row.status}
+                                            onChange={(event) => {
+                                                const nextValue = event.target.value as CheckinStatus;
+                                                setStatusDrafts((previous) => ({ ...previous, [row._id]: nextValue }));
+                                            }}
+                                            disabled={updatingRowId === row._id}
+                                        >
+                                            <option value="SUCCESS">SUCCESS</option>
+                                            <option value="LATE">LATE</option>
+                                            <option value="FAILED">FAILED</option>
+                                        </select>
+                                        <input
+                                            className={styles.adjustReasonInput}
+                                            value={reasonDrafts[row._id] || ''}
+                                            onChange={(event) => setReasonDrafts((previous) => ({ ...previous, [row._id]: event.target.value }))}
+                                            placeholder="Lý do xử lý khiếu nại (khuyến nghị)"
+                                            disabled={updatingRowId === row._id}
+                                        />
+                                        <button
+                                            className={styles.adjustBtn}
+                                            onClick={() => { void handleUpdateStatus(row); }}
+                                            disabled={updatingRowId === row._id}
+                                        >
+                                            {updatingRowId === row._id ? 'Đang lưu...' : 'Lưu'}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

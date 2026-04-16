@@ -147,7 +147,7 @@ const ConversationSidebar: React.FC = () => {
     return (
         <aside className={styles.sidebar}>
             <div className={styles.sidebarHeader}>
-                <h2>Conversations</h2>
+                <h2>Hội thoại</h2>
                 <button className={styles.iconBtn}>
                     <FontAwesomeIcon icon={faEdit} />
                 </button>

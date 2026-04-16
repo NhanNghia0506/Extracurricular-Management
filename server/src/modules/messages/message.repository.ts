@@ -48,6 +48,13 @@ export class MessageRepository {
             .exec();
     }
 
+    async findLatestByConversationId(conversationId: string): Promise<MessageDocument | null> {
+        return this.messageModel
+            .findOne({ conversationId: new Types.ObjectId(conversationId) })
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
     async update(
         messageId: string,
         updateMessageDto: UpdateMessageDto,
@@ -78,12 +85,22 @@ export class MessageRepository {
         return message.save();
     }
 
-    async delete(messageId: string): Promise<any> {
+    async delete(messageId: string): Promise<MessageDocument> {
         const message = await this.findById(messageId);
         if (!message) {
             throw new Error('Message not found');
         }
-        return this.messageModel.deleteOne({ _id: messageId });
+
+        if (message.isDeleted) {
+            return message;
+        }
+
+        message.isDeleted = true;
+        message.deletedAt = new Date();
+        message.content = 'Tin nhắn đã bị thu hồi';
+        message.updatedAt = new Date();
+
+        return message.save();
     }
 
     async updateStatus(

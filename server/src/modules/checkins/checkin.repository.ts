@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
-import { Checkin } from './checkin.entity';
+import { Checkin, CheckinDocument } from './checkin.entity';
 import { ActivityStatus, CheckinStatus } from 'src/global/globalEnum';
 
 interface AttendanceHistoryFilter {
@@ -146,10 +146,10 @@ export interface StudentStatsRecord {
 @Injectable()
 export class CheckinRepository {
     constructor(
-        @InjectModel(Checkin.name) private readonly checkinModel: Model<Checkin>,
+        @InjectModel(Checkin.name) private readonly checkinModel: Model<CheckinDocument>,
     ) { }
 
-    create(checkin: Partial<Checkin>) {
+    create(checkin: Partial<Checkin>): Promise<CheckinDocument> {
         return this.checkinModel.create(checkin);
     }
 
@@ -160,7 +160,7 @@ export class CheckinRepository {
         checkinSessionId: string,
         deviceId: string,
         status: CheckinStatus | CheckinStatus[],
-    ) {
+    ): Promise<CheckinDocument | null> {
         return this.checkinModel.findOne({
             checkinSessionId: new Types.ObjectId(checkinSessionId),
             deviceId,
@@ -172,7 +172,7 @@ export class CheckinRepository {
         checkinSessionId: string,
         userId: string,
         status: CheckinStatus | CheckinStatus[],
-    ) {
+    ): Promise<CheckinDocument | null> {
         return this.checkinModel.findOne({
             checkinSessionId: new Types.ObjectId(checkinSessionId),
             userId: new Types.ObjectId(userId),
@@ -180,13 +180,41 @@ export class CheckinRepository {
         }).exec();
     }
 
-    async findLatestBySessionAndUser(checkinSessionId: string, userId: string): Promise<Checkin | null> {
+    async findLatestBySessionAndUser(checkinSessionId: string, userId: string): Promise<CheckinDocument | null> {
         return this.checkinModel
             .findOne({
                 checkinSessionId: new Types.ObjectId(checkinSessionId),
                 userId: new Types.ObjectId(userId),
             })
             .sort({ createdAt: -1 })
+            .exec();
+    }
+
+    async findById(checkinId: string): Promise<CheckinDocument | null> {
+        return this.checkinModel.findById(new Types.ObjectId(checkinId)).exec();
+    }
+
+    async updateStatus(
+        checkinId: string,
+        payload: {
+            status: CheckinStatus;
+            adjustedBy: string;
+            adjustmentReason: string;
+            failReason?: string | null;
+        },
+    ): Promise<CheckinDocument | null> {
+        return this.checkinModel
+            .findByIdAndUpdate(
+                new Types.ObjectId(checkinId),
+                {
+                    status: payload.status,
+                    failReason: payload.failReason ?? null,
+                    adjustedBy: new Types.ObjectId(payload.adjustedBy),
+                    adjustmentReason: payload.adjustmentReason,
+                    adjustedAt: new Date(),
+                },
+                { new: true },
+            )
             .exec();
     }
 
@@ -198,7 +226,7 @@ export class CheckinRepository {
             adjustedBy: string;
             adjustmentReason: string;
         },
-    ): Promise<Checkin | null> {
+    ): Promise<CheckinDocument | null> {
         const updateData: Record<string, unknown> = {
             adjustedBy: new Types.ObjectId(payload.adjustedBy),
             adjustedAt: new Date(),
@@ -226,7 +254,7 @@ export class CheckinRepository {
     async findBySessionId(
         checkinSessionId: string,
         status?: CheckinStatus,
-    ): Promise<Checkin[]> {
+    ): Promise<CheckinDocument[]> {
         const filter: {
             checkinSessionId: Types.ObjectId;
             status?: CheckinStatus;
@@ -244,7 +272,7 @@ export class CheckinRepository {
             .exec();
     }
 
-    async findLatestByUserId(userId: string): Promise<Checkin | null> {
+    async findLatestByUserId(userId: string): Promise<CheckinDocument | null> {
         return this.checkinModel
             .findOne({ userId: new Types.ObjectId(userId) })
             .sort({ createdAt: -1 })

@@ -5,6 +5,14 @@ import {
     AttendanceHistoryResponse,
 } from '../types/attendance-history.types';
 
+type CheckinStatus = 'SUCCESS' | 'LATE' | 'FAILED';
+
+interface UpdateCheckinStatusPayload {
+    status: CheckinStatus;
+    adjustmentReason?: string;
+    failReason?: string;
+}
+
 export class CheckinService {
     /**
      * Lấy danh sách người đã checkin theo sessionId
@@ -42,6 +50,11 @@ export class CheckinService {
             userId,
         });
 
+        return response.data;
+    }
+
+    async updateCheckinStatus(checkinId: string, payload: UpdateCheckinStatusPayload) {
+        const response = await apiService.patch(`/checkins/${checkinId}/status`, payload);
         return response.data;
     }
 }

@@ -1,8 +1,7 @@
 export type ComplaintCategory = 'ACTIVITY' | 'CHECKIN';
 export type ComplaintStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'RESOLVED' | 'CLOSED';
 export type ComplaintPriority = 'NORMAL' | 'HIGH' | 'URGENT';
-export type ComplaintResolution = 'UPHELD' | 'DISMISSED' | 'PARTIAL';
-export type CheckinStatus = 'SUCCESS' | 'FAILED' | 'LATE';
+export type ComplaintResolution = 'UPHELD' | 'DISMISSED';
 export type ComplaintActorRole = 'STUDENT' | 'ADMIN' | 'SYSTEM';
 export type ComplaintHistoryAction = 'CREATED' | 'ATTACHMENT_ADDED' | 'RESPONSE_ADDED' | 'STATUS_CHANGED';
 
@@ -104,11 +103,6 @@ export interface ReviewComplaintPayload {
     status: Exclude<ComplaintStatus, 'SUBMITTED'>;
     resolution?: ComplaintResolution;
     reviewNote: string;
-    checkinAdjustment?: {
-        status?: CheckinStatus;
-        trainingScoreDelta?: number;
-        reason?: string;
-    };
 }
 
 export interface UploadedComplaintAttachment {

@@ -4,7 +4,6 @@ import { AdminGuard } from 'src/guards/admin.guard';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { UploadService } from 'src/interceptors/upload.service';
 import { ActivityModule } from '../activities/activity.module';
-import { CheckinModule } from '../checkins/checkin.module';
 import { CheckinSessionModule } from '../checkin-sessions/checkin-session.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
@@ -29,7 +28,6 @@ import { ComplaintService } from './complaint.service';
             { name: User.name, schema: UserSchema },
         ]),
         ActivityModule,
-        CheckinModule,
         CheckinSessionModule,
         NotificationModule,
         OrganizerMemberModule,

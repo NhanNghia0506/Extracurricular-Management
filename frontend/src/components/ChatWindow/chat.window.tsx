@@ -9,13 +9,19 @@ import messageService from '../../services/message.service';
 import authService from '../../services/auth.service';
 import { Message } from '../../types/message.types';
 import { socketService } from '../../services/socket.service';
-import { ConversationOnlineCountPayload, SocketEvent } from '../../types/socket.types';
+import { ConversationMessageDeletedPayload, ConversationOnlineCountPayload, SocketEvent } from '../../types/socket.types';
+import { resolveImageSrc } from '../../utils/image-url';
 
 interface Conversation {
   _id: string;
   title: string;
   participantsCount: number;
   lastMessageUserName?: string;
+  activityId?: {
+    _id?: string;
+    title?: string;
+    image?: string;
+  };
 }
 
 const ChatWindow: React.FC = () => {
@@ -33,6 +39,7 @@ const ChatWindow: React.FC = () => {
   const [selectedImagePreview, setSelectedImagePreview] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const currentUser = authService.getCurrentUser();
   const currentUserId = currentUser?.id ? String(currentUser.id) : null;
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1]._id : null;
@@ -170,7 +177,23 @@ const ChatWindow: React.FC = () => {
       setOnlineCount(payload.onlineCount);
     };
 
+    const handleMessageDeleted = (payload: ConversationMessageDeletedPayload) => {
+      if (payload.conversationId !== conversationId) {
+        return;
+      }
+
+      setMessages((currentMessages) => currentMessages.map((message) => message._id === payload.messageId
+        ? {
+          ...message,
+          content: payload.content || 'Tin nhắn đã bị thu hồi',
+          isDeleted: true,
+          deletedAt: payload.deletedAt ? new Date(payload.deletedAt) : new Date(),
+        }
+        : message));
+    };
+
     socketService.on(SocketEvent.CONVERSATION_MESSAGE_NEW, handleRealtimeMessage);
+    socketService.on(SocketEvent.CONVERSATION_MESSAGE_DELETED, handleMessageDeleted);
     socketService.on(SocketEvent.CONVERSATION_ONLINE_COUNT, handleOnlineCount);
 
     if (socket.connected) {
@@ -183,6 +206,7 @@ const ChatWindow: React.FC = () => {
       socket.off(SocketEvent.CONNECT, joinConversation);
       socketService.emit(SocketEvent.LEAVE_CONVERSATION, { conversationId });
       socketService.off(SocketEvent.CONVERSATION_MESSAGE_NEW, handleRealtimeMessage);
+      socketService.off(SocketEvent.CONVERSATION_MESSAGE_DELETED, handleMessageDeleted);
       socketService.off(SocketEvent.CONVERSATION_ONLINE_COUNT, handleOnlineCount);
     };
   }, [conversationId]);
@@ -279,6 +303,35 @@ const ChatWindow: React.FC = () => {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    const confirmed = window.confirm('Bạn có chắc muốn xóa tin nhắn này không?');
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingMessageId(messageId);
+      const response = await messageService.deleteMessage(messageId);
+      const revokedMessage = response?.message;
+
+      setMessages((currentMessages) => currentMessages.map((message) => message._id === messageId
+        ? {
+          ...message,
+          content: revokedMessage?.content || 'Tin nhắn đã bị thu hồi',
+          isDeleted: true,
+          deletedAt: revokedMessage?.deletedAt ? new Date(revokedMessage.deletedAt) : new Date(),
+        }
+        : message));
+      setHighlightedMessageId((currentValue) => currentValue === messageId ? null : currentValue);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Không thể xóa tin nhắn';
+      window.alert(errorMessage);
+    } finally {
+      setDeletingMessageId((currentValue) => currentValue === messageId ? null : currentValue);
+    }
+  };
+
   const handleInputKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -316,6 +369,8 @@ const ChatWindow: React.FC = () => {
     );
   }
 
+  const activityImageUrl = resolveImageSrc(conversation?.activityId?.image);
+
   return (
     <main className={styles.chatWindow}>
       {/* Header */}
@@ -329,9 +384,12 @@ const ChatWindow: React.FC = () => {
           >
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
-          <div className={styles.avatarGroupSmall}>
-            <img src="https://i.pravatar.cc/150?u=1" alt="" />
-            <img src="https://i.pravatar.cc/150?u=2" alt="" />
+          <div className={styles.conversationAvatar} aria-label={conversation.activityId?.title || conversation.title}>
+            {activityImageUrl ? (
+              <img src={activityImageUrl} alt={conversation.activityId?.title || conversation.title} />
+            ) : (
+              <i className="fa-solid fa-building"></i>
+            )}
           </div>
           <div className={styles.titleInfo}>
             <h3>{conversation.title}</h3>
@@ -370,6 +428,8 @@ const ChatWindow: React.FC = () => {
                   })}
                   isSent={isSent}
                   isNew={message._id === highlightedMessageId}
+                  isDeleted={Boolean(message.isDeleted)}
+                  onDelete={isSent && !message.isDeleted && deletingMessageId !== message._id ? () => handleDeleteMessage(message._id) : undefined}
                 />
               </div>
             );

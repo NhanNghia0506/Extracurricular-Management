@@ -98,6 +98,18 @@ export class ConversationService {
         });
     }
 
+    async updateAfterMessageDeletion(
+        conversationId: string,
+        messageData: {
+            content?: string;
+            userId?: string;
+            userName?: string;
+            lastMessageAt?: Date;
+        } | null,
+    ) {
+        return this.conversationRepository.updateAfterMessageDeletion(conversationId, messageData);
+    }
+
     async addMember(conversationId: string, userId: string, role: ConversationRole = ConversationRole.MEMBER) {
         return this.conversationRepository.addMember(conversationId, userId, role);
     }

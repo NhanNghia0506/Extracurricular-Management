@@ -87,7 +87,9 @@ export class MessageService {
         );
 
         this.chatGateway.emitConversationMessage(this.serializeMessage(message));
-        this.chatGateway.emitConversationUpdated(updatedConversation?.toObject());
+
+        const refreshedConversation = await this.conversationService.getConversationById(normalizedDto.conversationId);
+        this.chatGateway.emitConversationUpdated(refreshedConversation.toObject());
 
         return message;
     }
@@ -144,7 +146,41 @@ export class MessageService {
             );
         }
 
-        return this.messageRepository.delete(messageId);
+        const conversationId = message.conversationId.toString();
+        const latestMessageBeforeDelete = await this.messageRepository.findLatestByConversationId(conversationId);
+        const revokedMessage = await this.messageRepository.delete(messageId);
+
+        if (latestMessageBeforeDelete && latestMessageBeforeDelete._id.toString() === messageId) {
+            const updatedConversation = await this.conversationService.updateAfterMessageDeletion(
+                conversationId,
+                {
+                    content: 'Tin nhắn đã bị thu hồi',
+                    userId: message.senderId.toString(),
+                    userName: message.senderName,
+                    lastMessageAt: message.createdAt,
+                },
+            );
+
+            if (updatedConversation) {
+                const refreshedConversation = await this.conversationService.getConversationById(conversationId);
+                this.chatGateway.emitConversationUpdated(refreshedConversation.toObject());
+            }
+        }
+
+        this.chatGateway.emitConversationMessageDeleted({
+            conversationId,
+            messageId,
+            content: revokedMessage.content,
+            isDeleted: true,
+            deletedAt: revokedMessage.deletedAt,
+            senderName: message.senderName,
+            senderId: message.senderId.toString(),
+        });
+
+        return {
+            success: true,
+            message: revokedMessage,
+        };
     }
 
     async markAsRead(conversationId: string): Promise<any> {

@@ -14,6 +14,34 @@ import { OrganizerMemberService } from '../organizer-members/organizer-member.se
 export class CheckinSessionService {
     private readonly logger = new Logger(CheckinSessionService.name);
 
+    private ensureValidDate(value: Date, fieldName: string): Date {
+        const parsed = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            throw new BadRequestException(`${fieldName} không hợp lệ`);
+        }
+
+        return parsed;
+    }
+
+    private validateSessionWindowWithinActivity(startTime: Date, endTime: Date, activityStartAt: Date, activityEndAt?: Date | null) {
+        const normalizedStartTime = this.ensureValidDate(startTime, 'startTime');
+        const normalizedEndTime = this.ensureValidDate(endTime, 'endTime');
+        const normalizedActivityStartAt = this.ensureValidDate(activityStartAt, 'activity.startAt');
+        const normalizedActivityEndAt = activityEndAt ? this.ensureValidDate(activityEndAt, 'activity.endAt') : null;
+
+        if (normalizedStartTime >= normalizedEndTime) {
+            throw new BadRequestException('startTime phải nhỏ hơn endTime');
+        }
+
+        if (normalizedStartTime < normalizedActivityStartAt) {
+            throw new BadRequestException('startTime của phiên điểm danh không được trước thời gian bắt đầu của hoạt động');
+        }
+
+        if (normalizedActivityEndAt && normalizedEndTime > normalizedActivityEndAt) {
+            throw new BadRequestException('endTime của phiên điểm danh không được sau thời gian kết thúc của hoạt động');
+        }
+    }
+
     constructor(
         private readonly checkinSessionRepository: CheckinSessionRepository,
         private readonly activityService: ActivityService,
@@ -49,17 +77,12 @@ export class CheckinSessionService {
             throw new BadRequestException('Không thể tạo phiên điểm danh cho hoạt động đã kết thúc');
         }
 
-        if (createCheckinSessionDto.startTime >= createCheckinSessionDto.endTime) {
-            throw new BadRequestException('startTime phải nhỏ hơn endTime');
-        }
-
-        if (createCheckinSessionDto.startTime < activity.startAt) {
-            throw new BadRequestException('startTime của phiên điểm danh không được trước thời gian bắt đầu của hoạt động');
-        }
-
-        if (activity.endAt && createCheckinSessionDto.endTime > activity.endAt) {
-            throw new BadRequestException('endTime của phiên điểm danh không được sau thời gian kết thúc của hoạt động');
-        }
+        this.validateSessionWindowWithinActivity(
+            createCheckinSessionDto.startTime,
+            createCheckinSessionDto.endTime,
+            activity.startAt,
+            activity.endAt,
+        );
 
         if (createCheckinSessionDto.lateAfter !== undefined) {
             if (
@@ -144,17 +167,12 @@ export class CheckinSessionService {
             throw new ForbiddenException('Chỉ chủ hoạt động hoặc admin mới có quyền chỉnh sửa phiên điểm danh');
         }
 
-        if (updateCheckinSessionDto.startTime >= updateCheckinSessionDto.endTime) {
-            throw new BadRequestException('startTime phải nhỏ hơn endTime');
-        }
-
-        if (updateCheckinSessionDto.startTime < activity.startAt) {
-            throw new BadRequestException('startTime của phiên điểm danh không được trước thời gian bắt đầu của hoạt động');
-        }
-
-        if (activity.endAt && updateCheckinSessionDto.endTime > activity.endAt) {
-            throw new BadRequestException('endTime của phiên điểm danh không được sau thời gian kết thúc của hoạt động');
-        }
+        this.validateSessionWindowWithinActivity(
+            updateCheckinSessionDto.startTime,
+            updateCheckinSessionDto.endTime,
+            activity.startAt,
+            activity.endAt,
+        );
 
         if (!Number.isFinite(updateCheckinSessionDto.radiusMetters) || updateCheckinSessionDto.radiusMetters <= 0) {
             throw new BadRequestException('radiusMetters phải lớn hơn 0');
