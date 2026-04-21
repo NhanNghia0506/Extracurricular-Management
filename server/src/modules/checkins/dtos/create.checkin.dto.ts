@@ -1,23 +1,33 @@
-import { IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateCheckinDto {
     @IsMongoId()
     @IsNotEmpty()
-    checkinSessionId: string;
+    checkinSessionId!: string;
 
     @IsMongoId()
     @IsNotEmpty()
-    userId: string;
+    userId!: string;
 
     @IsNumber()
     @IsNotEmpty()
-    latitude: number;
+    latitude!: number;
 
     @IsNumber()
     @IsNotEmpty()
-    longitude: number;
+    longitude!: number;
 
     @IsString()
+    @IsOptional()
+    deviceId?: string;
+
+    @IsOptional()
     @IsNotEmpty()
-    deviceId: string;
+    fingerprintData?: {
+        userAgent: string;
+        screen: string;
+        timezone: string;
+        language: string;
+        platform: string;
+    };
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
     faCalendarCheck, faStar, faPercentage, faFilter,
-    faFileExport, faMapMarkerAlt, faChevronLeft, faChevronRight, faArrowRight,
+    faMapMarkerAlt, faChevronLeft, faChevronRight, faArrowRight,
     faRotateRight,
 } from '@fortawesome/free-solid-svg-icons';
 import styles from './attendance.history.module.scss';
@@ -62,25 +62,23 @@ const AttendanceHistory: React.FC = () => {
         return date.toLocaleDateString('vi-VN');
     }, []);
 
-    const formatHourRange = React.useCallback((startDate?: string, endDate?: string): string => {
-        if (!startDate || !endDate) {
+    const formatDateTime = React.useCallback((isoDate?: string): string => {
+        if (!isoDate) {
             return '--';
         }
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-
-        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        const date = new Date(isoDate);
+        if (Number.isNaN(date.getTime())) {
             return '--';
         }
 
-        const startTime = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        const endTime = end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        return `${startTime} - ${endTime}`;
-    }, []);
-
-    const handleExportClick = React.useCallback(() => {
-        window.alert('Chức năng xuất báo cáo sẽ được bổ sung ở phiên bản tiếp theo.');
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
     }, []);
 
     const cycleStatusFilter = React.useCallback(() => {
@@ -111,6 +109,10 @@ const AttendanceHistory: React.FC = () => {
 
         return 'Bộ lọc: Vắng';
     }, [filters.status]);
+
+    const displayCumulativeTrainingScore = React.useMemo(() => {
+        return summary.cumulativeTrainingScore;
+    }, [summary.cumulativeTrainingScore]);
 
     return (
         <div className={styles.container}>
@@ -144,9 +146,9 @@ const AttendanceHistory: React.FC = () => {
                         <FontAwesomeIcon icon={faRotateRight} />
                         Làm mới
                     </button>
-                    <button className={styles.btnExport} onClick={handleExportClick}>
+                    {/* <button className={styles.btnExport} onClick={handleExportClick}>
                         <FontAwesomeIcon icon={faFileExport} /> Xuất báo cáo
-                    </button>
+                    </button> */}
                 </div>
             </header>
 
@@ -166,7 +168,7 @@ const AttendanceHistory: React.FC = () => {
                     <div className={`${styles.iconBox} ${styles.green}`}><FontAwesomeIcon icon={faStar} /></div>
                     <div className={styles.statContent}>
                         <label>ĐIỂM RÈN LUYỆN</label>
-                        <div className={styles.value}>{summary.cumulativeTrainingScore} <small>pts</small></div>
+                        <div className={styles.value}>{displayCumulativeTrainingScore} <small>pts</small></div>
                     </div>
                 </div>
                 <div className={styles.statCard}>
@@ -205,10 +207,10 @@ const AttendanceHistory: React.FC = () => {
                         <thead>
                             <tr>
                                 <th>HOẠT ĐỘNG</th>
-                                <th>THỜI GIAN</th>
+                                <th>TÊN PHIÊN ĐIỂM DANH</th>
+                                <th>THỜI GIAN ĐIỂM DANH</th>
                                 <th>ĐỊA ĐIỂM</th>
                                 <th>TRẠNG THÁI</th>
-                                <th>ĐIỂM</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -220,38 +222,40 @@ const AttendanceHistory: React.FC = () => {
                                 </tr>
                             )}
 
-                            {items.map((item) => (
-                                <tr key={item.checkinId}>
-                                    <td>
-                                        <div className={styles.activityInfo}>
-                                            <div className={styles.actIcon}>👥</div>
-                                            <div>
-                                                <strong>{item.activityTitle}</strong>
-                                                <span>{item.organizerName || 'Đơn vị tổ chức chưa cập nhật'}</span>
+                            {items.map((item) => {
+                                return (
+                                    <tr key={item.checkinId}>
+                                        <td>
+                                            <div className={styles.activityInfo}>
+                                                <div className={styles.actIcon}>👥</div>
+                                                <div>
+                                                    <strong>{item.activityTitle}</strong>
+                                                    <span>{item.organizerName || 'Đơn vị tổ chức chưa cập nhật'}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className={styles.timeCell}>
-                                            <strong>{formatDate(item.activityStartAt)}</strong>
-                                            <span>{formatHourRange(item.activityStartAt, item.activityEndAt)}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className={styles.locationCell}>
-                                            <FontAwesomeIcon icon={faMapMarkerAlt} /> {item.locationAddress || '--'}
-                                        </div>
-                                    </td>
-                                    <td className={styles.statusCell}>
-                                        <span className={`${styles.badge} ${getStatusClass(item.status)}`}>
-                                            {getStatusLabel(item.status)}
-                                        </span>
-                                    </td>
-                                    <td className={`${styles.pointsCell} ${item.awardedPoints > 0 ? styles.pointsActive : ''}`}>
-                                        {item.awardedPoints > 0 ? `+${item.awardedPoints} pts` : '0 pts'}
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td>
+                                            <strong>{item.sessionTitle || '--'}</strong>
+                                        </td>
+                                        <td>
+                                            <div className={styles.timeCell}>
+                                                <strong>{formatDate(item.checkinTime)}</strong>
+                                                <span>{formatDateTime(item.checkinTime)}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className={styles.locationCell}>
+                                                <FontAwesomeIcon icon={faMapMarkerAlt} /> {item.locationAddress || '--'}
+                                            </div>
+                                        </td>
+                                        <td className={styles.statusCell}>
+                                            <span className={`${styles.badge} ${getStatusClass(item.status)}`}>
+                                                {getStatusLabel(item.status)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

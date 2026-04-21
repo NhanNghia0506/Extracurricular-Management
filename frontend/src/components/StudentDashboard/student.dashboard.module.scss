@@ -189,8 +189,9 @@ $success-green: #4ade80;
     // Layout Grid
     .contentGrid {
         display: grid;
-        grid-template-columns: 1fr 320px;
+        grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
         gap: 24px;
+        align-items: start;
     }
 
     .card {
@@ -198,6 +199,7 @@ $success-green: #4ade80;
         border-radius: 20px;
         padding: 32px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        min-width: 0;
     }
 
     // Personal Info Section
@@ -244,43 +246,187 @@ $success-green: #4ade80;
 
     // Training Summary (Màu xanh đậm)
     .trainingSummary {
-        background: $primary-blue;
+        background: linear-gradient(180deg, #0f5fe0 0%, #0056d2 56%, #0048b0 100%);
         color: white;
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 36%);
+            pointer-events: none;
+        }
 
         h3 {
             font-size: 18px;
-            margin-bottom: 4px;
+            margin: 0;
         }
 
         p {
             font-size: 12px;
             opacity: 0.8;
-            margin-bottom: 24px;
+            margin: 0;
+            line-height: 1.45;
+        }
+
+        .scoreHeaderRow {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+            flex-wrap: wrap;
+        }
+
+        .scoreEyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.72);
+            margin-bottom: 6px;
+        }
+
+        .scoreChip {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+        }
+
+        .scorePanel {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 22px;
+            backdrop-filter: blur(14px);
+        }
+
+        .scoreRangeForm {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+            min-width: 0;
+        }
+
+        .dateField {
+            label {
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+                opacity: 0.78;
+            }
+
+            input {
+                width: 100%;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 12px;
+                padding: 11px 12px;
+                font-size: 13px;
+                color: #0f172a;
+                background: rgba(255, 255, 255, 0.96);
+                outline: none;
+                min-width: 0;
+                box-sizing: border-box;
+
+                &:focus {
+                    border-color: rgba(255, 255, 255, 0.6);
+                    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
+                }
+            }
+        }
+
+        .scoreActions {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .primaryAction,
+        .secondaryAction {
+            flex: 1;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+
+            &:hover:not(:disabled) {
+                transform: translateY(-1px);
+            }
+
+            &:disabled {
+                opacity: 0.75;
+                cursor: not-allowed;
+            }
+        }
+
+        .primaryAction {
+            background: white;
+            color: $primary-blue;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+        }
+
+        .secondaryAction {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.24);
         }
 
         .gpaArea {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
 
             .gpaLabel {
                 font-size: 12px;
                 opacity: 0.8;
+                margin-bottom: 8px;
             }
 
             .gpaValue {
-                font-size: 52px;
+                font-size: 56px;
                 font-weight: bold;
                 line-height: 1;
+                letter-spacing: -0.03em;
+                word-break: break-word;
             }
         }
 
         .stats {
             display: flex;
             gap: 12px;
+            position: relative;
+            z-index: 1;
 
             .statBox {
-                background: rgba(255, 255, 255, 0.15);
+                background: rgba(255, 255, 255, 0.14);
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 padding: 16px;
-                border-radius: 12px;
+                border-radius: 14px;
                 flex: 1;
 
                 span {
@@ -298,14 +444,17 @@ $success-green: #4ade80;
 
         .viewFullBtn {
             width: 100%;
-            margin-top: 24px;
+            margin-top: 20px;
             background: white;
             color: $primary-blue;
             border: none;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: bold;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 800;
             cursor: pointer;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
         }
     }
 
@@ -461,10 +610,36 @@ $success-green: #4ade80;
 
         .trainingSummary {
             order: -1;
+            width: 100%;
+
+            .scorePanel {
+                padding: 14px;
+            }
+
+            .scoreHeaderRow {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .scoreChip {
+                align-self: flex-start;
+            }
+
+            .scoreActions {
+                gap: 8px;
+            }
+
+            .scoreRangeForm {
+                grid-template-columns: 1fr;
+            }
+
+            .scoreActions {
+                flex-direction: column;
+            }
 
             .gpaArea {
                 .gpaValue {
-                    font-size: 44px;
+                    font-size: 40px;
                 }
             }
 

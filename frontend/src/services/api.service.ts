@@ -2,6 +2,7 @@ import axios from "axios";
 
 const apiBaseUrl = (process.env.REACT_APP_API_BASE_URL || '').trim();
 const normalizedApiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+const authTokenKey = process.env.REACT_APP_AUTH_TOKEN_KEY || 'authToken';
 
 const apiService = axios.create({
     baseURL: normalizedApiBaseUrl || undefined,
@@ -12,7 +13,7 @@ const isNgrokUrl = /https:\/\/.+\.ngrok[\w-]*\.dev$/i.test(apiBaseUrl);
 
 // Tự động gửi token nếu có 
 apiService.interceptors.request.use((config) => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem(authTokenKey);
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,7 +35,7 @@ apiService.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('authToken');
+            localStorage.removeItem(authTokenKey);
             window.location.href = '/login';
         }
         return Promise.reject(error);

@@ -237,12 +237,14 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
         (item) => item.status === 'SUCCESS' || item.status === 'LATE',
     ).length;
 
-    const attendancePercent = totalRegistered > 0
-        ? Math.round((successfulCheckinsCount / totalRegistered) * 100)
+    const totalRegisteredEffective = totalRegistered || activity?.registeredCount || participants.length || 0;
+
+    const attendancePercent = totalRegisteredEffective > 0
+        ? Math.round((successfulCheckinsCount / totalRegisteredEffective) * 100)
         : 0;
 
-    const attendanceProgress = totalRegistered > 0
-        ? Math.min((successfulCheckinsCount / totalRegistered) * 100, 100)
+    const attendanceProgress = totalRegisteredEffective > 0
+        ? Math.min((successfulCheckinsCount / totalRegisteredEffective) * 100, 100)
         : 0;
 
     const methodData = [
@@ -284,8 +286,8 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     const chartData = generateVelocityData();
 
     const generateCompletionData = () => {
-        const successCount = checkins.filter((item) => item.status === 'SUCCESS').length;
-        const absentCount = Math.max(totalRegistered - successCount, 0);
+        const successCount = checkins.filter((item) => item.status === 'SUCCESS' || item.status === 'LATE').length;
+        const absentCount = Math.max(totalRegisteredEffective - successCount, 0);
         return [
             { name: 'Có mặt', value: successCount },
             { name: 'Vắng mặt', value: absentCount },
@@ -293,8 +295,8 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({ sessionId }) 
     };
 
     const dynamicCompletionData = generateCompletionData();
-    const presentPercent = totalRegistered > 0
-        ? Math.round((dynamicCompletionData[0].value / totalRegistered) * 100)
+    const presentPercent = totalRegisteredEffective > 0
+        ? Math.round((dynamicCompletionData[0].value / totalRegisteredEffective) * 100)
         : 0;
 
     const remainingHours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');

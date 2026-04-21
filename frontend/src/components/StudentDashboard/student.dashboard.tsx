@@ -88,6 +88,12 @@ const StudentDashboard: React.FC = () => {
     const [profile, setProfile] = useState<DashboardProfile | null>(null);
     const [summary, setSummary] = useState<AttendanceHistorySummary>(DEFAULT_SUMMARY);
     const [recentActivities, setRecentActivities] = useState<AttendanceHistoryItem[]>([]);
+    const [trainingScoreValue, setTrainingScoreValue] = useState<number>(0);
+    const [trainingScoreTitle, setTrainingScoreTitle] = useState<string>('Tổng điểm hiện tại');
+    const [trainingScoreSubtitle, setTrainingScoreSubtitle] = useState<string>('Tổng hợp từ lịch sử điểm danh hoạt động');
+    const [scoreStartDate, setScoreStartDate] = useState<string>('');
+    const [scoreEndDate, setScoreEndDate] = useState<string>('');
+    const [isCalculatingScore, setIsCalculatingScore] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
     const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
@@ -111,14 +117,22 @@ const StudentDashboard: React.FC = () => {
 
             const [studentResponse, historyResponse] = await Promise.all([
                 currentUserId ? studentService.getStudentFullInfo(currentUserId) : Promise.resolve(null),
-                checkinService.getMyAttendanceHistory({ page: 1, limit: 5 }),
+                checkinService.getMyAttendanceHistory({ page: 1, limit: 200 }),
             ]);
 
             const profilePayload = studentResponse?.data?.data || currentUser;
 
             setProfile(normalizeProfile(profilePayload));
-            setSummary(historyResponse?.summary || DEFAULT_SUMMARY);
-            setRecentActivities((historyResponse?.items || []).slice(0, 3));
+            const allHistoryItems = historyResponse?.items || [];
+            const recent = allHistoryItems.slice(0, 3);
+
+            setSummary({
+                ...(historyResponse?.summary || DEFAULT_SUMMARY),
+            });
+            setTrainingScoreValue(historyResponse?.summary?.cumulativeTrainingScore || 0);
+            setTrainingScoreTitle('Tổng điểm hiện tại');
+            setTrainingScoreSubtitle('Tổng hợp từ lịch sử điểm danh hoạt động');
+            setRecentActivities(recent);
 
             const normalized = normalizeProfile(profilePayload);
             setEditForm({
@@ -137,10 +151,75 @@ const StudentDashboard: React.FC = () => {
             }
 
             setSummary(DEFAULT_SUMMARY);
+            setTrainingScoreValue(DEFAULT_SUMMARY.cumulativeTrainingScore);
+            setTrainingScoreTitle('Tổng điểm hiện tại');
+            setTrainingScoreSubtitle('Tổng hợp từ lịch sử điểm danh hoạt động');
             setRecentActivities([]);
             setError(err?.response?.data?.message || 'Không thể tải dữ liệu hồ sơ sinh viên');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const formatDateLabel = (value: string) => {
+        if (!value) {
+            return '--';
+        }
+
+        const parsedDate = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(parsedDate.getTime())) {
+            return '--';
+        }
+
+        return new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        }).format(parsedDate);
+    };
+
+    const resetTrainingScoreView = () => {
+        setTrainingScoreValue(summary.cumulativeTrainingScore || 0);
+        setTrainingScoreTitle('Tổng điểm hiện tại');
+        setTrainingScoreSubtitle('Tổng hợp từ lịch sử điểm danh hoạt động');
+    };
+
+    const handleCalculateTrainingScore = async () => {
+        if (!scoreStartDate || !scoreEndDate) {
+            setError('Vui lòng chọn đầy đủ từ ngày và đến ngày để tính điểm rèn luyện.');
+            return;
+        }
+
+        const start = new Date(`${scoreStartDate}T00:00:00`);
+        const end = new Date(`${scoreEndDate}T23:59:59.999`);
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+            setError('Khoảng thời gian không hợp lệ.');
+            return;
+        }
+
+        setIsCalculatingScore(true);
+        setError('');
+
+        try {
+            const historyResponse = await checkinService.getMyAttendanceHistory({
+                page: 1,
+                limit: 1000,
+                startDate: scoreStartDate,
+                endDate: scoreEndDate,
+                status: ['SUCCESS', 'LATE'],
+            });
+
+            const selectedSummary = historyResponse.summary;
+            setTrainingScoreValue(selectedSummary.cumulativeTrainingScore);
+            setTrainingScoreTitle(`Điểm từ ${formatDateLabel(scoreStartDate)} đến ${formatDateLabel(scoreEndDate)}`);
+            setTrainingScoreSubtitle(
+                `Hoàn thành ${selectedSummary.totalParticipatedActivities} hoạt động trong khoảng thời gian đã chọn`,
+            );
+        } catch (err: any) {
+            setError(err?.response?.data?.message || 'Không thể tính điểm rèn luyện theo khoảng thời gian đã chọn');
+        } finally {
+            setIsCalculatingScore(false);
         }
     };
 
@@ -357,11 +436,45 @@ const StudentDashboard: React.FC = () => {
 
                 {/* Right Sidebar */}
                 <aside className={`${styles.card} ${styles.trainingSummary}`}>
-                    <h3>Điểm rèn luyện</h3>
-                    <p>Tổng hợp từ lịch sử điểm danh hoạt động</p>
+                    <div className={styles.scoreHeaderRow}>
+                        <div>
+                            <span className={styles.scoreEyebrow}>TÍNH THEO KHOẢNG THỜI GIAN</span>
+                            <h3>Điểm rèn luyện</h3>
+                            <p>{trainingScoreSubtitle}</p>
+                        </div>
+                        <span className={styles.scoreChip}>{isCalculatingScore ? 'Đang xử lý' : 'Sẵn sàng'}</span>
+                    </div>
+                    <div className={styles.scorePanel}>
+                        <div className={styles.scoreRangeForm}>
+                            <div className={styles.dateField}>
+                                <label>Từ ngày</label>
+                                <input
+                                    type="date"
+                                    value={scoreStartDate}
+                                    onChange={(event) => setScoreStartDate(event.target.value)}
+                                />
+                            </div>
+                            <div className={styles.dateField}>
+                                <label>Đến ngày</label>
+                                <input
+                                    type="date"
+                                    value={scoreEndDate}
+                                    onChange={(event) => setScoreEndDate(event.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className={styles.scoreActions}>
+                            <button type="button" className={styles.secondaryAction} onClick={resetTrainingScoreView} disabled={isCalculatingScore}>
+                                Tổng hiện tại
+                            </button>
+                            <button type="button" className={styles.primaryAction} onClick={() => void handleCalculateTrainingScore()} disabled={isCalculatingScore}>
+                                {isCalculatingScore ? 'Đang tính...' : 'Tính theo thời gian'}
+                            </button>
+                        </div>
+                    </div>
                     <div className={styles.gpaArea}>
-                        <div className={styles.gpaLabel}>Tổng điểm hiện tại</div>
-                        <div className={styles.gpaValue}>{summary.cumulativeTrainingScore}</div>
+                        <div className={styles.gpaLabel}>{trainingScoreTitle}</div>
+                        <div className={styles.gpaValue}>{trainingScoreValue}</div>
                     </div>
                     <div className={styles.stats}>
                         <div className={styles.statBox}>
@@ -373,7 +486,7 @@ const StudentDashboard: React.FC = () => {
                             <strong>{summary.attendanceRate}%</strong>
                         </div>
                     </div>
-                    <button className={styles.viewFullBtn}>Xem chi tiết lịch sử</button>
+                    {/* <button className={styles.viewFullBtn} type="button">Xem chi tiết lịch sử</button> */}
                 </aside>
             </div>
         </div>

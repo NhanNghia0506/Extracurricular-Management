@@ -50,6 +50,21 @@ const mapActivityStatusToVietnamese = (status?: string): string => {
     }
 };
 
+const mapApprovalStatusToVietnamese = (approvalStatus?: string): string | null => {
+    switch (approvalStatus) {
+        case 'PENDING':
+            return 'Chờ duyệt';
+        case 'APPROVED':
+            return 'Đã duyệt';
+        case 'NEEDS_EDIT':
+            return 'Cần chỉnh sửa';
+        case 'REJECTED':
+            return 'Bị từ chối';
+        default:
+            return null;
+    }
+};
+
 const getConversationState = async (
     activityId: string,
     currentUserId?: string,
@@ -477,7 +492,8 @@ const ActivityDetail: React.FC = () => {
         : 'https://www.google.com/maps';
     const organizerImageUrl = resolveImageSrc(activity.organizer?.image)
         || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Organizer';
-    const activityStatusLabel = mapActivityStatusToVietnamese(activity.status);
+    const approvalStatusLabel = mapApprovalStatusToVietnamese(activity.approvalStatus);
+    const activityStatusLabel = approvalStatusLabel || mapActivityStatusToVietnamese(activity.status);
 
     return (
         <div className={styles.detailPage}>
@@ -564,9 +580,7 @@ const ActivityDetail: React.FC = () => {
                     <CommentSection activityId={id} />
                     <ActivityFeedbackSection
                         activityId={id}
-                        activityStatus={activity.status}
-                        activityEndAt={activity.endAt}
-                        isRegistered={activity.isRegistered}
+                        participantStatus={activity.participantStatus}
                     />
                 </main>
 

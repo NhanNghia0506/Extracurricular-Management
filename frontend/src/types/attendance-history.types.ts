@@ -15,6 +15,7 @@ export interface AttendanceHistoryItem {
     activityId: string;
     activityTitle: string;
     organizerName?: string;
+    activityStatus?: string;
     activityStartAt?: string;
     activityEndAt?: string;
     sessionId: string;

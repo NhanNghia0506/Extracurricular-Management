@@ -63,7 +63,7 @@ export interface ActivityDetailResponse {
     registeredCount: number;
     isRegistered: boolean;
     participantRegistrationId?: string | null;
-    participantStatus?: 'REGISTERED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | null;
+    participantStatus?: 'REGISTERED' | 'PENDING' | 'APPROVED' | 'PARTICIPATED' | 'REJECTED' | 'CANCELLED' | null;
     isOwner: boolean;
     canDelete: boolean;
     approvalStatus?: string;

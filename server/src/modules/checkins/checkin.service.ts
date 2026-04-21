@@ -26,6 +26,8 @@ import {
     TrainingScoreStudentItem,
 } from './checkin.repository';
 import { AcademicService } from '../academic/academic.services';
+import { createFingerPrintHash } from 'src/utils/createFingerPrintHash';
+import { DeviceService } from '../devices/device.service';
 
 interface StudentStatsRecord {
     studentId: string;
@@ -125,6 +127,7 @@ export interface MyAttendanceHistoryItem {
     activityId: string;
     activityTitle: string;
     organizerName?: string;
+    activityStatus?: string;
     activityStartAt?: Date;
     activityEndAt?: Date;
     sessionId: string;
@@ -207,6 +210,7 @@ export class CheckinService {
         private readonly userService: UserService,
         private readonly organizerMemberService: OrganizerMemberService,
         private readonly academicService: AcademicService,
+        private readonly deviceService: DeviceService,
     ) { }
 
     private parsePaginationNumber(rawValue: string | undefined, defaultValue: number, fieldName: string): number {
@@ -343,6 +347,37 @@ export class CheckinService {
         return repository.findBySessionId(checkinSessionId, status);
     }
 
+    private async resolveAndRegisterDevice(
+        createCheckinDto: CreateCheckinDto,
+        userId: string,
+    ): Promise<string> {
+        const deviceId = createCheckinDto.deviceId?.trim();
+
+        if (deviceId) {
+            try {
+                await this.deviceService.findOrCreateDevice(deviceId, userId);
+                return deviceId;
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Thiết bị không hợp lệ';
+                throw new BadRequestException(message);
+            }
+        }
+
+        if (!createCheckinDto.fingerprintData) {
+            throw new BadRequestException('Thiếu thông tin thiết bị để điểm danh');
+        }
+
+        const fingerprintHash = createFingerPrintHash(createCheckinDto.fingerprintData);
+
+        try {
+            const device = await this.deviceService.findOrCreateDevice(fingerprintHash, userId);
+            return device.id;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Thiết bị không hợp lệ';
+            throw new BadRequestException(message);
+        }
+    }
+
     async create(
         createCheckinDto: CreateCheckinDto,
         actorUserId: string,
@@ -367,10 +402,15 @@ export class CheckinService {
             throw new BadRequestException('Check-in session đã kết thúc');
         }
 
+        const resolvedDeviceId = await this.resolveAndRegisterDevice(
+            createCheckinDto,
+            createCheckinDto.userId,
+        );
+
         // Kiểm tra xem thiết bị đã check-in thành công trong session này chưa
         const hasDeviceCheckedIn = await this.hasDeviceCheckedInSuccessfully(
             createCheckinDto.checkinSessionId,
-            createCheckinDto.deviceId,
+            resolvedDeviceId,
         );
 
         if (hasDeviceCheckedIn) {
@@ -444,7 +484,7 @@ export class CheckinService {
                 distance,
                 status: CheckinStatus.FAILED,
                 failReason: `Vị trí cách ${distance.toFixed(2)}m, giới hạn ${checkinSession.radiusMetters}m`,
-                deviceId: createCheckinDto.deviceId,
+                deviceId: resolvedDeviceId,
                 isAnomalous: movementSpeedResult?.isAnomalous || false,
                 anomalyReason: movementSpeedResult?.anomalyReason || null,
                 movementSpeed: movementSpeedResult?.speedKmh || null,
@@ -462,7 +502,7 @@ export class CheckinService {
                 longitude: createCheckinDto.longitude,
                 distance,
                 status: checkinStatus,
-                deviceId: createCheckinDto.deviceId,
+                deviceId: resolvedDeviceId,
                 isAnomalous: movementSpeedResult?.isAnomalous || false,
                 anomalyReason: movementSpeedResult?.anomalyReason || null,
                 movementSpeed: movementSpeedResult?.speedKmh || null,
@@ -775,6 +815,7 @@ export class CheckinService {
         const mappedItems: MyAttendanceHistoryItem[] = items.map((item) => ({
             ...item,
             awardedPoints: [CheckinStatus.SUCCESS, CheckinStatus.LATE].includes(item.status)
+                && String(item.activityStatus || '').toUpperCase() === 'COMPLETED'
                 ? item.trainingScore
                 : 0,
         }));

@@ -60,6 +60,10 @@ const ActivityApprovalDetail: React.FC<ActivityApprovalDetailProps> = ({
         );
     }
 
+    const approveButtonLabel = activity.approvalState === 'rejected'
+        ? 'Phê duyệt lại hoạt động'
+        : 'Phê duyệt hoạt động';
+
     return (
         <main className={styles.detailView}>
             <div
@@ -153,7 +157,7 @@ const ActivityApprovalDetail: React.FC<ActivityApprovalDetailProps> = ({
                                 <FontAwesomeIcon icon={faEdit} /> Yêu cầu chỉnh sửa
                             </button>
                             <button className={styles.btnApprove} disabled={submitting} onClick={onApprove}>
-                                <FontAwesomeIcon icon={faCheckCircle} /> {submitting ? 'Đang gửi...' : 'Phê duyệt hoạt động'}
+                                <FontAwesomeIcon icon={faCheckCircle} /> {submitting ? 'Đang gửi...' : approveButtonLabel}
                             </button>
                         </div>
                     </div>

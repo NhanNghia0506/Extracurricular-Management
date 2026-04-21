@@ -69,6 +69,8 @@ const buildStatusLabel = (status: SessionStatus) => {
     return { text: 'ĐÃ KẾT THÚC', className: styles.badgeGray };
 };
 
+const isCountedCheckinStatus = (status?: string) => status === 'SUCCESS' || status === 'LATE';
+
 const buildAssetUrl = resolveImageSrc;
 
 const SessionManagement: React.FC = () => {
@@ -78,6 +80,7 @@ const SessionManagement: React.FC = () => {
     const [activity, setActivity] = useState<ActivityDetailResponse | null>(null);
     const [sessions, setSessions] = useState<CheckinSession[]>([]);
     const [sessionCheckinTotals, setSessionCheckinTotals] = useState<Record<string, number>>({});
+    const [totalRegisteredCount, setTotalRegisteredCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [canManageCheckinSessions, setCanManageCheckinSessions] = useState(false);
@@ -134,12 +137,22 @@ const SessionManagement: React.FC = () => {
                 setSessions(sortedSessionsData);
                 setCanManageCheckinSessions(nextCanManageCheckinSessions);
 
+                try {
+                    const registeredCount = await activityService.participantsCountByActivity(activityId);
+                    setTotalRegisteredCount(registeredCount);
+                } catch {
+                    setTotalRegisteredCount(Number(activityData?.registeredCount || 0));
+                }
+
                 if (sessionsData.length > 0) {
                     const totalsEntries = await Promise.all(
                         sortedSessionsData.map(async (session) => {
                             try {
-                                const result = await checkinService.getCheckinsBySessionId(session._id, 'SUCCESS');
-                                return [session._id, Number(result.total || 0)] as const;
+                                const result = await checkinService.getCheckinsBySessionId(session._id);
+                                const countedTotal = Array.isArray(result.data)
+                                    ? result.data.filter((item) => isCountedCheckinStatus(item.status)).length
+                                    : 0;
+                                return [session._id, countedTotal] as const;
                             } catch {
                                 return [session._id, 0] as const;
                             }
@@ -162,7 +175,7 @@ const SessionManagement: React.FC = () => {
     }, [activityId]);
 
     const summary = useMemo(() => {
-        const totalRegistered = Number(activity?.registeredCount || 0);
+        const totalRegistered = Number(totalRegisteredCount || activity?.registeredCount || 0);
         const totalCheckedIn = Object.values(sessionCheckinTotals).reduce((sum, value) => sum + value, 0);
         const ongoingCount = sessions.filter((session) => getSessionStatus(session) === 'ONGOING').length;
 
@@ -171,7 +184,7 @@ const SessionManagement: React.FC = () => {
             totalCheckedIn,
             ongoingCount,
         };
-    }, [activity?.registeredCount, sessionCheckinTotals, sessions]);
+    }, [activity?.registeredCount, sessionCheckinTotals, sessions, totalRegisteredCount]);
 
     const handleCreateSession = () => {
         if (!activityId || !canManageCheckinSessions) {
@@ -275,7 +288,7 @@ const SessionManagement: React.FC = () => {
                     const status = getSessionStatus(session);
                     const statusInfo = buildStatusLabel(status);
                     const checkedCount = sessionCheckinTotals[session._id] || 0;
-                    const totalRegistered = Number(activity?.registeredCount || 0);
+                    const totalRegistered = Number(totalRegisteredCount || activity?.registeredCount || 0);
                     const percent = totalRegistered > 0 ? Math.min(Math.round((checkedCount / totalRegistered) * 100), 100) : 0;
 
                     return (

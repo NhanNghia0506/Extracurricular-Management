@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal } from 'react-bootstrap';
 import complaintService from '../../services/complaint.service';
 import activityService from '../../services/activity.service';
 import checkinSessionService from '../../services/checkin-session.service';
@@ -74,6 +75,7 @@ const Complaints: React.FC = () => {
     const [responseAttachmentUrls, setResponseAttachmentUrls] = useState<string[]>([]);
     const [uploadingResponseAttachment, setUploadingResponseAttachment] = useState(false);
     const [sendingResponse, setSendingResponse] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     const [form, setForm] = useState<CreateComplaintPayload>({
         targetEntityId: '',
@@ -365,6 +367,9 @@ const Complaints: React.FC = () => {
                 description: '',
                 attachmentUrls: [],
             });
+            setSelectedActivityId('');
+            setSessionOptions([]);
+            setIsCreateModalOpen(false);
 
             await loadList();
             setSelectedId(created.id);
@@ -474,6 +479,13 @@ const Complaints: React.FC = () => {
                 </div>
 
                 <div className={styles.heroActions}>
+                    <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        onClick={() => setIsCreateModalOpen(true)}
+                    >
+                        Khiếu nại
+                    </button>
                     <button type="button" className={`${styles.btn} ${styles.btnSecondary}`} onClick={() => void loadList()}>
                         Tải lại
                     </button>
@@ -491,136 +503,15 @@ const Complaints: React.FC = () => {
                 <section className={styles.panel}>
                     <div className={styles.panelHeader}>
                         <div>
-                            <p className={styles.sectionLabel}>Tạo mới</p>
-                            <h3>Tạo khiếu nại mới</h3>
+                            <p className={styles.sectionLabel}>Thao tác nhanh</p>
+                            <h3>Gửi khiếu nại</h3>
                         </div>
-                        <span className={styles.panelHint}>Đính kèm bằng chứng nếu cần</span>
+                        <span className={styles.panelHint}>Mở form trong modal</span>
                     </div>
 
-                    <form className={styles.formGrid} onSubmit={handleCreate}>
-                        <label>
-                            Chọn hoạt động
-                            <select
-                                value={selectedActivityId}
-                                onChange={(event) => {
-                                    const nextActivityId = event.target.value;
-                                    setSelectedActivityId(nextActivityId);
-                                    setForm((prev) => ({ ...prev, targetEntityId: '' }));
-                                }}
-                                disabled={loadingTargets}
-                            >
-                                <option value="">{loadingTargets ? 'Đang tải hoạt động...' : 'Chọn hoạt động muốn khiếu nại'}</option>
-                                {activityOptions.map((activity) => (
-                                    <option key={activity.id} value={activity.id}>{activity.title}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <div className={styles.sessionPicker}>
-                            <div className={styles.sessionPickerHeader}>
-                                <strong>Chọn phiên điểm danh để khiếu nại</strong>
-                                {!selectedActivityId && <span>Vui lòng chọn hoạt động trước</span>}
-                            </div>
-
-                            {selectedActivityId && loadingSessions && (
-                                <div className={styles.targetHint}>Đang tải danh sách phiên điểm danh...</div>
-                            )}
-
-                            {selectedActivityId && !loadingSessions && sessionOptions.length === 0 && (
-                                <div className={styles.targetHint}>Hoạt động này chưa có phiên điểm danh.</div>
-                            )}
-
-                            {selectedActivityId && !loadingSessions && sessionOptions.length > 0 && (
-                                <div className={styles.sessionList}>
-                                    {sessionOptions.map((session) => {
-                                        const sessionStatus = sessionStatusMap[session._id];
-                                        const isSelected = form.targetEntityId === session._id;
-
-                                        return (
-                                            <button
-                                                key={session._id}
-                                                type="button"
-                                                className={`${styles.sessionItem} ${isSelected ? styles.sessionItemActive : ''}`}
-                                                onClick={() => setForm((prev) => ({ ...prev, targetEntityId: session._id }))}
-                                            >
-                                                <div className={styles.sessionTopRow}>
-                                                    <strong>{session.title}</strong>
-                                                    {sessionStatus ? (
-                                                        <span className={`${styles.sessionStatusBadge} ${sessionStatus.status === 'SUCCESS'
-                                                            ? styles.sessionStatusSuccess
-                                                            : sessionStatus.status === 'FAILED'
-                                                                ? styles.sessionStatusFailed
-                                                                : styles.sessionStatusLate
-                                                            }`}>
-                                                            {checkinStatusLabel[sessionStatus.status]}
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`${styles.sessionStatusBadge} ${styles.sessionStatusUnknown}`}>
-                                                            Chưa check-in
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p>
-                                                    {formatDate(session.startTime)} - {formatDate(session.endTime)}
-                                                </p>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        <label>
-                            Tiêu đề
-                            <input
-                                value={form.title}
-                                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                                placeholder="Nhập tiêu đề khiếu nại"
-                            />
-                        </label>
-
-                        <label>
-                            Nội dung khiếu nại
-                            <textarea
-                                value={form.description}
-                                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                                placeholder="Mô tả chi tiết vấn đề cần khiếu nại"
-                            />
-                        </label>
-
-                        <div className={styles.uploadRow}>
-                            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
-                            <span>{uploading ? 'Đang upload...' : 'Ảnh bằng chứng (tùy chọn)'}</span>
-                        </div>
-
-                        {(form.attachmentUrls || []).length > 0 && (
-                            <div className={styles.attachmentList}>
-                                {(form.attachmentUrls || []).map((url, index) => {
-                                    const src = resolveImageSrc(url) || url;
-                                    return (
-                                        <div className={styles.attachmentItem} key={`${url}-${index}`}>
-                                            <img src={src} alt={`attachment-${index + 1}`} />
-                                            <a href={src} target="_blank" rel="noreferrer">{src}</a>
-                                            <button
-                                                type="button"
-                                                className={`${styles.btn} ${styles.btnSecondary}`}
-                                                onClick={() => setForm((prev) => ({
-                                                    ...prev,
-                                                    attachmentUrls: (prev.attachmentUrls || []).filter((_, idx) => idx !== index),
-                                                }))}
-                                            >
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting}>
-                            {submitting ? 'Đang gửi...' : 'Gửi khiếu nại'}
-                        </button>
-                    </form>
+                    <div className={styles.empty}>
+                        Form khiếu nại đã được chuyển sang modal để giao diện gọn hơn. Nhấn nút <strong>Khiếu nại</strong> để bắt đầu gửi yêu cầu mới.
+                    </div>
                 </section>
 
                 <section className={styles.panel}>
@@ -832,6 +723,158 @@ const Complaints: React.FC = () => {
                     </div>
                 </section>
             </div>
+
+            <Modal
+                show={isCreateModalOpen}
+                onHide={() => {
+                    if (!submitting && !uploading) {
+                        setIsCreateModalOpen(false);
+                    }
+                }}
+                size="lg"
+                centered
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Tạo khiếu nại mới</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p className={styles.modalSubtitle}>Nhập thông tin và đính kèm bằng chứng nếu cần.</p>
+                    <form className={styles.formGrid} onSubmit={handleCreate}>
+                        <label>
+                            Chọn hoạt động
+                            <select
+                                value={selectedActivityId}
+                                onChange={(event) => {
+                                    const nextActivityId = event.target.value;
+                                    setSelectedActivityId(nextActivityId);
+                                    setForm((prev) => ({ ...prev, targetEntityId: '' }));
+                                }}
+                                disabled={loadingTargets}
+                            >
+                                <option value="">{loadingTargets ? 'Đang tải hoạt động...' : 'Chọn hoạt động muốn khiếu nại'}</option>
+                                {activityOptions.map((activity) => (
+                                    <option key={activity.id} value={activity.id}>{activity.title}</option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <div className={styles.sessionPicker}>
+                            <div className={styles.sessionPickerHeader}>
+                                <strong>Chọn phiên điểm danh để khiếu nại</strong>
+                                {!selectedActivityId && <span>Vui lòng chọn hoạt động trước</span>}
+                            </div>
+
+                            {selectedActivityId && loadingSessions && (
+                                <div className={styles.targetHint}>Đang tải danh sách phiên điểm danh...</div>
+                            )}
+
+                            {selectedActivityId && !loadingSessions && sessionOptions.length === 0 && (
+                                <div className={styles.targetHint}>Hoạt động này chưa có phiên điểm danh.</div>
+                            )}
+
+                            {selectedActivityId && !loadingSessions && sessionOptions.length > 0 && (
+                                <div className={styles.sessionList}>
+                                    {sessionOptions.map((session) => {
+                                        const sessionStatus = sessionStatusMap[session._id];
+                                        const isSelected = form.targetEntityId === session._id;
+
+                                        return (
+                                            <button
+                                                key={session._id}
+                                                type="button"
+                                                className={`${styles.sessionItem} ${isSelected ? styles.sessionItemActive : ''}`}
+                                                onClick={() => setForm((prev) => ({ ...prev, targetEntityId: session._id }))}
+                                            >
+                                                <div className={styles.sessionTopRow}>
+                                                    <strong>{session.title}</strong>
+                                                    {sessionStatus ? (
+                                                        <span className={`${styles.sessionStatusBadge} ${sessionStatus.status === 'SUCCESS'
+                                                            ? styles.sessionStatusSuccess
+                                                            : sessionStatus.status === 'FAILED'
+                                                                ? styles.sessionStatusFailed
+                                                                : styles.sessionStatusLate
+                                                            }`}>
+                                                            {checkinStatusLabel[sessionStatus.status]}
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`${styles.sessionStatusBadge} ${styles.sessionStatusUnknown}`}>
+                                                            Chưa check-in
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p>
+                                                    {formatDate(session.startTime)} - {formatDate(session.endTime)}
+                                                </p>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <label>
+                            Tiêu đề
+                            <input
+                                value={form.title}
+                                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                                placeholder="Nhập tiêu đề khiếu nại"
+                            />
+                        </label>
+
+                        <label>
+                            Nội dung khiếu nại
+                            <textarea
+                                value={form.description}
+                                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                                placeholder="Mô tả chi tiết vấn đề cần khiếu nại"
+                            />
+                        </label>
+
+                        <div className={styles.uploadRow}>
+                            <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                            <span>{uploading ? 'Đang upload...' : 'Ảnh bằng chứng (tùy chọn)'}</span>
+                        </div>
+
+                        {(form.attachmentUrls || []).length > 0 && (
+                            <div className={styles.attachmentList}>
+                                {(form.attachmentUrls || []).map((url, index) => {
+                                    const src = resolveImageSrc(url) || url;
+                                    return (
+                                        <div className={styles.attachmentItem} key={`${url}-${index}`}>
+                                            <img src={src} alt={`attachment-${index + 1}`} />
+                                            <a href={src} target="_blank" rel="noreferrer">{src}</a>
+                                            <button
+                                                type="button"
+                                                className={`${styles.btn} ${styles.btnSecondary}`}
+                                                onClick={() => setForm((prev) => ({
+                                                    ...prev,
+                                                    attachmentUrls: (prev.attachmentUrls || []).filter((_, idx) => idx !== index),
+                                                }))}
+                                            >
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div className={styles.modalActions}>
+                            <button
+                                type="button"
+                                className={`${styles.btn} ${styles.btnSecondary}`}
+                                onClick={() => setIsCreateModalOpen(false)}
+                                disabled={submitting || uploading}
+                            >
+                                Hủy
+                            </button>
+                            <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={submitting}>
+                                {submitting ? 'Đang gửi...' : 'Gửi khiếu nại'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal.Body>
+            </Modal>
         </div>
     );
 };

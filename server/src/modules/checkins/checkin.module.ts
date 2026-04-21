@@ -11,6 +11,7 @@ import { StudentModule } from '../students/student.module';
 import { CheckinGateway } from '../../events/checkin.gateway';
 import { AcademicModule } from '../academic/academic.module';
 import { OrganizerMemberModule } from '../organizer-members/organizer-member.module';
+import { DeviceModule } from '../devices/device.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { OrganizerMemberModule } from '../organizer-members/organizer-member.mod
         ActivityParticipantModule,
         AcademicModule,
         OrganizerMemberModule,
+        DeviceModule,
     ],
     controllers: [CheckinController],
     providers: [CheckinService, CheckinRepository, CheckinGateway],

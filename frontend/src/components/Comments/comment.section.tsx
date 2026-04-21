@@ -64,10 +64,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({ activityId }) => {
     return (
         <div className={styles.commentsContainer}>
             <div className={styles.header}>
-                <h5>Comments <span>{total}</span></h5>
-                <div className={styles.sortDropdown}>
+                <h5>Bình luận <span>{total}</span></h5>
+                {/* <div className={styles.sortDropdown}>
                     Newest <i className="fa-solid fa-chevron-down"></i>
-                </div>
+                </div> */}
             </div>
 
             <div className={styles.inputWrapper}>

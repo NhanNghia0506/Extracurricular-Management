@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Modal } from 'react-bootstrap';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import styles from './attendance.module.scss';
 import AttendanceMap from './attendance.map';
@@ -10,6 +11,13 @@ type CachedLocation = {
     latitude: number;
     longitude: number;
     capturedAt: number;
+};
+
+type CheckinResultModalState = {
+    open: boolean;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
 };
 
 const GEO_OPTIONS: PositionOptions = {
@@ -29,6 +37,12 @@ const Attendance: React.FC = () => {
     const [checkinSuccess, setCheckinSuccess] = useState(false);
     const [hasCheckinSuccessfully, setHasCheckinSuccessfully] = useState(false);
     const [cachedLocation, setCachedLocation] = useState<CachedLocation | null>(null);
+    const [checkinResultModal, setCheckinResultModal] = useState<CheckinResultModalState>({
+        open: false,
+        type: 'success',
+        title: '',
+        message: '',
+    });
 
     useEffect(() => {
         const fetchCheckinSession = async () => {
@@ -123,6 +137,12 @@ const Attendance: React.FC = () => {
                 // Điểm danh thành công
                 setCheckinSuccess(true);
                 setHasCheckinSuccessfully(true);
+                setCheckinResultModal({
+                    open: true,
+                    type: 'success',
+                    title: 'Điểm danh thành công',
+                    message: 'Bạn đã điểm danh thành công. Hệ thống sẽ quay lại trang trước sau vài giây.',
+                });
 
                 // Quay về trang trước sau 2 giây
                 setTimeout(() => {
@@ -132,16 +152,48 @@ const Attendance: React.FC = () => {
                 // Điểm danh thất bại - hiển thị lý do
                 const failReason = checkinData.failReason || 'Không rõ nguyên nhân thất bại';
                 setCheckinError(`Điểm danh thất bại: ${failReason}`);
+                setCheckinResultModal({
+                    open: true,
+                    type: 'error',
+                    title: 'Điểm danh thất bại',
+                    message: failReason,
+                });
+            } else {
+                // Các trạng thái hợp lệ khác (ví dụ LATE) vẫn xem là hoàn tất điểm danh
+                setCheckinSuccess(true);
+                setHasCheckinSuccessfully(true);
+                setCheckinResultModal({
+                    open: true,
+                    type: 'success',
+                    title: 'Điểm danh hoàn tất',
+                    message: 'Bạn đã điểm danh thành công.',
+                });
+
+                setTimeout(() => {
+                    navigate(-1);
+                }, 2000);
             }
         } catch (err) {
             if (err instanceof GeolocationPositionError) {
                 setCheckinError('Không thể lấy vị trí. Vui lòng kiểm tra quyền GPS!');
+                setCheckinResultModal({
+                    open: true,
+                    type: 'error',
+                    title: 'Không thể điểm danh',
+                    message: 'Không thể lấy vị trí. Vui lòng kiểm tra quyền GPS!',
+                });
             } else {
                 // Bắt error message từ backend
                 const errorMessage = (err as any)?.response?.data?.message
                     || (err as any)?.message
                     || 'Lỗi khi điểm danh. Vui lòng thử lại!';
                 setCheckinError(errorMessage);
+                setCheckinResultModal({
+                    open: true,
+                    type: 'error',
+                    title: 'Không thể điểm danh',
+                    message: errorMessage,
+                });
             }
             console.error(err);
         } finally {
@@ -252,20 +304,6 @@ const Attendance: React.FC = () => {
                                 {hasCheckinSuccessfully ? 'Đã điểm danh' : (isCheckinLoading ? 'Đang điểm danh...' : (isOngoing ? 'Vào khu vực để điểm danh' : (hasNotStarted ? 'Chưa tới thời gian điểm danh' : 'Điểm danh đã kết thúc')))}
                             </button>
 
-                            {checkinSuccess && (
-                                <div className="alert alert-success mt-3 mb-0" role="alert">
-                                    <i className="fa-solid fa-check-circle me-2"></i>
-                                    Điểm danh thành công! Đang quay lại...
-                                </div>
-                            )}
-
-                            {checkinError && (
-                                <div className="alert alert-danger mt-3 mb-0" role="alert">
-                                    <i className="fa-solid fa-exclamation-circle me-2"></i>
-                                    {checkinError}
-                                </div>
-                            )}
-
                             <p className="text-center text-muted mt-2 mb-0" style={{ fontSize: '0.65rem' }}>
                                 Điểm danh có hiệu lực đến {formatTime(endTime)}
                             </p>
@@ -274,6 +312,27 @@ const Attendance: React.FC = () => {
                 </div>
 
             </aside>
+
+            <Modal
+                show={checkinResultModal.open}
+                onHide={() => setCheckinResultModal((prev) => ({ ...prev, open: false }))}
+                centered
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>{checkinResultModal.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div
+                        className={`alert ${checkinResultModal.type === 'success' ? 'alert-success' : 'alert-danger'} mb-0`}
+                        role="alert"
+                    >
+                        <i
+                            className={`fa-solid ${checkinResultModal.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'} me-2`}
+                        ></i>
+                        {checkinResultModal.message}
+                    </div>
+                </Modal.Body>
+            </Modal>
         </div>
     );
 };

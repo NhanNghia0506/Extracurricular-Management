@@ -488,7 +488,7 @@ const ConfigureAttendance: React.FC = () => {
                         {!sessionId && activityStatus === 'COMPLETED' && (
                             <p className="small text-danger mt-2 mb-0">Hoạt động đã kết thúc nên không thể tạo phiên điểm danh mới.</p>
                         )}
-                        <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Lưu nháp</button>
+                        {/* <button className="btn btn-link w-100 text-muted fw-bold text-decoration-none mt-2 small">Lưu nháp</button> */}
                     </div>
 
                     {/* Tip Box */}

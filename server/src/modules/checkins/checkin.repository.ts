@@ -18,6 +18,7 @@ interface AttendanceHistoryItemRaw {
     activityId: Types.ObjectId;
     activityTitle: string;
     organizerName?: string;
+    activityStatus?: ActivityStatus;
     activityStartAt?: Date;
     activityEndAt?: Date;
     sessionId: Types.ObjectId;
@@ -42,6 +43,7 @@ export interface AttendanceHistoryItem {
     activityId: string;
     activityTitle: string;
     organizerName?: string;
+    activityStatus?: ActivityStatus;
     activityStartAt?: Date;
     activityEndAt?: Date;
     sessionId: string;
@@ -339,6 +341,7 @@ export class CheckinRepository {
                     activityId: '$activity._id',
                     activityTitle: '$activity.title',
                     organizerName: '$organizer.name',
+                    activityStatus: '$activity.status',
                     activityStartAt: '$activity.startAt',
                     activityEndAt: '$activity.endAt',
                     sessionId: '$session._id',
@@ -367,8 +370,24 @@ export class CheckinRepository {
                     summary: [
                         {
                             $group: {
-                                _id: null,
-                                totalSessions: { $sum: 1 },
+                                _id: '$activityId',
+                                activityTitle: { $first: '$activityTitle' },
+                                activityTrainingScore: { $first: '$trainingScore' },
+                                activityHasAwardedScore: {
+                                    $max: {
+                                        $cond: [
+                                            {
+                                                $and: [
+                                                    { $in: ['$status', [CheckinStatus.SUCCESS, CheckinStatus.LATE]] },
+                                                    { $eq: ['$activityStatus', ActivityStatus.COMPLETED] },
+                                                ],
+                                            },
+                                            1,
+                                            0,
+                                        ],
+                                    },
+                                },
+                                sessionCount: { $sum: 1 },
                                 successCount: {
                                     $sum: {
                                         $cond: [{ $eq: ['$status', CheckinStatus.SUCCESS] }, 1, 0],
@@ -384,16 +403,22 @@ export class CheckinRepository {
                                         $cond: [{ $eq: ['$status', CheckinStatus.FAILED] }, 1, 0],
                                     },
                                 },
+                                participatedActivityIds: { $addToSet: '$activityId' },
+                            },
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalSessions: { $sum: '$sessionCount' },
+                                successCount: { $sum: '$successCount' },
+                                lateCount: { $sum: '$lateCount' },
+                                failedCount: { $sum: '$failedCount' },
                                 cumulativeTrainingScore: {
                                     $sum: {
-                                        $cond: [
-                                            { $in: ['$status', [CheckinStatus.SUCCESS, CheckinStatus.LATE]] },
-                                            '$trainingScore',
-                                            0,
-                                        ],
+                                        $cond: [{ $eq: ['$activityHasAwardedScore', 1] }, '$activityTrainingScore', 0],
                                     },
                                 },
-                                participatedActivityIds: { $addToSet: '$activityId' },
+                                participatedActivityIds: { $addToSet: '$_id' },
                             },
                         },
                     ],

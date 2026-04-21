@@ -78,21 +78,6 @@ export class ActivityFeedbackService {
         }
     }
 
-    private ensureFeedbackWindowOpen(activity: { status?: string; endAt?: Date | string | null }): void {
-        const now = new Date();
-        const isCompleted = String(activity?.status || '').toUpperCase() === 'COMPLETED';
-
-        let endedByTime = false;
-        if (activity?.endAt) {
-            const endAt = new Date(activity.endAt);
-            endedByTime = !Number.isNaN(endAt.getTime()) && now.getTime() >= endAt.getTime();
-        }
-
-        if (isCompleted || endedByTime) {
-            throw new ForbiddenException('Hoạt động đã kết thúc, chức năng đánh giá đã bị khóa');
-        }
-    }
-
     async create(
         activityId: string,
         createDto: CreateActivityFeedbackDto,
@@ -121,18 +106,13 @@ export class ActivityFeedbackService {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
         }
 
-        this.ensureFeedbackWindowOpen({
-            status: activity.status,
-            endAt: activity.endAt,
-        });
-
-        const hasAttended = await this.activityFeedbackRepository.hasSuccessfulAttendanceForActivity(
+        const hasParticipated = await this.activityFeedbackRepository.hasParticipatedInActivity(
             activityId,
             currentUserId,
         );
 
-        if (!hasAttended) {
-            throw new ForbiddenException('Bạn chỉ có thể đánh giá hoạt động mà bạn đã điểm danh');
+        if (!hasParticipated) {
+            throw new ForbiddenException('Bạn chỉ có thể đánh giá hoạt động mà bạn đã tham gia');
         }
 
         const existing = await this.activityFeedbackRepository.findByActivityAndAuthor(activityId, currentUserId);
@@ -175,11 +155,6 @@ export class ActivityFeedbackService {
         if (!activity) {
             throw new NotFoundException('Không tìm thấy hoạt động với ID đã cho');
         }
-
-        this.ensureFeedbackWindowOpen({
-            status: activity.status,
-            endAt: activity.endAt,
-        });
 
         if (existing.authorId.toString() !== currentUserId) {
             throw new ForbiddenException('Bạn chỉ có thể chỉnh sửa đánh giá của chính mình');

@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CheckinStatus } from 'src/global/globalEnum';
-import { Checkin } from '../checkins/checkin.entity';
+import { ActivityParticipant, ParticipantStatus } from '../activity-participants/activity-participant.entity';
 import { ActivityFeedback, ActivityFeedbackDocument } from './activity-feedback.entity';
 
 interface CreateActivityFeedbackPayload {
@@ -17,8 +16,8 @@ export class ActivityFeedbackRepository {
     constructor(
         @InjectModel(ActivityFeedback.name)
         private readonly activityFeedbackModel: Model<ActivityFeedbackDocument>,
-        @InjectModel(Checkin.name)
-        private readonly checkinModel: Model<Checkin>,
+        @InjectModel(ActivityParticipant.name)
+        private readonly activityParticipantModel: Model<ActivityParticipant>,
     ) { }
 
     async create(payload: CreateActivityFeedbackPayload): Promise<ActivityFeedbackDocument> {
@@ -78,33 +77,14 @@ export class ActivityFeedbackRepository {
             .exec();
     }
 
-    async hasSuccessfulAttendanceForActivity(activityId: string, userId: string): Promise<boolean> {
-        const rows = await this.checkinModel.aggregate<Array<{ _id: Types.ObjectId }>>([
-            {
-                $match: {
-                    userId: new Types.ObjectId(userId),
-                    status: { $in: [CheckinStatus.SUCCESS, CheckinStatus.LATE] },
-                },
-            },
-            {
-                $lookup: {
-                    from: 'checkinsessions',
-                    localField: 'checkinSessionId',
-                    foreignField: '_id',
-                    as: 'session',
-                },
-            },
-            { $unwind: { path: '$session', preserveNullAndEmptyArrays: false } },
-            {
-                $match: {
-                    'session.activityId': new Types.ObjectId(activityId),
-                },
-            },
-            { $limit: 1 },
-            { $project: { _id: 1 } },
-        ]).exec();
+    async hasParticipatedInActivity(activityId: string, userId: string): Promise<boolean> {
+        const participant = await this.activityParticipantModel.findOne({
+            activityId: new Types.ObjectId(activityId),
+            userId: new Types.ObjectId(userId),
+            status: ParticipantStatus.PARTICIPATED,
+        }).select('_id').lean().exec();
 
-        return rows.length > 0;
+        return Boolean(participant);
     }
 
     async getDashboard(activityId: string, recentLimit: number = 5): Promise<{

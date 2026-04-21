@@ -13,7 +13,6 @@ export class DeviceService {
      * Tìm hoặc tạo mới device
      * @param deviceId - Device fingerprint hash
      * @param userId - User ID đang sử dụng device
-     * @throws Error nếu device đã được sử dụng bởi 2 users khác
      */
     async findOrCreateDevice(deviceId: string, userId: string) {
         const existingDevice = await this.deviceRepository.findById(deviceId);
@@ -21,11 +20,6 @@ export class DeviceService {
         if (existingDevice) {
             const userObjectId = new Types.ObjectId(userId);
             const isUserAlreadyRegistered = existingDevice.userIds.some(id => id.equals(userObjectId));
-
-            // Kiểm tra nếu device đã có 2 users và user hiện tại không nằm trong danh sách
-            if (existingDevice.userIds.length >= 2 && !isUserAlreadyRegistered) {
-                throw new Error('Thiết bị này đã đạt giới hạn 2 tài khoản. Không thể đăng nhập thêm.');
-            }
 
             // Cập nhật lastSeen
             await this.deviceRepository.updateLastSeen(deviceId, new Date());

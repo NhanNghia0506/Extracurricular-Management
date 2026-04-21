@@ -423,7 +423,7 @@ const ActivityParticipants: React.FC = () => {
                         <i className="fa-solid fa-file-excel"></i>
                         {exportingFormat === 'xlsx' ? 'Đang xuất Excel...' : 'Xuất Excel'}
                     </button>
-                    <button className={styles.btnPrimary}><i className="fa-solid fa-bolt"></i> Thao tác hàng loạt</button>
+                    {/* <button className={styles.btnPrimary}><i className="fa-solid fa-bolt"></i> Thao tác hàng loạt</button> */}
                 </div>
             </header>
 

@@ -40,6 +40,12 @@ const ActivityApprovalSidebar: React.FC<ActivityApprovalSidebarProps> = ({
                 >
                     Đã duyệt ({tabCounts.approved})
                 </button>
+                <button
+                    className={activeTab === 'rejected' ? styles.active : ''}
+                    onClick={() => onTabChange('rejected')}
+                >
+                    Bị từ chối ({tabCounts.rejected})
+                </button>
             </div>
             <div className={styles.activityList}>
                 {activities.map((activity) => (

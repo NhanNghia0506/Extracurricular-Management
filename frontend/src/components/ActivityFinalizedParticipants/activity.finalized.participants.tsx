@@ -21,6 +21,7 @@ const ActivityFinalizedParticipants: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedStatusView, setSelectedStatusView] = useState<'PRESENT' | 'ABSENT'>('PRESENT');
     const [selectedClassFilter, setSelectedClassFilter] = useState('ALL');
     const [exportingFormat, setExportingFormat] = useState<'csv' | 'xlsx' | null>(null);
     const [exportError, setExportError] = useState<string | null>(null);
@@ -60,15 +61,23 @@ const ActivityFinalizedParticipants: React.FC = () => {
         fetchData();
     }, [activityId]);
 
-    // Filter only PARTICIPATED status
-    const finalizedParticipants = useMemo(() => {
-        return allParticipants.filter((p) => p.status === 'PARTICIPATED');
-    }, [allParticipants]);
+    const isAbsentParticipant = (participant: ParticipantItem) => {
+        const status = participant.status || '';
+        return status !== 'PARTICIPATED' && status !== 'CANCELLED' && status !== 'REJECTED';
+    };
+
+    const visibleParticipants = useMemo(() => {
+        if (selectedStatusView === 'PRESENT') {
+            return allParticipants.filter((participant) => participant.status === 'PARTICIPATED');
+        }
+
+        return allParticipants.filter(isAbsentParticipant);
+    }, [allParticipants, selectedStatusView]);
 
     const filteredParticipants = useMemo(() => {
         const keyword = searchTerm.trim().toLowerCase();
 
-        return finalizedParticipants.filter((participant) => {
+        return visibleParticipants.filter((participant) => {
             const name = participant.studentName?.toLowerCase() || '';
             const code = participant.studentCode?.toLowerCase() || '';
             const className = participant.className || '';
@@ -78,11 +87,15 @@ const ActivityFinalizedParticipants: React.FC = () => {
 
             return matchesSearch && matchesClass;
         });
-    }, [finalizedParticipants, searchTerm, selectedClassFilter]);
+    }, [visibleParticipants, searchTerm, selectedClassFilter]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedClassFilter, finalizedParticipants.length]);
+    }, [searchTerm, selectedClassFilter, selectedStatusView, visibleParticipants.length]);
+
+    useEffect(() => {
+        setSelectedClassFilter('ALL');
+    }, [selectedStatusView]);
 
     const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / pageSize));
     const shouldPaginate = filteredParticipants.length > pageSize;
@@ -99,17 +112,18 @@ const ActivityFinalizedParticipants: React.FC = () => {
     const classFilterOptions = useMemo(() => {
         const values = Array.from(
             new Set(
-                finalizedParticipants
+                visibleParticipants
                     .map((participant) => participant.className?.trim())
                     .filter((value): value is string => Boolean(value)),
             ),
         );
 
         return values.sort((a, b) => a.localeCompare(b, 'vi'));
-    }, [finalizedParticipants]);
+    }, [visibleParticipants]);
 
     const totalRegistered = allParticipants.length;
-    const participatedCount = finalizedParticipants.length;
+    const participatedCount = allParticipants.filter((participant) => participant.status === 'PARTICIPATED').length;
+    const absentCount = allParticipants.filter(isAbsentParticipant).length;
     const participationRate = totalRegistered > 0 ? Math.round((participatedCount / totalRegistered) * 100) : 0;
 
     const getInitials = (name?: string) => {
@@ -145,31 +159,42 @@ const ActivityFinalizedParticipants: React.FC = () => {
             setExportError(null);
             setExportMessage(null);
 
-            const exportData: ExportRow[] = paginatedParticipants.map((stu) => ({
+            const exportData: ExportRow[] = filteredParticipants.map((stu, index) => ({
+                STT: index + 1,
                 'Mã sinh viên': stu.studentCode || 'Chưa cập nhật',
                 'Tên sinh viên': stu.studentName || 'Chưa cập nhật',
                 'Lớp': stu.className || 'Chưa cập nhật',
                 'Khoa': stu.facultyName || 'Chưa cập nhật',
                 'Ngày đăng ký': formatDateTime(stu.registeredAt),
-                'Trạng thái': 'Đã tham gia',
+                'Trạng thái': selectedStatusView === 'PRESENT' ? 'Đã tham gia' : 'Vắng mặt',
             }));
 
-            const fileName = buildSafeFileName(`danh-sach-da-tham-gia-${activity?.title || 'hoat-dong'}`);
+            const baseName = buildSafeFileName(
+                `${selectedStatusView === 'PRESENT' ? 'danh-sach-da-tham-gia' : 'danh-sach-vang-mat'}-${activity?.title || 'hoat-dong'}`,
+            );
 
             if (format === 'csv') {
-                exportRowsToCsv(exportData, fileName);
+                exportRowsToCsv(exportData, `${baseName}.csv`);
+                setExportMessage('Xuất CSV thành công.');
             } else {
-                exportRowsToXlsx(exportData, fileName);
+                exportRowsToXlsx(exportData, `${baseName}.xlsx`, 'Danh sach');
+                setExportMessage('Xuất Excel thành công.');
             }
-
-            setExportMessage(`Xuất ${format.toUpperCase()} thành công!`);
             setTimeout(() => setExportMessage(null), 3000);
         } catch (err: any) {
-            setExportError(err?.message || `Lỗi khi xuất ${format.toUpperCase()}`);
+            setExportError(err?.message || 'Không thể xuất báo cáo lúc này.');
         } finally {
             setExportingFormat(null);
         }
     };
+
+    const emptyMessage = selectedStatusView === 'PRESENT'
+        ? 'Chưa có sinh viên đã tham gia hoạt động này'
+        : 'Chưa có sinh viên vắng mặt trong hoạt động này';
+
+    const pageTitle = selectedStatusView === 'PRESENT'
+        ? 'Danh sách sinh viên đã tham gia'
+        : 'Danh sách sinh viên vắng mặt';
 
     if (loading) return <div className="text-center py-5">Đang tải...</div>;
     if (error) return <div className="text-center py-5 text-danger">{error}</div>;
@@ -178,8 +203,10 @@ const ActivityFinalizedParticipants: React.FC = () => {
         <div className={styles.managementWrapper}>
             <div className={styles.header}>
                 <div>
-                    <h2>Danh sách sinh viên đã tham gia</h2>
-                    <p>{activity?.title || 'Hoạt động'}</p>
+                    <h2>{pageTitle}</h2>
+                    <p>
+                        {activity?.title || 'Hoạt động'} · Đã tham gia: {participatedCount} · Vắng mặt: {absentCount}
+                    </p>
                 </div>
                 <div className={styles.actionButtons}>
                     <button
@@ -244,6 +271,14 @@ const ActivityFinalizedParticipants: React.FC = () => {
             <div className={styles.tableContainer}>
                 <div className={styles.tableFilters}>
                     <div className={styles.leftFilters}>
+                        <select
+                            className={styles.selectBox}
+                            value={selectedStatusView}
+                            onChange={(e) => setSelectedStatusView(e.target.value as 'PRESENT' | 'ABSENT')}
+                        >
+                            <option value="PRESENT">Đã tham gia</option>
+                            <option value="ABSENT">Vắng mặt</option>
+                        </select>
                         <div className={styles.searchBox}>
                             <i className="fa-solid fa-search"></i>
                             <input
@@ -273,7 +308,7 @@ const ActivityFinalizedParticipants: React.FC = () => {
                 {paginatedParticipants.length === 0 ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
                         <i className="fa-regular fa-folder-open" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block' }}></i>
-                        <p>Chưa có sinh viên đã tham gia hoạt động này</p>
+                        <p>{emptyMessage}</p>
                     </div>
                 ) : (
                     <>

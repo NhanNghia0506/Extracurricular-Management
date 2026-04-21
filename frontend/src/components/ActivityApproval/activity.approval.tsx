@@ -58,6 +58,7 @@ const ActivityApproval: React.FC = () => {
             pending: stats.pending,
             needsEdit: stats.needsEdit,
             approved: stats.approved,
+            rejected: stats.rejected,
         }),
         [stats],
     );

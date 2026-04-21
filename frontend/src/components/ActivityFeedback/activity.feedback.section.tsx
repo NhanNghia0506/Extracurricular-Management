@@ -9,9 +9,7 @@ import {
 
 interface ActivityFeedbackSectionProps {
     activityId: string;
-    activityStatus?: string;
-    activityEndAt?: string;
-    isRegistered?: boolean;
+    participantStatus?: string | null;
 }
 
 const DEFAULT_LIMIT = 10;
@@ -30,9 +28,7 @@ const renderStars = (rating: number) => {
 
 const ActivityFeedbackSection: React.FC<ActivityFeedbackSectionProps> = ({
     activityId,
-    activityStatus,
-    activityEndAt,
-    isRegistered,
+    participantStatus,
 }) => {
     const currentUserId = authService.getCurrentUser()?.id as string | undefined;
 
@@ -60,28 +56,9 @@ const ActivityFeedbackSection: React.FC<ActivityFeedbackSectionProps> = ({
         );
     }, [feedbacks, currentUserId]);
 
-    const isFeedbackLocked = useMemo(() => {
-        const isCompleted = String(activityStatus || '').toUpperCase() === 'COMPLETED';
-
-        if (isCompleted) {
-            return true;
-        }
-
-        if (!activityEndAt) {
-            return false;
-        }
-
-        const endAt = new Date(activityEndAt);
-        if (Number.isNaN(endAt.getTime())) {
-            return false;
-        }
-
-        return Date.now() >= endAt.getTime();
-    }, [activityStatus, activityEndAt]);
-
     const canSubmitFeedback = useMemo(() => {
-        return Boolean(isRegistered) && !isFeedbackLocked;
-    }, [isRegistered, isFeedbackLocked]);
+        return String(participantStatus || '').toUpperCase() === 'PARTICIPATED';
+    }, [participantStatus]);
 
     const fetchDashboardAndList = useCallback(async () => {
         if (!activityId) {
@@ -156,11 +133,7 @@ const ActivityFeedbackSection: React.FC<ActivityFeedbackSectionProps> = ({
         const trimmedComment = comment.trim();
 
         if (!canSubmitFeedback) {
-            if (isFeedbackLocked) {
-                setFormError('Hoạt động đã kết thúc, chức năng đánh giá đã bị khóa.');
-            } else {
-                setFormError('Bạn cần đăng ký tham gia và check-in thành công để đánh giá hoạt động.');
-            }
+            setFormError('Chỉ sinh viên đã tham gia hoạt động mới có thể gửi đánh giá.');
             return;
         }
 
@@ -314,9 +287,7 @@ const ActivityFeedbackSection: React.FC<ActivityFeedbackSectionProps> = ({
                         {!canSubmitFeedback && (
                             <div className={styles.ctaWrap}>
                                 <p className={styles.statusText}>
-                                    {isFeedbackLocked
-                                        ? 'Hoạt động đã kết thúc nên chức năng đánh giá đã bị khóa.'
-                                        : 'Chỉ sinh viên đã check-in thành công mới có thể gửi đánh giá.'}
+                                    Chỉ sinh viên đã tham gia hoạt động mới có thể gửi đánh giá.
                                 </p>
                             </div>
                         )}

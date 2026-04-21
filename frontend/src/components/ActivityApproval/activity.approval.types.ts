@@ -5,7 +5,7 @@ import {
 } from '@/types/activity.types';
 import { resolveImageSrc } from '../../utils/image-url';
 
-export type ApprovalState = 'pending' | 'needsEdit' | 'approved';
+export type ApprovalState = 'pending' | 'needsEdit' | 'approved' | 'rejected';
 export type ApprovalDecision = 'APPROVED' | 'NEEDS_EDIT' | 'REJECTED';
 
 export interface ApprovalMetric {
@@ -52,7 +52,7 @@ const APPROVAL_STATE_MAP: Record<string, ApprovalState | null> = {
     PENDING: 'pending',
     NEEDS_EDIT: 'needsEdit',
     APPROVED: 'approved',
-    REJECTED: null,
+    REJECTED: 'rejected',
 };
 
 const STATUS_LABEL_MAP: Record<string, string> = {
