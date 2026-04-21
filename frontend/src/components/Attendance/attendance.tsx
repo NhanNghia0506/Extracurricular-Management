@@ -33,8 +33,8 @@ const Attendance: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isCheckinLoading, setIsCheckinLoading] = useState(false);
-    const [checkinError, setCheckinError] = useState<string | null>(null);
-    const [checkinSuccess, setCheckinSuccess] = useState(false);
+    const [, setCheckinError] = useState<string | null>(null);
+    const [, setCheckinSuccess] = useState(false);
     const [hasCheckinSuccessfully, setHasCheckinSuccessfully] = useState(false);
     const [cachedLocation, setCachedLocation] = useState<CachedLocation | null>(null);
     const [checkinResultModal, setCheckinResultModal] = useState<CheckinResultModalState>({
