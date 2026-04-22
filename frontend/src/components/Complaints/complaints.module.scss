@@ -723,7 +723,171 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
     span {
         color: $text-muted;
         font-size: 0.82rem;
+        line-height: 1.45;
     }
+}
+
+.modalBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(8px);
+}
+
+.modalCard {
+    width: min(100%, 680px);
+    max-height: min(90vh, 900px);
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 24px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28);
+}
+
+.modalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.15rem 0.9rem;
+    border-bottom: 1px solid $border-lighter;
+
+    h3 {
+        margin: 0.15rem 0 0;
+        color: $text-dark;
+        font-size: 1.18rem;
+        font-weight: 900;
+    }
+}
+
+.modalBody {
+    display: grid;
+    gap: 1rem;
+    padding: 1.1rem 1.15rem 1.15rem;
+}
+
+.modalCloseBtn {
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 1px solid $border-light;
+    border-radius: 999px;
+    background: #ffffff;
+    color: $text-muted;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+
+    &:hover {
+        color: $text-dark;
+        border-color: rgba(37, 99, 235, 0.28);
+        background: #eff6ff;
+    }
+}
+
+.modalSubtitle {
+    margin: 0.25rem 0 0;
+    color: $text-muted;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.responseListWrap {
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    padding: 0.85rem;
+}
+
+.responseList {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.responseItem {
+    border: 1px solid $border-light;
+    border-left: 4px solid rgba(37, 99, 235, 0.35);
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 0.85rem 0.95rem;
+    display: grid;
+    gap: 0.55rem;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+
+    p {
+        margin: 0;
+        color: $text-dark;
+        line-height: 1.65;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+    }
+}
+
+.responseItemHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+}
+
+.responseIdentity {
+    display: grid;
+    gap: 0.18rem;
+
+    strong {
+        color: $text-dark;
+        font-size: 0.9rem;
+    }
+
+    span {
+        color: $text-muted;
+        font-size: 0.76rem;
+    }
+}
+
+.responseMetaBadges {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.responseRoleBadge {
+    border-radius: 999px;
+    padding: 0.22rem 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.responseRoleAdmin {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.responseRoleStudent {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.responseRoleSystem {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.responseIndexBadge {
+    border-radius: 999px;
+    border: 1px solid $border-light;
+    background: #f8fafc;
+    color: $text-muted;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 0.2rem 0.5rem;
 }
 
 .responseComposerLabel {
@@ -868,6 +1032,11 @@ $shadow-soft: 0 12px 32px rgba(15, 23, 42, 0.08);
     .responseThreadHeader,
     .responseCardTop,
     .responseSectionHeaderRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .responseItemHeader {
         flex-direction: column;
         align-items: flex-start;
     }

@@ -126,6 +126,43 @@ $bg-blue-light: var(--color-bg-blue-50);
         margin-bottom: 1rem;
         font-size: 0.9rem;
     }
+
+    .warningBox {
+        display: flex;
+        gap: 1rem;
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        align-items: flex-start;
+
+        .warningIcon {
+            color: #92400e;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .warningContent {
+            flex: 1;
+
+            strong {
+                display: block;
+                color: #92400e;
+                margin-bottom: 0.25rem;
+                font-weight: 700;
+                font-size: 0.9rem;
+            }
+
+            p {
+                color: #78350f;
+                font-size: 0.85rem;
+                margin: 0;
+                line-height: 1.4;
+            }
+        }
+    }
 }
 
 .customInput,

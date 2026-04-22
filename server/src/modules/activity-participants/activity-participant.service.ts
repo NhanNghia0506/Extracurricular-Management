@@ -111,8 +111,8 @@ export class ActivityParticipantService {
     }
 
     countParticipantsByActivity(activityId: string) {
-        // Count REGISTERED participants for capacity/progress tracking
-        return this.activityParticipantRepository.countRegisteredByActivityId(activityId);
+        // For UI/statistics: count both current registrations and finalized participations
+        return this.activityParticipantRepository.countRegisteredAndParticipatedByActivityId(activityId);
     }
 
     // Handle capacity check and auto-promotion of PENDING users

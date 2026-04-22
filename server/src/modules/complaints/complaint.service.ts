@@ -102,6 +102,44 @@ interface ComplaintDashboardResponse {
     closed: number;
 }
 
+interface UserNameRow {
+    _id: Types.ObjectId;
+    name?: string;
+}
+
+interface AttachmentLeanRow {
+    _id: Types.ObjectId;
+    responseId?: Types.ObjectId | null;
+    fileName: string;
+    fileUrl: string;
+    mimeType: string;
+    fileSize: number;
+    createdAt?: Date;
+}
+
+interface ComplaintResponseLeanRow {
+    _id: Types.ObjectId;
+    complaintId: Types.ObjectId;
+    senderId: Types.ObjectId;
+    senderRole: ComplaintActorRole;
+    message: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+interface ComplaintHistoryLeanRow {
+    _id: Types.ObjectId;
+    complaintId: Types.ObjectId;
+    action: ComplaintHistoryAction;
+    actorId?: Types.ObjectId | null;
+    actorRole: ComplaintActorRole;
+    fromStatus?: ComplaintStatus | null;
+    toStatus?: ComplaintStatus | null;
+    note?: string | null;
+    meta?: Record<string, unknown> | null;
+    createdAt?: Date;
+}
+
 @Injectable()
 export class ComplaintService {
     constructor(
@@ -479,7 +517,7 @@ export class ComplaintService {
 
     private async assertOrganizerManager(organizerId: string, userId: string): Promise<void> {
         const member = await this.organizerMemberService.findByUserIdAndOrganizerId(userId, organizerId);
-        if (!member || !member.isActive || member.role !== 'MANAGER') {
+        if (!member || !member.isActive || String(member.role) !== 'MANAGER') {
             throw new ForbiddenException('Bạn không có quyền xử lý khiếu nại của tổ chức này');
         }
     }
@@ -522,9 +560,7 @@ export class ComplaintService {
     private async getComplaintOrganizerId(complaint: ComplaintDocument): Promise<string | null> {
         const directActivity = await this.activityService.findById(complaint.targetEntityId.toString());
         if (directActivity?.organizerId) {
-            return typeof directActivity.organizerId === 'string'
-                ? directActivity.organizerId
-                : String((directActivity.organizerId as any)._id || directActivity.organizerId);
+            return this.resolveOrganizerIdValue(directActivity.organizerId);
         }
 
         const activity = await this.checkinSessionService.findActivityBySessionId(complaint.targetEntityId.toString());
@@ -532,9 +568,30 @@ export class ComplaintService {
             return null;
         }
 
-        return typeof activity.organizerId === 'string'
-            ? activity.organizerId
-            : String((activity.organizerId as any)._id || activity.organizerId);
+        return this.resolveOrganizerIdValue(activity.organizerId);
+    }
+
+    private resolveOrganizerIdValue(value: unknown): string {
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        if (value instanceof Types.ObjectId) {
+            return value.toString();
+        }
+
+        if (value && typeof value === 'object' && '_id' in value) {
+            const objectId = (value as { _id?: unknown })._id;
+            if (typeof objectId === 'string') {
+                return objectId;
+            }
+
+            if (objectId instanceof Types.ObjectId) {
+                return objectId.toString();
+            }
+        }
+
+        return String(value);
     }
 
     private async getTargetEntityName(targetEntityId: string): Promise<string> {
@@ -565,14 +622,14 @@ export class ComplaintService {
 
         const users = await this.userModel.find({
             _id: { $in: [complainantId, ...(reviewedById ? [reviewedById] : [])] },
-        }).select('_id name').lean();
+        }).select('_id name').lean<UserNameRow[]>();
 
         const attachmentRows = await this.complaintAttachmentModel
             .find({ complaintId: item._id, responseId: null })
             .sort({ createdAt: -1 })
-            .lean();
+            .lean<AttachmentLeanRow[]>();
 
-        const attachments = attachmentRows.map((row: any) => ({
+        const attachments: ComplaintAttachmentItem[] = attachmentRows.map((row) => ({
             id: String(row._id),
             fileName: row.fileName,
             fileUrl: row.fileUrl,
@@ -581,7 +638,7 @@ export class ComplaintService {
             createdAt: row.createdAt,
         }));
 
-        const userMap = new Map(users.map((user: any) => [String(user._id), user.name as string]));
+        const userMap = new Map(users.map((user) => [String(user._id), user.name]));
 
         return {
             id: item._id.toString(),
@@ -632,24 +689,24 @@ export class ComplaintService {
                 complaintId: new Types.ObjectId(complaintId),
             })
             .sort({ createdAt: 1 })
-            .lean();
+            .lean<ComplaintResponseLeanRow[]>();
 
-        const senderIds = Array.from(new Set(rows.map((row: any) => String(row.senderId))));
+        const senderIds = Array.from(new Set(rows.map((row) => String(row.senderId))));
         const users = senderIds.length
-            ? await this.userModel.find({ _id: { $in: senderIds } }).select('_id name').lean()
+            ? await this.userModel.find({ _id: { $in: senderIds } }).select('_id name').lean<UserNameRow[]>()
             : [];
-        const userMap = new Map(users.map((user: any) => [String(user._id), user.name as string]));
+        const userMap = new Map(users.map((user) => [String(user._id), user.name]));
 
-        const responseIds = rows.map((row: any) => row._id);
+        const responseIds = rows.map((row) => row._id);
         const attachments = responseIds.length
             ? await this.complaintAttachmentModel
                 .find({ responseId: { $in: responseIds } })
                 .sort({ createdAt: 1 })
-                .lean()
+                .lean<AttachmentLeanRow[]>()
             : [];
 
         const attachmentMap = new Map<string, ComplaintAttachmentItem[]>();
-        for (const row of attachments as any[]) {
+        for (const row of attachments) {
             const key = String(row.responseId);
             const list = attachmentMap.get(key) || [];
             list.push({
@@ -663,7 +720,7 @@ export class ComplaintService {
             attachmentMap.set(key, list);
         }
 
-        return rows.map((row: any) => ({
+        return rows.map((row) => ({
             id: String(row._id),
             complaintId: String(row.complaintId),
             senderId: String(row.senderId),
@@ -680,21 +737,21 @@ export class ComplaintService {
         const user = await this.userModel
             .findById(row.senderId)
             .select('_id name')
-            .lean();
+            .lean<UserNameRow | null>();
 
         const attachments = await this.complaintAttachmentModel
             .find({ responseId: row._id })
             .sort({ createdAt: 1 })
-            .lean();
+            .lean<AttachmentLeanRow[]>();
 
         return {
             id: row._id.toString(),
             complaintId: row.complaintId.toString(),
             senderId: row.senderId.toString(),
-            senderName: (user as any)?.name,
+            senderName: user?.name,
             senderRole: row.senderRole,
             message: row.message,
-            attachments: (attachments as any[]).map((item) => ({
+            attachments: attachments.map((item) => ({
                 id: String(item._id),
                 fileName: item.fileName,
                 fileUrl: item.fileUrl,
@@ -711,20 +768,20 @@ export class ComplaintService {
         const rows = await this.complaintHistoryModel
             .find({ complaintId: new Types.ObjectId(complaintId) })
             .sort({ createdAt: -1 })
-            .lean();
+            .lean<ComplaintHistoryLeanRow[]>();
 
         const actorIds = Array.from(new Set(
-            (rows as any[])
+            rows
                 .map((row) => row.actorId ? String(row.actorId) : '')
                 .filter(Boolean),
         ));
 
         const users = actorIds.length
-            ? await this.userModel.find({ _id: { $in: actorIds } }).select('_id name').lean()
+            ? await this.userModel.find({ _id: { $in: actorIds } }).select('_id name').lean<UserNameRow[]>()
             : [];
-        const userMap = new Map(users.map((user: any) => [String(user._id), user.name as string]));
+        const userMap = new Map(users.map((user) => [String(user._id), user.name]));
 
-        return (rows as any[]).map((row) => ({
+        return rows.map((row) => ({
             id: String(row._id),
             complaintId: String(row.complaintId),
             action: row.action,
@@ -800,9 +857,15 @@ export class ComplaintService {
         const admins = await this.userModel
             .find({ role: UserRole.ADMIN })
             .select('_id')
-            .lean();
+            .lean<Array<{ _id: Types.ObjectId }>>();
 
-        const adminIds = admins.map((item: any) => String(item._id));
+        const organizerId = await this.getComplaintOrganizerId(complaint);
+        const complaintId = complaint._id.toString();
+        const linkUrl = organizerId
+            ? `/admin/complaints?id=${complaintId}&organizerId=${organizerId}`
+            : `/admin/complaints?id=${complaintId}`;
+
+        const adminIds = admins.map((item) => String(item._id));
         if (!adminIds.length) {
             return;
         }
@@ -813,10 +876,11 @@ export class ComplaintService {
             title: 'Có khiếu nại mới',
             message: `Khiếu nại mới cho ${targetEntityName}`,
             type: NotificationType.ALERT,
-            linkUrl: `/admin/complaints?id=${complaint._id.toString()}`,
-            groupKey: `complaint:${complaint._id.toString()}`,
+            linkUrl,
+            groupKey: `complaint:${complaintId}`,
             meta: {
-                complaintId: complaint._id.toString(),
+                complaintId,
+                organizerId,
                 targetEntityId: complaint.targetEntityId.toString(),
             },
         });

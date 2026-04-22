@@ -332,6 +332,21 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
     const selectedAttachments = useMemo(() => selectedDetail?.attachmentUrls || [], [selectedDetail]);
     const hasActiveFilters = Boolean(statusFilter);
     const activeFilterCount = [statusFilter].filter(Boolean).length;
+    const latestResponseAt = useMemo(() => {
+        if (!responses.length) {
+            return null;
+        }
+
+        const timestamps = responses
+            .map((item) => new Date(item.createdAt || '').getTime())
+            .filter((value) => Number.isFinite(value));
+
+        if (!timestamps.length) {
+            return null;
+        }
+
+        return new Date(Math.max(...timestamps));
+    }, [responses]);
 
     const dashboardLabel = 'Khiếu nại của tổ chức';
 
@@ -572,6 +587,9 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                     <p className={styles.responseEyebrow}>Trao đổi</p>
                                     <h4>Phản hồi</h4>
                                     <span>{responses.length} phản hồi đã ghi nhận</span>
+                                    {latestResponseAt && (
+                                        <span>Cập nhật gần nhất: {formatDate(latestResponseAt)}</span>
+                                    )}
                                 </div>
 
                                 <button
@@ -587,17 +605,44 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                                 {loadingResponses && <div className={styles.empty}>Đang tải phản hồi...</div>}
 
                                 {!loadingResponses && responses.length === 0 && (
-                                    <div className={styles.empty}>Chưa có phản hồi nào cho khiếu nại này.</div>
+                                    <div className={styles.empty}>
+                                        <p>Chưa có phản hồi nào cho khiếu nại này.</p>
+                                        <button
+                                            type="button"
+                                            className={`${styles.btn} ${styles.btnSecondary}`}
+                                            onClick={openResponseModal}
+                                            style={{ marginTop: '0.65rem' }}
+                                        >
+                                            Tạo phản hồi đầu tiên
+                                        </button>
+                                    </div>
                                 )}
 
                                 {!loadingResponses && responses.length > 0 && (
                                     <div className={styles.responseList}>
-                                        {responses.map((response) => (
+                                        {responses.map((response, index) => (
                                             <article key={response.id} className={styles.responseItem}>
                                                 <div className={styles.responseItemHeader}>
-                                                    <div>
+                                                    <div className={styles.responseIdentity}>
                                                         <strong>{response.senderName || response.senderId}</strong>
                                                         <span>{formatDate(response.createdAt)}</span>
+                                                    </div>
+
+                                                    <div className={styles.responseMetaBadges}>
+                                                        <span className={`${styles.responseRoleBadge} ${response.senderRole === 'ADMIN'
+                                                            ? styles.responseRoleAdmin
+                                                            : response.senderRole === 'STUDENT'
+                                                                ? styles.responseRoleStudent
+                                                                : styles.responseRoleSystem
+                                                            }`}
+                                                        >
+                                                            {response.senderRole === 'ADMIN'
+                                                                ? 'Quản lý'
+                                                                : response.senderRole === 'STUDENT'
+                                                                    ? 'Sinh viên'
+                                                                    : 'Hệ thống'}
+                                                        </span>
+                                                        <span className={styles.responseIndexBadge}>#{index + 1}</span>
                                                     </div>
                                                 </div>
                                                 <p>{response.message}</p>
@@ -681,7 +726,7 @@ const AdminComplaints: React.FC<AdminComplaintsProps> = ({ organizerId }) => {
                         <div className={styles.modalHeader}>
                             <div>
                                 <p className={styles.filterEyebrow}>Phản hồi</p>
-                                <h3 id="manager-response-title">Gửi phản hồi cho khiếu nại</h3>
+                                <h3 id="manager-response-title">Tạo phản hồi cho khiếu nại</h3>
                                 <p className={styles.modalSubtitle}>{selectedDetail.title}</p>
                             </div>
                             <button type="button" className={styles.modalCloseBtn} onClick={closeResponseModal}>×</button>

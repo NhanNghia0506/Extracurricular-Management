@@ -4,6 +4,7 @@ import { Server, Socket } from 'socket.io';
 
 interface MessageData {
     text: string;
+    conversationId: string;
     userId?: string;
     timestamp?: number;
 }
@@ -97,7 +98,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleDisconnect(client: Socket) {
         this.connectedClients.delete(client.id);
-        this.logger.log(`❌ Client disconnected: ${client.id} (Total: ${this.connectedClients.size})`);
+        this.logger.log(`Client disconnected: ${client.id} (Total: ${this.connectedClients.size})`);
     }
 
     @SubscribeMessage('join-conversation')
@@ -173,13 +174,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 };
             }
 
+            const conversationId = String(data.conversationId || '').trim();
+            if (!conversationId) {
+                this.logger.warn(`Missing conversationId from client ${client.id}`);
+                return {
+                    status: 'error',
+                    message: 'conversationId is required',
+                };
+            }
+
+            const room = this.getConversationRoom(conversationId);
+
             const messageData: MessageData = {
                 ...data,
+                conversationId,
                 timestamp: data.timestamp || Date.now(),
             };
 
-            this.logger.log(`📩 Message from ${client.id}: ${messageData.text}`);
-            client.broadcast.emit('receive-message', messageData);
+            this.logger.log(`📩 Message from ${client.id} to room ${room}: ${messageData.text}`);
+            client.to(room).emit('receive-message', messageData);
 
             return {
                 status: 'ok',

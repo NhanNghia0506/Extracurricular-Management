@@ -136,6 +136,18 @@ const CreateActivityForm: React.FC<CreateActivityFormProps> = ({
             <form className={styles.formBody} onSubmit={onSubmit}>
                 {errorMessage && <p className={styles.errorText}>{errorMessage}</p>}
 
+                {!isAdmin && isUpdate && (
+                    <div className={styles.warningBox}>
+                        <div className={styles.warningIcon}>
+                            <i className="fa-solid fa-circle-info"></i>
+                        </div>
+                        <div className={styles.warningContent}>
+                            <strong>Cần duyệt lại</strong>
+                            <p>Mỗi khi bạn chỉnh sửa hoạt động, quản trị viên sẽ cần phê duyệt thay đổi trước khi đăng lên công khai.</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Tên Hoạt Động */}
                 <label>Tên Hoạt Động</label>
                 <input

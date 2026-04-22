@@ -37,9 +37,16 @@ export const useSocket = () => {
         };
     }, []);
 
-    const sendMessage = (text: string, userId?: string) => {
+    const sendMessage = (text: string, conversationId: string, userId?: string) => {
+        const normalizedConversationId = String(conversationId || '').trim();
+        if (!normalizedConversationId) {
+            console.warn('Cannot send socket message without conversationId');
+            return;
+        }
+
         const messageData: MessageData = {
             text,
+            conversationId: normalizedConversationId,
             userId,
             timestamp: Date.now(),
         };

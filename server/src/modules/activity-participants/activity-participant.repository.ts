@@ -51,6 +51,16 @@ export class ActivityParticipantRepository {
         });
     }
 
+    // Count participants shown on activity detail/statistics
+    // Includes users who are currently REGISTERED and those finalized as PARTICIPATED
+    countRegisteredAndParticipatedByActivityId(activityId: string): Promise<number> {
+        const objectId = new Types.ObjectId(activityId);
+        return this.activityParticipantModel.countDocuments({
+            activityId: objectId,
+            status: { $in: [ParticipantStatus.REGISTERED, ParticipantStatus.PARTICIPATED] },
+        });
+    }
+
     // Find first PENDING participant in queue for auto-promotion
     findFirstPendingByActivityId(activityId: string): Promise<PendingParticipantRow | null> {
         const objectId = new Types.ObjectId(activityId);

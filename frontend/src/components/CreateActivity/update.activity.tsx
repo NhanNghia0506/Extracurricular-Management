@@ -170,11 +170,19 @@ const UpdateActivity: React.FC = () => {
 
             await activityService.updateWithFile(activityId, formData);
 
-            showToast({
-                type: 'success',
-                title: 'Cập nhật hoạt động thành công!',
-                message: 'Thông tin hoạt động đã được cập nhật.',
-            });
+            if (isAdmin) {
+                showToast({
+                    type: 'success',
+                    title: 'Cập nhật hoạt động thành công!',
+                    message: 'Thông tin hoạt động đã được cập nhật và đăng lên ngay.',
+                });
+            } else {
+                showToast({
+                    type: 'info',
+                    title: 'Cập nhật hoạt động thành công!',
+                    message: 'Hoạt động đã được cập nhật. Quản trị viên sẽ duyệt lại thay đổi của bạn trước khi đăng lên.',
+                });
+            }
         } catch (error) {
             console.error('Lỗi cập nhật activity:', error);
             showToast({

@@ -24,6 +24,7 @@ export interface ActivityApprovalRecord extends Omit<Activity, 'organizerId' | '
 
 export interface RecommendationCandidateRecord {
     _id: Types.ObjectId;
+    createdBy: Types.ObjectId;
     title: string;
     description: string;
     image?: string;
@@ -554,6 +555,7 @@ export class ActivityRepository {
             {
                 $project: {
                     _id: 1,
+                    createdBy: 1,
                     title: 1,
                     description: 1,
                     image: 1,

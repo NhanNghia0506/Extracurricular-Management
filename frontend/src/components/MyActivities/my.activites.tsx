@@ -79,6 +79,13 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
         UNKNOWN: { label: 'Chưa cập nhật', color: '#64748b' },
     } as Record<ActivityRuntimeStatus, StatusPresentation>), []);
 
+    const approvalStatusPresentationMap = useMemo(() => ({
+        PENDING: { label: 'Chờ duyệt', color: '#f59e0b' },
+        NEEDS_EDIT: { label: 'Cần sửa', color: '#f97316' },
+        REJECTED: { label: 'Bị từ chối', color: '#dc2626' },
+        APPROVED: { label: 'Đã duyệt', color: '#10b981' },
+    } as Record<string, StatusPresentation>), []);
+
     const statusFilterConfig = useMemo(() => ([
         { key: 'ALL' as const, label: 'Tất cả trạng thái', icon: 'fa-table-cells-large' },
         { key: 'PENDING' as const, label: 'Chờ duyệt', icon: 'fa-hourglass-half' },
@@ -310,11 +317,15 @@ const MyActivities: React.FC<MyActivitiesProps> = ({ searchTerm = '' }) => {
                     const runtimeStatus = getActivityRuntimeStatus(act);
                     const runtimeStatusPresentation = activityStatusPresentationMap[runtimeStatus];
                     const activityId = getActivityId(act);
+                    const approvalStatus = act.relation === 'created' ? act.approvalStatus : null;
+                    const displayStatusTag = approvalStatus && approvalStatus !== 'APPROVED' 
+                        ? approvalStatusPresentationMap[approvalStatus] 
+                        : runtimeStatusPresentation;
                     return (
                         <div key={activityId} className={styles.activityCard}>
                             <div className={`${styles.imageWrapper} ${runtimeStatus === 'COMPLETED' ? styles.ended : ''}`}>
                                 <img src={getImageUrl(act.image)} alt={act.title} />
-                                <span className={styles.statusTag} style={{ background: runtimeStatusPresentation.color }}>{runtimeStatusPresentation.label}</span>
+                                <span className={styles.statusTag} style={{ background: displayStatusTag.color }}>{displayStatusTag.label}</span>
                             </div>
 
                             <div className={styles.cardBody}>

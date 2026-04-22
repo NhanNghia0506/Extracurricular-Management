@@ -3,6 +3,7 @@ import type { ActivityComment, DeleteActivityCommentResponse } from './comment.t
 
 export interface MessageData {
     text: string;
+    conversationId: string;
     userId?: string;
     timestamp?: number;
 }

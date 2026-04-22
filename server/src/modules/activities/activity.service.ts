@@ -52,6 +52,7 @@ interface ActivityApprovalReviewPayload {
 
 interface ActivityRecommendationItem {
     id: string;
+    isMine: boolean;
     title: string;
     description: string;
     image?: string;
@@ -193,7 +194,7 @@ export class ActivityService {
         );
 
         const items = candidates
-            .map((item) => this.scoreRecommendation(item, categoryAffinities))
+            .map((item) => this.scoreRecommendation(item, categoryAffinities, userId))
             .sort((a, b) => {
                 if (b.matchScore !== a.matchScore) {
                     return b.matchScore - a.matchScore;
@@ -1221,13 +1222,13 @@ export class ActivityService {
     private scoreRecommendation(
         item: RecommendationCandidateRecord,
         categoryAffinities: Map<string, number>,
+        userId: string,
     ): ActivityRecommendationItem {
         const categoryKey = item.categoryId?._id ? String(item.categoryId._id) : '';
         const categoryCount = categoryAffinities.get(categoryKey) || 0;
 
         const categoryScore = Math.min(categoryCount * 8, 24);
         const cohortScore = Math.min((item.cohortCount || 0) * 2, 20);
-        const ratingScore = Math.min(((item.averageRating || 0) / 5) * 20, 20);
         const popularityScore = Math.min((item.participantCount || 0) / 5, 12);
         const trainingScore = Math.min((item.trainingScore || 0) / 5, 12);
 
@@ -1239,7 +1240,6 @@ export class ActivityService {
         const rawScore =
             categoryScore +
             cohortScore +
-            ratingScore +
             popularityScore +
             trainingScore +
             freshnessScore +
@@ -1251,7 +1251,6 @@ export class ActivityService {
         const strongestSignal = [
             { key: 'category', value: categoryScore },
             { key: 'cohort', value: cohortScore },
-            { key: 'rating', value: ratingScore },
             { key: 'freshness', value: freshnessScore },
         ].sort((a, b) => b.value - a.value)[0]?.key;
 
@@ -1259,14 +1258,13 @@ export class ActivityService {
             reason = `Phù hợp với sở thích danh mục ${item.categoryId?.name || ''}`.trim();
         } else if (strongestSignal === 'cohort' && item.cohortCount > 0) {
             reason = 'Được sinh viên cùng lớp/khoa quan tâm';
-        } else if (strongestSignal === 'rating' && item.averageRating > 0) {
-            reason = `Đánh giá cao (${item.averageRating}/5)`;
         } else if (strongestSignal === 'freshness') {
             reason = 'Sắp diễn ra, phù hợp để đăng ký ngay';
         }
 
         return {
             id: item._id.toString(),
+            isMine: Boolean(item.createdBy?.toString() === userId),
             title: item.title,
             description: item.description,
             image: item.image,
